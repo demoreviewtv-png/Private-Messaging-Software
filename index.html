@@ -305,7 +305,7 @@
     <div id="chat-area">
         <div id="chat-header">
             <div class="header-title" id="room-title">Server 1 🌐</div>
-            <div class="history-notice">⏳ Realtime History Enabled: Messages are saved dynamically.</div>
+            <div class="history-notice">⏳ Auto-Sync (2.5s) Active: Messages save and reload dynamically.</div>
         </div>
         <div id="message-container"></div>
 
@@ -322,7 +322,6 @@
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
             authDomain: "privatems-vercel-app.firebaseapp.com",
-            // Realtime DB requires the official project database URL endpoint
             databaseURL: "https://privatems-vercel-app-default-rtdb.firebaseio.com",
             projectId: "privatems-vercel-app",
             storageBucket: "privatems-vercel-app.firebasestorage.app",
@@ -337,6 +336,7 @@
         let username;
         let friendCode;
         let savedColor;
+        let syncInterval = null;
 
         const usernameInput = document.getElementById('username-input');
         const colorPicker = document.getElementById('name-color');
@@ -383,7 +383,6 @@
                     loops++;
                 }
                 localStorage.setItem('privacy_chat_friend_code', friendCode);
-                // Flag code as taken in realtime tree
                 await set(ref(db, `used_codes/${friendCode}`), true);
             }
 
@@ -401,7 +400,7 @@
             colorPicker.value = savedColor;
             
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
-            loadMessageHistory(currentChannelName);
+            startAutoSync(currentChannelName);
         }
 
         window.saveUsername = function() {
@@ -474,34 +473,57 @@
             currentSubscription = pusher.subscribe(targetChannel);
             bindChannelEvents(currentSubscription);
 
-            loadMessageHistory(targetChannel);
+            startAutoSync(targetChannel);
         };
 
-        // --- REALTIME DB HISTORY RETRIEVAL ---
-        async function loadMessageHistory(channelName) {
+        // --- REALTIME DB HISTORY & FETCH AUTO-SYNC ---
+        async function loadMessageHistory(channelName, isSilent = false) {
             if (!friendCode) return;
-            container.innerHTML = '<div style="color: #949ba4; font-size: 13px;">Loading history...</div>';
-            updateStatus("🔵 Fetching realtime pipeline history...", "#5865f2");
+            if (!isSilent) {
+                container.innerHTML = '<div style="color: #949ba4; font-size: 13px;">Loading history...</div>';
+                updateStatus("🔵 Fetching realtime pipeline history...", "#5865f2");
+            }
             
             try {
                 const messageRef = ref(db, `messages/${channelName}`);
                 const snapshot = await get(messageRef);
+                
+                // Read current scroll positioning before rendering
+                const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 40;
+                
                 container.innerHTML = ''; 
                 
                 if (snapshot.exists()) {
                     snapshot.forEach((childSnapshot) => {
                         const data = childSnapshot.val();
-                        appendMessage(data.senderName, data.text, data.color);
+                        silentAppend(data.senderName, data.text, data.color);
                     });
+                    if (wasAtBottom || !isSilent) {
+                        container.scrollTop = container.scrollHeight;
+                    }
                 } else {
                     container.innerHTML = `<div style="color: #23a55a; font-size:13px;">No past history found in this room yet. Start typing!</div>`;
                 }
                 updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
             } catch (error) {
                 console.error("Error loading chat history: ", error);
-                container.innerHTML = '<div style="color: #da373c; font-size: 13px;">Error loading data history from Realtime Database.</div>';
+                if (!isSilent) {
+                    container.innerHTML = '<div style="color: #da373c; font-size: 13px;">Error loading data history from Realtime Database.</div>';
+                }
                 updateStatus(`🔴 DB Error: ${error.message}`, "#da373c");
             }
+        }
+
+        function startAutoSync(channelName) {
+            if (syncInterval) clearInterval(syncInterval);
+            
+            // First initial load is full visible load
+            loadMessageHistory(channelName, false);
+            
+            // Background interval cycles checks smoothly every 2500ms
+            syncInterval = setInterval(() => {
+                loadMessageHistory(channelName, true);
+            }, 2500);
         }
 
         window.connectToFriend = function() {
@@ -582,7 +604,7 @@
             }, 100);
         }
 
-        function appendMessage(user, text, color) {
+        function silentAppend(user, text, color) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
 
@@ -598,6 +620,10 @@
             messageDiv.appendChild(usernameSpan);
             messageDiv.appendChild(textSpan);
             container.appendChild(messageDiv);
+        }
+
+        function appendMessage(user, text, color) {
+            silentAppend(user, text, color);
             container.scrollTop = container.scrollHeight;
         }
     </script>
