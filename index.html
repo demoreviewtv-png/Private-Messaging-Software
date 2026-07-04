@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrivacyChat</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #313338; /* Discord-like dark background */
+            color: #dbdee1;
+        }
+
+        /* Sidebar for Channels / Info */
+        #sidebar {
+            width: 240px;
+            background-color: #2b2d31;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            border-right: 1px solid #1e1f22;
+        }
+
+        .channel-title {
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 15px;
+        }
+
+        .privacy-badge {
+            font-size: 12px;
+            background-color: #23a55a;
+            color: white;
+            padding: 5px 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        /* Main Chat Area */
+        #chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #313338;
+        }
+
+        #message-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message .username {
+            font-weight: 600;
+            color: #f2f3f5;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .message .text {
+            color: #dbdee1;
+            font-size: 15px;
+            word-break: break-word;
+        }
+
+        /* Input Form */
+        #input-form {
+            padding: 20px;
+            background-color: #313338;
+        }
+
+        #message-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            background-color: #383a40;
+            color: #dbdee1;
+            font-size: 15px;
+            outline: none;
+        }
+
+        #message-input::placeholder {
+            color: #949ba4;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div>
+            <div class="channel-title"># privacy-lounge</div>
+            <p style="color: #949ba4; font-size: 14px;">An anonymous space with zero IP tracking, logs, or history.</p>
+        </div>
+        <div>
+            <div style="font-size: 13px; margin-bottom: 8px;">Your Temporary ID:</div>
+            <div id="user-display" style="font-weight: bold; color: #5865f2; margin-bottom: 15px;"></div>
+            <div class="privacy-badge">Zero-Data Mode Active</div>
+        </div>
+    </div>
+
+    <div id="chat-area">
+        <div id="message-container">
+            <div class="message">
+                <span class="username" style="color: #5865f2;">System</span>
+                <span class="text">Welcome! Your identity is purely local. No data is stored or tracked.</span>
+            </div>
+        </div>
+
+        <form id="input-form">
+            <input type="text" id="message-input" placeholder="Message #privacy-lounge" autocomplete="off" maxlength="500">
+        </form>
+    </div>
+
+    <script>
+        // 1. Generate an entirely random identity locally on page load
+        const randomId = Math.floor(1000 + Math.random() * 9000);
+        const username = `User-${randomId}`;
+        
+        // Display the random username in the sidebar
+        document.getElementById('user-display').textContent = username;
+
+        const form = document.getElementById('input-form');
+        const input = document.getElementById('message-input');
+        const container = document.getElementById('message-container');
+
+        // 2. Handle sending messages locally
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const messageText = input.value.trim();
+            if (messageText === '') return;
+
+            // Create message HTML element
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+
+            const usernameSpan = document.createElement('span');
+            usernameSpan.classList.add('username');
+            usernameSpan.textContent = username;
+
+            const textSpan = document.createElement('span');
+            textSpan.classList.add('text');
+            textSpan.textContent = messageText;
+
+            messageDiv.appendChild(usernameSpan);
+            messageDiv.appendChild(textSpan);
+            container.appendChild(messageDiv);
+
+            // Auto-scroll to the bottom
+            container.scrollTop = container.scrollHeight;
+
+            // Clear input box
+            input.value = '';
+        });
+    </script>
+</body>
+</html>
