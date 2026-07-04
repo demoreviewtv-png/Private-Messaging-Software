@@ -259,6 +259,33 @@
         .reset-btn:hover {
             color: #ff7377;
         }
+
+        .pm-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 4px 0;
+        }
+
+        .pm-item .nav-btn {
+            margin: 0;
+            flex: 1;
+        }
+
+        .nick-btn {
+            background: none;
+            border: none;
+            color: #949ba4;
+            font-size: 11px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .nick-btn:hover {
+            color: #fff;
+            background-color: #35373c;
+        }
     </style>
 </head>
 <body>
@@ -346,7 +373,9 @@
         let syncInterval = null;
         let profileInterval = null;
         let customServers = [];
-        
+        let savedDms = []; // Track history of active friend codes
+        let nicknames = {}; // Map friend codes to customized labels
+
         let activeFriendProfiles = {}; 
 
         const usernameInput = document.getElementById('username-input');
@@ -422,13 +451,19 @@
             usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
             
-            // Load custom servers list
             try {
                 customServers = JSON.parse(localStorage.getItem('privacy_chat_custom_servers')) || [];
-            } catch (e) {
-                customServers = [];
-            }
+            } catch (e) { customServers = []; }
             renderCustomServers();
+
+            try {
+                savedDms = JSON.parse(localStorage.getItem('privacy_chat_saved_dms')) || [];
+                nicknames = JSON.parse(localStorage.getItem('privacy_chat_nicknames')) || {};
+            } catch (e) {
+                savedDms = [];
+                nicknames = {};
+            }
+            rebuildDmList();
 
             await syncProfileToDatabase();
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
@@ -459,6 +494,8 @@
                 localStorage.removeItem('privacy_chat_friend_code');
                 localStorage.removeItem('privacy_chat_username');
                 localStorage.removeItem('privacy_chat_custom_servers');
+                localStorage.removeItem('privacy_chat_saved_dms');
+                localStorage.removeItem('privacy_chat_nicknames');
                 document.getElementById('friend-code-display').textContent = 'Loading...';
                 initIdentity();
                 window.switchChannel('server-1', 'Server 1 🌐');
@@ -532,10 +569,17 @@
                         const data = childSnapshot.val();
                         let displayName = data.senderName;
                         let displayColor = data.color;
-                        if (activeFriendProfiles[data.senderCode]) {
+                        
+                        // Priority 1: Check for a local custom nickname override
+                        if (nicknames[data.senderCode]) {
+                            displayName = nicknames[data.senderCode];
+                        } 
+                        // Priority 2: Check for dynamic profile updates
+                        else if (activeFriendProfiles[data.senderCode]) {
                             displayName = activeFriendProfiles[data.senderCode].username;
                             displayColor = activeFriendProfiles[data.senderCode].color;
                         }
+                        
                         silentAppend(displayName, data.text, displayColor);
                     });
                     if (wasAtBottom || !isSilent) {
@@ -562,7 +606,6 @@
             }, 2500);
         }
 
-        // --- 5-SECOND BACKGROUND PROFILE IDENTITY SWEEPER ---
         function startProfileChecking() {
             if (profileInterval) clearInterval(profileInterval);
             profileInterval = setInterval(async () => {
@@ -583,12 +626,6 @@
                                     color: remoteProfile.color
                                 };
                                 profilesChanged = true;
-                                
-                                const pmChannelID = [friendCode, code].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
-                                let sidebarBtn = document.getElementById(`btn-${pmChannelID}`);
-                                if (sidebarBtn) {
-                                    sidebarBtn.textContent = `💬 ${remoteProfile.username}`;
-                                }
                             }
                         }
                     } catch (err) {
@@ -596,17 +633,16 @@
                     }
                 }
                 if (profilesChanged) {
+                    rebuildDmList();
                     loadMessageHistory(currentChannelName, true);
                 }
             }, 5000);
         }
 
-        // --- CUSTOM SERVERS HANDLING (MAX 3) ---
         window.joinCustomServer = function() {
             const rawInput = document.getElementById('custom-server-input').value.trim();
             if (!rawInput) return;
             
-            // Format input into a URL/DB safe slug token 
             const serverID = "custom-" + rawInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
             const serverLabel = "🛠️ " + rawInput.substring(0, 20);
 
@@ -616,7 +652,7 @@
             }
 
             if (customServers.length >= 3) {
-                alert("Custom server limit reached! (Max 3 servers allowed). Reset profile identity to clear them.");
+                alert("Custom server limit reached! (Max 3 servers allowed).");
                 return;
             }
 
@@ -633,7 +669,6 @@
         };
 
         function renderCustomServers() {
-            // Remove existing custom nodes
             document.querySelectorAll("[id^='btn-custom-']").forEach(el => el.remove());
             const listContainer = document.getElementById('server-list');
             
@@ -647,9 +682,15 @@
             });
         }
 
+        // --- DYNAMIC DM & CUSTOM NICKNAME CONFIGURATION ---
         window.connectToFriend = async function() {
             let targetCode = document.getElementById('friend-code-input').value.trim().toUpperCase().replace('#', '');
             if (!targetCode || targetCode === friendCode) return;
+
+            if (!savedDms.includes(targetCode)) {
+                savedDms.push(targetCode);
+                localStorage.setItem('privacy_chat_saved_dms', JSON.stringify(savedDms));
+            }
 
             let initialTargetName = `#${targetCode}`;
             try {
@@ -665,22 +706,87 @@
                 activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4' };
             }
 
+            rebuildDmList();
+            
             const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
-            const pmList = document.getElementById('pm-list');
+            const targetBtn = document.getElementById(`btn-${pmChannelID}`);
+            const currentLabel = nicknames[targetCode] || initialTargetName;
             
-            let btn = document.getElementById(`btn-${pmChannelID}`);
-            if (!btn) {
-                btn = document.createElement('button');
-                btn.id = `btn-${pmChannelID}`;
-                btn.className = 'nav-btn';
-                btn.textContent = `💬 ${initialTargetName}`;
-                btn.onclick = function() { window.switchChannel(pmChannelID, `DM with ${initialTargetName}`, btn); };
-                pmList.appendChild(btn);
-            }
-            
-            window.switchChannel(pmChannelID, `DM with ${initialTargetName}`, btn);
+            window.switchChannel(pmChannelID, `DM with ${currentLabel}`, targetBtn);
             document.getElementById('friend-code-input').value = '';
         };
+
+        window.setCustomNickname = function(targetCode) {
+            const existingNick = nicknames[targetCode] || "";
+            const newNick = prompt(`Enter a private nickname for #${targetCode}:`, existingNick);
+            
+            if (newNick === null) return; // Cancelled
+            
+            if (newNick.trim() === "") {
+                delete nicknames[targetCode];
+            } else {
+                nicknames[targetCode] = newNick.trim();
+            }
+            
+            localStorage.setItem('privacy_chat_nicknames', JSON.stringify(nicknames));
+            rebuildDmList();
+            
+            // If viewing this specific channel, update top title banner immediately
+            const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
+            if (currentChannelName === pmChannelID) {
+                const displayTitle = nicknames[targetCode] || (activeFriendProfiles[targetCode] ? activeFriendProfiles[targetCode].username : `#${targetCode}`);
+                roomTitle.textContent = `DM with ${displayTitle}`;
+            }
+            
+            // Refresh conversation logs to show the new nickname
+            loadMessageHistory(currentChannelName, true);
+        };
+
+        function rebuildDmList() {
+            const pmList = document.getElementById('pm-list');
+            pmList.innerHTML = '';
+
+            savedDms.forEach(targetCode => {
+                const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
+                
+                // Get display name based on nickname or online profile
+                let resolvedLabel = `#${targetCode}`;
+                if (nicknames[targetCode]) {
+                    resolvedLabel = nicknames[targetCode];
+                } else if (activeFriendProfiles[targetCode]) {
+                    resolvedLabel = activeFriendProfiles[targetCode].username;
+                }
+
+                const containerDiv = document.createElement('div');
+                containerDiv.className = 'pm-item';
+
+                const btn = document.createElement('button');
+                btn.id = `btn-${pmChannelID}`;
+                btn.className = 'nav-btn';
+                btn.textContent = `💬 ${resolvedLabel}`;
+                btn.onclick = function() { 
+                    window.switchChannel(pmChannelID, `DM with ${resolvedLabel}`, btn); 
+                };
+
+                const nickBtn = document.createElement('button');
+                nickBtn.className = 'nick-btn';
+                nickBtn.textContent = '✏️';
+                nickBtn.title = "Set Private Nickname";
+                nickBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    window.setCustomNickname(targetCode);
+                };
+
+                containerDiv.appendChild(btn);
+                containerDiv.appendChild(nickBtn);
+                pmList.appendChild(containerDiv);
+                
+                // Ensure active status carries over visually on list redraws
+                if (currentChannelName === pmChannelID) {
+                    btn.classList.add('active');
+                }
+            });
+        }
 
         // --- CHAT FORM & 10s SLOWMODE LOGIC ---
         const COOLDOWN_MS = 10000;
