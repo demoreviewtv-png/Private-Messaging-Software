@@ -268,8 +268,15 @@
             <div class="channel-title">PrivacyChat</div>
             
             <div class="section-title">Servers</div>
-            <button class="nav-btn active" id="btn-server-1" onclick="window.switchChannel('server-1', 'Server 1 🌐', this)">🌐 Server 1</button>
-            <button class="nav-btn" id="btn-server-2" onclick="window.switchChannel('server-2', 'Server 2 🚀', this)">🚀 Server 2</button>
+            <div id="server-list">
+                <button class="nav-btn active" id="btn-server-1" onclick="window.switchChannel('server-1', 'Server 1 🌐', this)">🌐 Server 1</button>
+                <button class="nav-btn" id="btn-server-2" onclick="window.switchChannel('server-2', 'Server 2 🚀', this)">🚀 Server 2</button>
+            </div>
+            
+            <div class="pm-input-box">
+                <input type="text" id="custom-server-input" placeholder="Create/Join Server (Max 3)...">
+                <button onclick="window.joinCustomServer()">Join</button>
+            </div>
 
             <div class="section-title">Private Messages</div>
             <div id="pm-list"></div>
@@ -338,8 +345,8 @@
         let savedColor;
         let syncInterval = null;
         let profileInterval = null;
+        let customServers = [];
         
-        // Caches resolved profiles to map friend codes to identities locally
         let activeFriendProfiles = {}; 
 
         const usernameInput = document.getElementById('username-input');
@@ -415,6 +422,14 @@
             usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
             
+            // Load custom servers list
+            try {
+                customServers = JSON.parse(localStorage.getItem('privacy_chat_custom_servers')) || [];
+            } catch (e) {
+                customServers = [];
+            }
+            renderCustomServers();
+
             await syncProfileToDatabase();
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
             startAutoSync(currentChannelName);
@@ -443,6 +458,7 @@
             if (confirm("Are you sure you want to change your Friend Code? Old conversation loops will break.")) {
                 localStorage.removeItem('privacy_chat_friend_code');
                 localStorage.removeItem('privacy_chat_username');
+                localStorage.removeItem('privacy_chat_custom_servers');
                 document.getElementById('friend-code-display').textContent = 'Loading...';
                 initIdentity();
                 window.switchChannel('server-1', 'Server 1 🌐');
@@ -514,7 +530,6 @@
                 if (snapshot.exists()) {
                     snapshot.forEach((childSnapshot) => {
                         const data = childSnapshot.val();
-                        // If profile mapping contains refreshed remote details, use them over archived nodes
                         let displayName = data.senderName;
                         let displayColor = data.color;
                         if (activeFriendProfiles[data.senderCode]) {
@@ -569,7 +584,6 @@
                                 };
                                 profilesChanged = true;
                                 
-                                // Update sidebar private channel labels if they match
                                 const pmChannelID = [friendCode, code].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
                                 let sidebarBtn = document.getElementById(`btn-${pmChannelID}`);
                                 if (sidebarBtn) {
@@ -581,18 +595,62 @@
                         console.error("Failed executing identity checks: ", err);
                     }
                 }
-                // If profiles updated, force structural refresh of text views silently
                 if (profilesChanged) {
                     loadMessageHistory(currentChannelName, true);
                 }
             }, 5000);
         }
 
+        // --- CUSTOM SERVERS HANDLING (MAX 3) ---
+        window.joinCustomServer = function() {
+            const rawInput = document.getElementById('custom-server-input').value.trim();
+            if (!rawInput) return;
+            
+            // Format input into a URL/DB safe slug token 
+            const serverID = "custom-" + rawInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
+            const serverLabel = "🛠️ " + rawInput.substring(0, 20);
+
+            if (customServers.some(s => s.id === serverID)) {
+                alert("You are already in this server room!");
+                return;
+            }
+
+            if (customServers.length >= 3) {
+                alert("Custom server limit reached! (Max 3 servers allowed). Reset profile identity to clear them.");
+                return;
+            }
+
+            customServers.push({ id: serverID, name: serverLabel });
+            localStorage.setItem('privacy_chat_custom_servers', JSON.stringify(customServers));
+            
+            renderCustomServers();
+            document.getElementById('custom-server-input').value = '';
+            
+            const newlyCreatedBtn = document.getElementById(`btn-${serverID}`);
+            if (newlyCreatedBtn) {
+                window.switchChannel(serverID, serverLabel, newlyCreatedBtn);
+            }
+        };
+
+        function renderCustomServers() {
+            // Remove existing custom nodes
+            document.querySelectorAll("[id^='btn-custom-']").forEach(el => el.remove());
+            const listContainer = document.getElementById('server-list');
+            
+            customServers.forEach(srv => {
+                const btn = document.createElement('button');
+                btn.id = `btn-${srv.id}`;
+                btn.className = 'nav-btn';
+                btn.textContent = srv.name;
+                btn.onclick = function() { window.switchChannel(srv.id, srv.name, btn); };
+                listContainer.appendChild(btn);
+            });
+        }
+
         window.connectToFriend = async function() {
             let targetCode = document.getElementById('friend-code-input').value.trim().toUpperCase().replace('#', '');
             if (!targetCode || targetCode === friendCode) return;
 
-            // Fetch username mapping details immediately on load connection
             let initialTargetName = `#${targetCode}`;
             try {
                 const pSnap = await get(ref(db, `profiles/${targetCode}`));
