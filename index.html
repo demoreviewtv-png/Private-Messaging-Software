@@ -30,6 +30,13 @@
             border-right: 1px solid #1e1f22;
         }
 
+        .channel-title {
+            font-weight: bold;
+            font-size: 18px;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
         .section-title {
             font-size: 12px;
             font-weight: bold;
@@ -134,7 +141,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         #name-color {
@@ -170,13 +177,72 @@
             border-radius: 4px;
             cursor: pointer;
         }
+
+        /* Profile Card Layout */
+        .profile-container {
+            background-color: #1e1f22;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        /* Editable Username Box Layout */
+        .username-edit-box {
+            display: flex;
+            gap: 5px;
+            margin-top: 3px;
+            margin-bottom: 8px;
+        }
+
+        .username-edit-box input {
+            flex: 1;
+            background: #2b2d31;
+            border: 1px solid #383a40;
+            padding: 4px 6px;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            outline: none;
+        }
+
+        .username-edit-box button {
+            background: #35373c;
+            border: none;
+            color: #dbdee1;
+            padding: 0 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .username-edit-box button:hover {
+            background: #4e5058;
+            color: #fff;
+        }
+
+        .reset-btn {
+            background: none;
+            border: none;
+            color: #da373c;
+            font-size: 11px;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .reset-btn:hover {
+            color: #ff7377;
+        }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
         <div>
-            <div class="channel-title" style="font-weight: bold; font-size: 18px; color: #fff; margin-bottom: 10px;">PrivacyChat</div>
+            <div class="channel-title">PrivacyChat</div>
             
             <div class="section-title">Servers</div>
             <button class="nav-btn active" onclick="switchChannel('server-1', 'Server 1 🌐')">🌐 Server 1</button>
@@ -191,8 +257,18 @@
         </div>
 
         <div>
-            <div style="font-size: 12px; color: #949ba4; margin-bottom: 4px;">Your Friend Code:</div>
-            <div id="user-display" style="font-weight: bold; font-size: 13px; margin-bottom: 10px;"></div>
+            <div class="profile-container">
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Friend Code</div>
+                <div id="friend-code-display" style="font-weight: bold; font-size: 15px; color: #fff; font-family: monospace;"></div>
+                
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
+                <div class="username-edit-box">
+                    <input type="text" id="username-input" maxlength="20" autocomplete="off">
+                    <button onclick="saveUsername()">Save</button>
+                </div>
+                
+                <button class="reset-btn" onclick="resetIdentity()">Reset Friend Code</button>
+            </div>
             
             <div class="color-picker-wrapper">
                 <label for="name-color" style="font-size: 12px; color: #949ba4;">Name Color:</label>
@@ -208,7 +284,7 @@
         <div id="message-container">
             <div class="message">
                 <span class="username" style="color: #23a55a;">System</span>
-                <span class="text">Welcome. 10s slowmode is active. Share your Friend Code to text privately!</span>
+                <span class="text">Welcome. 10s slowmode is active. Edit your name or color at any time!</span>
             </div>
         </div>
 
@@ -218,31 +294,73 @@
     </div>
 
     <script>
-        // Generate and Save Unique Friend Code Identities
-        let username = localStorage.getItem('privacy_chat_username');
-        if (!username) {
-            const randomId = Math.floor(100000 + Math.random() * 900000); // 6-digit code
-            username = `User-${randomId}`;
-            localStorage.setItem('privacy_chat_username', username);
-        }
-        
-        let savedColor = localStorage.getItem('privacy_chat_color') || '#5865f2';
+        let username;
+        let friendCode;
+        let savedColor;
 
-        const userDisplay = document.getElementById('user-display');
+        const usernameInput = document.getElementById('username-input');
         const colorPicker = document.getElementById('name-color');
         const chatHeader = document.getElementById('chat-header');
-        
-        userDisplay.textContent = username;
-        userDisplay.style.color = savedColor;
-        colorPicker.value = savedColor;
+
+        // Load or initialize local credentials
+        function initIdentity() {
+            // 1. Load or make friend code number
+            friendCode = localStorage.getItem('privacy_chat_friend_code');
+            if (!friendCode) {
+                friendCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit number
+                localStorage.setItem('privacy_chat_friend_code', friendCode);
+            }
+
+            // 2. Load or make display username
+            username = localStorage.getItem('privacy_chat_username');
+            if (!username) {
+                username = `User-${friendCode}`;
+                localStorage.setItem('privacy_chat_username', username);
+            }
+            
+            savedColor = localStorage.getItem('privacy_chat_color') || '#5865f2';
+
+            // Render elements
+            document.getElementById('friend-code-display').textContent = `#${friendCode}`;
+            usernameInput.value = username;
+            usernameInput.style.color = savedColor;
+            
+            colorPicker.value = savedColor;
+        }
+
+        // Save customized username changes
+        function saveUsername() {
+            const newName = usernameInput.value.trim();
+            if (newName === "") {
+                alert("Username cannot be blank!");
+                usernameInput.value = username;
+                return;
+            }
+            username = newName;
+            localStorage.setItem('privacy_chat_username', username);
+            alert("Username saved locally!");
+        }
+
+        // Drop storage keys and regenerate elements
+        function resetIdentity() {
+            if (confirm("Are you sure you want to completely change your Friend Code? Your current private conversation loops will break.")) {
+                localStorage.removeItem('privacy_chat_friend_code');
+                localStorage.removeItem('privacy_chat_username');
+                initIdentity();
+                switchChannel('server-1', 'Server 1 🌐');
+            }
+        }
+
+        // Initialize UI Elements instantly
+        initIdentity();
 
         colorPicker.addEventListener('input', function(e) {
             savedColor = e.target.value;
-            userDisplay.style.color = savedColor;
+            usernameInput.style.color = savedColor;
             localStorage.setItem('privacy_chat_color', savedColor);
         });
 
-        // --- APINATOR / PUSHER SYSTEM ---
+        // --- APINATOR LIVE CONFIGURATION ---
         const pusher = new Pusher('app_0eb6e0fdc30452b7c1c55f2cc8ba6843052381e4', {
             cluster: 'us', 
             wsHost: 'rt.apinator.io',
@@ -256,49 +374,50 @@
 
         function bindChannelEvents(channel) {
             channel.bind('client-message', function(data) {
-                if (data.sender !== username) {
-                    appendMessage(data.sender, data.text, data.color);
+                // Ensure we don't display our own echoed messages twice, validated via friend codes
+                if (data.senderCode !== friendCode) {
+                    appendMessage(data.senderName, data.text, data.color);
                 }
             });
         }
 
         function switchChannel(targetChannel, displayName) {
-            // Unsubscribe from previous room
             pusher.unsubscribe(currentChannelName);
-            
-            // Clear message UI screen
             document.getElementById('message-container').innerHTML = '';
             chatHeader.textContent = displayName;
             
-            // Update Navigation UI buttons highlights
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            event?.target?.classList?.add('active');
+            if(event && event.target && event.target.classList.contains('nav-btn')) {
+                event.target.classList.add('active');
+            }
 
-            // Subscribe to the new channel
             currentChannelName = targetChannel;
             currentSubscription = pusher.subscribe(targetChannel);
             bindChannelEvents(currentSubscription);
         }
 
         function connectToFriend() {
-            const targetCode = document.getElementById('friend-code-input').value.trim();
-            if (!targetCode || targetCode === username) return;
-
-            // Generate a combined unique room string specific only to these 2 users sorted alphabetically
-            const pmChannelID = [username, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
+            let targetCode = document.getElementById('friend-code-input').value.trim();
+            if (!targetCode) return;
             
-            // Add to sidebar list
+            targetCode = targetCode.replace('#', '');
+
+            if (targetCode === friendCode) return;
+
+            // Generate an alphabetical unique loop string between both friend code identifiers
+            const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
+            
             const pmList = document.getElementById('pm-list');
             if (!document.getElementById(`btn-${pmChannelID}`)) {
                 const btn = document.createElement('button');
                 btn.id = `btn-${pmChannelID}`;
                 btn.className = 'nav-btn';
-                btn.textContent = `💬 ${targetCode}`;
-                btn.onclick = () => switchChannel(pmChannelID, `DM with ${targetCode}`);
+                btn.textContent = `💬 #${targetCode}`;
+                btn.onclick = () => switchChannel(pmChannelID, `DM with #${targetCode}`);
                 pmList.appendChild(btn);
             }
             
-            switchChannel(pmChannelID, `DM with ${targetCode}`);
+            switchChannel(pmChannelID, `DM with #${targetCode}`);
             document.getElementById('friend-code-input').value = '';
         }
 
@@ -306,7 +425,7 @@
         const form = document.getElementById('input-form');
         const input = document.getElementById('message-input');
         const container = document.getElementById('message-container');
-        const COOLDOWN_MS = 10000; // 10 seconds
+        const COOLDOWN_MS = 10000;
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -316,7 +435,8 @@
             appendMessage(username, messageText, savedColor);
 
             currentSubscription.trigger('client-message', {
-                sender: username,
+                senderName: username,
+                senderCode: friendCode,
                 text: messageText,
                 color: savedColor
             });
