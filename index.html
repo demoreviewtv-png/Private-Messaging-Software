@@ -67,7 +67,6 @@
 
         .message .username {
             font-weight: 600;
-            color: #f2f3f5;
             font-size: 14px;
             margin-bottom: 2px;
         }
@@ -93,6 +92,23 @@
             font-size: 15px;
             outline: none;
         }
+
+        /* Color Picker Styling */
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #name-color {
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            background: none;
+        }
     </style>
 </head>
 <body>
@@ -104,7 +120,13 @@
         </div>
         <div>
             <div style="font-size: 13px; margin-bottom: 8px;">Your Saved Anonymous ID:</div>
-            <div id="user-display" style="font-weight: bold; color: #5865f2; margin-bottom: 15px;"></div>
+            <div id="user-display" style="font-weight: bold; margin-bottom: 10px;"></div>
+            
+            <div class="color-picker-wrapper">
+                <label for="name-color" style="font-size: 13px; color: #949ba4;">Name Color:</label>
+                <input type="color" id="name-color" value="#5865f2">
+            </div>
+
             <div class="privacy-badge">Zero-Data Mode Active</div>
         </div>
     </div>
@@ -113,7 +135,7 @@
         <div id="message-container">
             <div class="message">
                 <span class="username" style="color: #5865f2;">System</span>
-                <span class="text">Welcome back! Your identity is stored securely and locally on your device.</span>
+                <span class="text">Welcome back! Your identity and custom color are stored locally on your device.</span>
             </div>
         </div>
 
@@ -123,18 +145,35 @@
     </div>
 
     <script>
-        // 1. Check if a username already exists in the local browser storage
+        // 1. Setup Persistent Username
         let username = localStorage.getItem('privacy_chat_username');
-
-        // If it doesn't exist, make a new one and save it permanently in the browser
         if (!username) {
             const randomId = Math.floor(1000 + Math.random() * 9000);
             username = `User-${randomId}`;
             localStorage.setItem('privacy_chat_username', username);
         }
         
-        // Display the persistent username
-        document.getElementById('user-display').textContent = username;
+        // 2. Setup Persistent Name Color
+        let savedColor = localStorage.getItem('privacy_chat_color');
+        if (!savedColor) {
+            savedColor = '#5865f2'; // Default Discord-ish blue
+            localStorage.setItem('privacy_chat_color', savedColor);
+        }
+
+        // Apply saved settings to UI Elements
+        const userDisplay = document.getElementById('user-display');
+        const colorPicker = document.getElementById('name-color');
+        
+        userDisplay.textContent = username;
+        userDisplay.style.color = savedColor;
+        colorPicker.value = savedColor;
+
+        // Listen for color changes and save them instantly
+        colorPicker.addEventListener('input', function(e) {
+            const newColor = e.target.value;
+            userDisplay.style.color = newColor;
+            localStorage.setItem('privacy_chat_color', newColor);
+        });
 
         const form = document.getElementById('input-form');
         const input = document.getElementById('message-input');
@@ -146,23 +185,23 @@
             const messageText = input.value.trim();
             if (messageText === '') return;
 
-            // Display message locally
-            appendMessage(username, messageText);
+            // Get current color right before sending/displaying
+            const currentColor = localStorage.getItem('privacy_chat_color') || '#5865f2';
 
-            // TODO: Connect a privacy-focused WebSocket server here to broadcast to friends:
-            // socket.send(JSON.stringify({ user: username, text: messageText }));
+            // Display message locally
+            appendMessage(username, messageText, currentColor);
 
             input.value = '';
         });
 
-        function appendMessage(user, text) {
+        function appendMessage(user, text, color) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
 
             const usernameSpan = document.createElement('span');
             usernameSpan.classList.add('username');
             usernameSpan.textContent = user;
-            if(user === username) usernameSpan.style.color = "#00b0f4"; // Highlight you
+            usernameSpan.style.color = color; // Applies the saved color custom to the user
 
             const textSpan = document.createElement('span');
             textSpan.classList.add('text');
