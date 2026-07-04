@@ -120,6 +120,12 @@
             font-weight: 600;
             font-size: 14px;
             margin-bottom: 2px;
+            cursor: pointer;
+            width: fit-content;
+        }
+
+        .message .username:hover {
+            text-decoration: underline;
         }
 
         .message .text {
@@ -333,7 +339,7 @@
     <div id="chat-area">
         <div id="chat-header">
             <div class="header-title" id="room-title">Server 1 🌐</div>
-            <div class="history-notice">⚡ Rapid Send Enabled: Slowmode and limit parameters disabled.</div>
+            <div class="history-notice">⚡ Rapid Send Enabled: Click a username to open a direct DM pipeline.</div>
         </div>
         <div id="message-container"></div>
 
@@ -519,7 +525,14 @@
         function bindChannelEvents(channel) {
             channel.bind('client-message', function(data) {
                 if (data.senderCode !== friendCode) {
-                    appendMessage(data.senderName, data.text, data.color);
+                    // Update cache to fix incoming real-time styling conflicts
+                    activeFriendProfiles[data.senderCode] = {
+                        username: data.senderName,
+                        color: data.color
+                    };
+                    
+                    let displayName = nicknames[data.senderCode] || data.senderName;
+                    appendMessage(displayName, data.text, data.color, data.senderCode);
                 }
             });
         }
@@ -562,7 +575,7 @@
                     snapshot.forEach((childSnapshot) => {
                         const data = childSnapshot.val();
                         let displayName = data.senderName;
-                        let displayColor = data.color;
+                        let displayColor = data.color || '#949ba4'; // Safe database color fallback
                         
                         if (nicknames[data.senderCode]) {
                             displayName = nicknames[data.senderCode];
@@ -571,7 +584,7 @@
                             displayColor = activeFriendProfiles[data.senderCode].color;
                         }
                         
-                        silentAppend(displayName, data.text, displayColor);
+                        silentAppend(displayName, data.text, displayColor, data.senderCode);
                     });
                     if (wasAtBottom || !isSilent) {
                         container.scrollTop = container.scrollHeight;
@@ -630,7 +643,7 @@
             }, 5000);
         }
 
-        // --- CUSTOM SERVERS HANDLING (UNLIMITED) ---
+        // --- CUSTOM SERVERS HANDLING ---
         window.joinCustomServer = function() {
             const rawInput = document.getElementById('custom-server-input').value.trim();
             if (!rawInput) return;
@@ -669,10 +682,16 @@
             });
         }
 
-        window.connectToFriend = async function() {
-            let targetCode = document.getElementById('friend-code-input').value.trim().toUpperCase().replace('#', '');
+        // --- CLICK USERNAME TO FRIEND & DIRECT CONSOLE ACCESS PIPELINE ---
+        window.clickUserToFriend = async function(targetCode, targetDefaultName) {
             if (!targetCode || targetCode === friendCode) return;
+            
+            if (confirm(`Do you want to add ${targetDefaultName} (#${targetCode}) to your Private Messages?`)) {
+                await window.executeFriendConnection(targetCode);
+            }
+        };
 
+        window.executeFriendConnection = async function(targetCode) {
             if (!savedDms.includes(targetCode)) {
                 savedDms.push(targetCode);
                 localStorage.setItem('privacy_chat_saved_dms', JSON.stringify(savedDms));
@@ -699,6 +718,13 @@
             const currentLabel = nicknames[targetCode] || initialTargetName;
             
             window.switchChannel(pmChannelID, `DM with ${currentLabel}`, targetBtn);
+        };
+
+        window.connectToFriend = async function() {
+            let targetCode = document.getElementById('friend-code-input').value.trim().toUpperCase().replace('#', '');
+            if (!targetCode || targetCode === friendCode) return;
+            
+            await window.executeFriendConnection(targetCode);
             document.getElementById('friend-code-input').value = '';
         };
 
@@ -770,13 +796,13 @@
             });
         }
 
-        // --- CHAT FORM (SLOWMODE REMOVED) ---
+        // --- CHAT FORM & SEND CONFIGURATION ---
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const messageText = input.value.trim();
             if (messageText === '') return;
 
-            appendMessage(username, messageText, savedColor);
+            appendMessage(username, messageText, savedColor, friendCode);
             input.value = '';
 
             updateStatus("🟡 Uploading stream data...", "#f2a359");
@@ -795,7 +821,7 @@
                     senderName: username,
                     senderCode: friendCode,
                     text: messageText,
-                    color: savedColor,
+                    color: savedColor, // Injects explicit Hex code strings straight into Firebase
                     timestamp: serverTimestamp()
                 });
                 updateStatus("🟢 Message saved securely!", "#23a55a");
@@ -806,7 +832,7 @@
             }
         });
 
-        function silentAppend(user, text, color) {
+        function silentAppend(user, text, color, senderIdCode) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
 
@@ -814,6 +840,11 @@
             usernameSpan.classList.add('username');
             usernameSpan.textContent = user;
             usernameSpan.style.color = color;
+            
+            // Wire interaction logic passing string parameters safely inside inline clicks
+            if (senderIdCode && senderIdCode !== friendCode) {
+                usernameSpan.setAttribute('onclick', `window.clickUserToFriend('${senderIdCode}', '${user.replace(/'/g, "\\'")}')`);
+            }
 
             const textSpan = document.createElement('span');
             textSpan.classList.add('text');
@@ -824,8 +855,8 @@
             container.appendChild(messageDiv);
         }
 
-        function appendMessage(user, text, color) {
-            silentAppend(user, text, color);
+        function appendMessage(user, text, color, senderIdCode) {
+            silentAppend(user, text, color, senderIdCode);
             container.scrollTop = container.scrollHeight;
         }
     </script>
