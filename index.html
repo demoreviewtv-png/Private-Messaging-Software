@@ -153,7 +153,6 @@
             cursor: not-allowed;
         }
 
-        /* Status Indicator Styling */
         #db-status {
             font-size: 11px;
             font-weight: bold;
@@ -283,7 +282,7 @@
         <div>
             <div class="profile-container">
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Friend Code</div>
-                <div id="friend-code-display" style="font-weight: bold; font-size: 15px; color: #fff; font-family: monospace;"></div>
+                <div id="friend-code-display" style="font-weight: bold; font-size: 15px; color: #fff; font-family: monospace;">Loading...</div>
                 
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
                 <div class="username-edit-box">
@@ -308,8 +307,7 @@
             <div class="header-title" id="room-title">Server 1 🌐</div>
             <div class="history-notice">⏳ History Enabled: Messages sent here are saved dynamically to Firebase.</div>
         </div>
-        <div id="message-container">
-            </div>
+        <div id="message-container"></div>
 
         <form id="input-form">
             <input type="text" id="message-input" placeholder="Message" autocomplete="off" maxlength="500">
@@ -346,16 +344,41 @@
         const input = document.getElementById('message-input');
         const statusLabel = document.getElementById('db-status');
 
-        // Update the status bar UI helper
         function updateStatus(text, colorClass = "#949ba4") {
             statusLabel.innerHTML = text;
             statusLabel.style.color = colorClass;
         }
 
-        function initIdentity() {
+        // Helper to generate uppercase alphanumeric strings
+        function generateRandomCode(length = 6) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Omitted similar-looking characters like O, I, 1, 0
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // Checks Firestore to ensure code is not already in use by active chat histories
+        async function checkCodeUniqueness(code) {
+            const q = query(collection(db, "messages"), where("senderCode", "==", code));
+            const snapshot = await getDocs(q);
+            return snapshot.empty;
+        }
+
+        async function initIdentity() {
+            updateStatus("🔵 Assigning credentials...", "#5865f2");
             friendCode = localStorage.getItem('privacy_chat_friend_code');
+            
             if (!friendCode) {
-                friendCode = Math.floor(100000 + Math.random() * 900000).toString();
+                let isUnique = false;
+                let loops = 0;
+                // Keep generating until a unique code is found
+                while (!isUnique && loops < 10) {
+                    friendCode = generateRandomCode(6);
+                    isUnique = await checkCodeUniqueness(friendCode);
+                    loops++;
+                }
                 localStorage.setItem('privacy_chat_friend_code', friendCode);
             }
 
@@ -373,6 +396,7 @@
             colorPicker.value = savedColor;
             
             updateStatus("🟢 Database Ready & Syncing", "#23a55a");
+            loadMessageHistory(currentChannelName);
         }
 
         window.saveUsername = function() {
@@ -397,13 +421,12 @@
             if (confirm("Are you sure you want to change your Friend Code? Old conversation loops will break.")) {
                 localStorage.removeItem('privacy_chat_friend_code');
                 localStorage.removeItem('privacy_chat_username');
+                document.getElementById('friend-code-display').textContent = 'Loading...';
                 initIdentity();
                 switchChannel('server-1', 'Server 1 🌐');
             }
         }
         document.getElementById('reset-id-btn').onclick = window.resetIdentity;
-
-        initIdentity();
 
         colorPicker.addEventListener('input', function(e) {
             savedColor = e.target.value;
@@ -422,7 +445,7 @@
         let currentChannelName = 'server-1';
         let currentSubscription = pusher.subscribe('server-1');
         bindChannelEvents(currentSubscription);
-        loadMessageHistory('server-1');
+        initIdentity();
 
         function bindChannelEvents(channel) {
             channel.bind('client-message', function(data) {
@@ -453,6 +476,7 @@
 
         // --- FIREBASE LIVE HISTORY RETRIEVAL ---
         async function loadMessageHistory(channelName) {
+            if (!friendCode) return; // Prevent raw load sequences before init completion
             container.innerHTML = '<div style="color: #949ba4; font-size: 13px;">Loading history...</div>';
             updateStatus("🔵 Fetching database history...", "#5865f2");
             try {
@@ -477,12 +501,12 @@
             } catch (error) {
                 console.error("Error loading chat history: ", error);
                 container.innerHTML = '<div style="color: #da373c; font-size: 13px;">Error loading data history from Firebase.</div>';
-                updateStatus(`🔴 Firebase Error: ${error.message}. Check Security Rules/Indexes.`, "#da373c");
+                updateStatus(`🔴 Firebase Error: ${error.message}`, "#da373c");
             }
         }
 
         window.connectToFriend = function() {
-            let targetCode = document.getElementById('friend-code-input').value.trim().replace('#', '');
+            let targetCode = document.getElementById('friend-code-input').value.trim().toUpperCase().replace('#', '');
             if (!targetCode || targetCode === friendCode) return;
 
             const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
@@ -510,15 +534,12 @@
             const messageText = input.value.trim();
             if (messageText === '' || input.disabled) return;
 
-            // 1. Show message on screen instantly
             appendMessage(username, messageText, savedColor);
             input.value = '';
             activateSlowmode();
 
-            // 2. Update status to saving
             updateStatus("🟡 Sending message to Firebase storage...", "#f2a359");
 
-            // 3. Broadcast real-time over Apinator
             currentSubscription.trigger('client-message', {
                 senderName: username,
                 senderCode: friendCode,
@@ -526,12 +547,11 @@
                 color: savedColor
             });
 
-            // 4. Save to Firebase
             try {
                 await addDoc(collection(db, "messages"), {
                     channel: currentChannelName,
                     senderName: username,
-                    senderCode: friendCode,
+                    senderCode: friendCode, // Saved securely linked to alphanumeric friend code
                     text: messageText,
                     color: savedColor,
                     timestamp: serverTimestamp()
