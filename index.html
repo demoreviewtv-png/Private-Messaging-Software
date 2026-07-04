@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PrivacyChat</title>
+    <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -93,7 +94,6 @@
             outline: none;
         }
 
-        /* Color Picker Styling */
         .color-picker-wrapper {
             display: flex;
             align-items: center;
@@ -120,7 +120,7 @@
         </div>
         <div>
             <div style="font-size: 13px; margin-bottom: 8px;">Your Saved Anonymous ID:</div>
-            <div id="user-display" style="font-weight: bold; margin-bottom: 10px;"></div>
+            <div id="user-display" style="font-weight: bold; color: #5865f2; margin-bottom: 10px;"></div>
             
             <div class="color-picker-wrapper">
                 <label for="name-color" style="font-size: 13px; color: #949ba4;">Name Color:</label>
@@ -134,8 +134,8 @@
     <div id="chat-area">
         <div id="message-container">
             <div class="message">
-                <span class="username" style="color: #5865f2;">System</span>
-                <span class="text">Welcome back! Your identity and custom color are stored locally on your device.</span>
+                <span class="username" style="color: #23a55a;">System</span>
+                <span class="text">Connected to privacy-lounge. Messages update dynamically via Apinator.</span>
             </div>
         </div>
 
@@ -145,7 +145,7 @@
     </div>
 
     <script>
-        // 1. Setup Persistent Username
+        // Setup Persistent Username
         let username = localStorage.getItem('privacy_chat_username');
         if (!username) {
             const randomId = Math.floor(1000 + Math.random() * 9000);
@@ -153,14 +153,13 @@
             localStorage.setItem('privacy_chat_username', username);
         }
         
-        // 2. Setup Persistent Name Color
+        // Setup Persistent Name Color
         let savedColor = localStorage.getItem('privacy_chat_color');
         if (!savedColor) {
-            savedColor = '#5865f2'; // Default Discord-ish blue
+            savedColor = '#5865f2';
             localStorage.setItem('privacy_chat_color', savedColor);
         }
 
-        // Apply saved settings to UI Elements
         const userDisplay = document.getElementById('user-display');
         const colorPicker = document.getElementById('name-color');
         
@@ -168,11 +167,28 @@
         userDisplay.style.color = savedColor;
         colorPicker.value = savedColor;
 
-        // Listen for color changes and save them instantly
         colorPicker.addEventListener('input', function(e) {
             const newColor = e.target.value;
             userDisplay.style.color = newColor;
             localStorage.setItem('privacy_chat_color', newColor);
+        });
+
+        // --- APINATOR LIVE CONFIGURATION ---
+        const pusher = new Pusher('app_0eb6e0fdc30452b7c1c55f2cc8ba6843052381e4', {
+            cluster: 'us', 
+            wsHost: 'rt.apinator.io',
+            forceTLS: true,
+            enabledTransports: ['ws', 'wss']
+        });
+
+        // Subscribe to a public room name
+        const channel = pusher.subscribe('privacy-lounge');
+
+        // Listen for messages broadcasted by other clients
+        channel.bind('client-message', function(data) {
+            if (data.username !== username) {
+                appendMessage(data.username, data.text, data.color);
+            }
         });
 
         const form = document.getElementById('input-form');
@@ -185,11 +201,17 @@
             const messageText = input.value.trim();
             if (messageText === '') return;
 
-            // Get current color right before sending/displaying
             const currentColor = localStorage.getItem('privacy_chat_color') || '#5865f2';
 
-            // Display message locally
+            // 1. Show the message on your own screen instantly
             appendMessage(username, messageText, currentColor);
+
+            // 2. Broadcast the message to your friends using client events
+            channel.trigger('client-message', {
+                username: username,
+                text: messageText,
+                color: currentColor
+            });
 
             input.value = '';
         });
@@ -201,7 +223,7 @@
             const usernameSpan = document.createElement('span');
             usernameSpan.classList.add('username');
             usernameSpan.textContent = user;
-            usernameSpan.style.color = color; // Applies the saved color custom to the user
+            usernameSpan.style.color = color;
 
             const textSpan = document.createElement('span');
             textSpan.classList.add('text');
