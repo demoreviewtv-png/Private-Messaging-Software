@@ -15,11 +15,10 @@
         body {
             display: flex;
             height: 100vh;
-            background-color: #313338; /* Discord-like dark background */
+            background-color: #313338;
             color: #dbdee1;
         }
 
-        /* Sidebar for Channels / Info */
         #sidebar {
             width: 240px;
             background-color: #2b2d31;
@@ -45,7 +44,6 @@
             text-align: center;
         }
 
-        /* Main Chat Area */
         #chat-area {
             flex: 1;
             display: flex;
@@ -80,7 +78,6 @@
             word-break: break-word;
         }
 
-        /* Input Form */
         #input-form {
             padding: 20px;
             background-color: #313338;
@@ -96,10 +93,6 @@
             font-size: 15px;
             outline: none;
         }
-
-        #message-input::placeholder {
-            color: #949ba4;
-        }
     </style>
 </head>
 <body>
@@ -107,10 +100,10 @@
     <div id="sidebar">
         <div>
             <div class="channel-title"># privacy-lounge</div>
-            <p style="color: #949ba4; font-size: 14px;">An anonymous space with zero IP tracking, logs, or history.</p>
+            <p style="color: #949ba4; font-size: 14px;">An anonymous space with zero IP tracking or server logs.</p>
         </div>
         <div>
-            <div style="font-size: 13px; margin-bottom: 8px;">Your Temporary ID:</div>
+            <div style="font-size: 13px; margin-bottom: 8px;">Your Saved Anonymous ID:</div>
             <div id="user-display" style="font-weight: bold; color: #5865f2; margin-bottom: 15px;"></div>
             <div class="privacy-badge">Zero-Data Mode Active</div>
         </div>
@@ -120,7 +113,7 @@
         <div id="message-container">
             <div class="message">
                 <span class="username" style="color: #5865f2;">System</span>
-                <span class="text">Welcome! Your identity is purely local. No data is stored or tracked.</span>
+                <span class="text">Welcome back! Your identity is stored securely and locally on your device.</span>
             </div>
         </div>
 
@@ -130,46 +123,56 @@
     </div>
 
     <script>
-        // 1. Generate an entirely random identity locally on page load
-        const randomId = Math.floor(1000 + Math.random() * 9000);
-        const username = `User-${randomId}`;
+        // 1. Check if a username already exists in the local browser storage
+        let username = localStorage.getItem('privacy_chat_username');
+
+        // If it doesn't exist, make a new one and save it permanently in the browser
+        if (!username) {
+            const randomId = Math.floor(1000 + Math.random() * 9000);
+            username = `User-${randomId}`;
+            localStorage.setItem('privacy_chat_username', username);
+        }
         
-        // Display the random username in the sidebar
+        // Display the persistent username
         document.getElementById('user-display').textContent = username;
 
         const form = document.getElementById('input-form');
         const input = document.getElementById('message-input');
         const container = document.getElementById('message-container');
 
-        // 2. Handle sending messages locally
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
             const messageText = input.value.trim();
             if (messageText === '') return;
 
-            // Create message HTML element
+            // Display message locally
+            appendMessage(username, messageText);
+
+            // TODO: Connect a privacy-focused WebSocket server here to broadcast to friends:
+            // socket.send(JSON.stringify({ user: username, text: messageText }));
+
+            input.value = '';
+        });
+
+        function appendMessage(user, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
 
             const usernameSpan = document.createElement('span');
             usernameSpan.classList.add('username');
-            usernameSpan.textContent = username;
+            usernameSpan.textContent = user;
+            if(user === username) usernameSpan.style.color = "#00b0f4"; // Highlight you
 
             const textSpan = document.createElement('span');
             textSpan.classList.add('text');
-            textSpan.textContent = messageText;
+            textSpan.textContent = text;
 
             messageDiv.appendChild(usernameSpan);
             messageDiv.appendChild(textSpan);
             container.appendChild(messageDiv);
-
-            // Auto-scroll to the bottom
             container.scrollTop = container.scrollHeight;
-
-            // Clear input box
-            input.value = '';
-        });
+        }
     </script>
 </body>
 </html>
