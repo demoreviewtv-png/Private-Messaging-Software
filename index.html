@@ -305,7 +305,7 @@
     <div id="chat-area">
         <div id="chat-header">
             <div class="header-title" id="room-title">Server 1 🌐</div>
-            <div class="history-notice">⏳ Auto-Sync (2.5s) Active: Messages save and reload dynamically.</div>
+            <div class="history-notice">⏳ Profile Auto-Sync Enabled: Verifying user identities dynamically.</div>
         </div>
         <div id="message-container"></div>
 
@@ -337,6 +337,10 @@
         let friendCode;
         let savedColor;
         let syncInterval = null;
+        let profileInterval = null;
+        
+        // Caches resolved profiles to map friend codes to identities locally
+        let activeFriendProfiles = {}; 
 
         const usernameInput = document.getElementById('username-input');
         const colorPicker = document.getElementById('name-color');
@@ -363,10 +367,23 @@
         async function checkCodeUniqueness(code) {
             try {
                 const dbRef = ref(db);
-                const snapshot = await get(child(dbRef, `used_codes/${code}`));
+                const snapshot = await get(child(dbRef, `profiles/${code}`));
                 return !snapshot.exists();
             } catch (e) {
                 return true;
+            }
+        }
+
+        async function syncProfileToDatabase() {
+            if (!friendCode) return;
+            try {
+                await set(ref(db, `profiles/${friendCode}`), {
+                    username: username,
+                    color: savedColor,
+                    lastSeen: serverTimestamp()
+                });
+            } catch (e) {
+                console.error("Profile sync error: ", e);
             }
         }
 
@@ -383,7 +400,6 @@
                     loops++;
                 }
                 localStorage.setItem('privacy_chat_friend_code', friendCode);
-                await set(ref(db, `used_codes/${friendCode}`), true);
             }
 
             username = localStorage.getItem('privacy_chat_username');
@@ -399,11 +415,13 @@
             usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
             
+            await syncProfileToDatabase();
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
             startAutoSync(currentChannelName);
+            startProfileChecking();
         }
 
-        window.saveUsername = function() {
+        window.saveUsername = async function() {
             const newName = usernameInput.value.trim();
             if (newName === "") {
                 alert("Username cannot be blank!");
@@ -412,6 +430,7 @@
             }
             username = newName;
             localStorage.setItem('privacy_chat_username', username);
+            await syncProfileToDatabase();
             
             usernameInput.blur();
             const saveBtn = document.getElementById('save-username-btn');
@@ -430,10 +449,11 @@
             }
         };
 
-        colorPicker.addEventListener('input', function(e) {
+        colorPicker.addEventListener('input', async function(e) {
             savedColor = e.target.value;
             usernameInput.style.color = savedColor;
             localStorage.setItem('privacy_chat_color', savedColor);
+            await syncProfileToDatabase();
         });
 
         // --- APINATOR LIVE CONFIGURATION ---
@@ -487,8 +507,6 @@
             try {
                 const messageRef = ref(db, `messages/${channelName}`);
                 const snapshot = await get(messageRef);
-                
-                // Read current scroll positioning before rendering
                 const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 40;
                 
                 container.innerHTML = ''; 
@@ -496,7 +514,14 @@
                 if (snapshot.exists()) {
                     snapshot.forEach((childSnapshot) => {
                         const data = childSnapshot.val();
-                        silentAppend(data.senderName, data.text, data.color);
+                        // If profile mapping contains refreshed remote details, use them over archived nodes
+                        let displayName = data.senderName;
+                        let displayColor = data.color;
+                        if (activeFriendProfiles[data.senderCode]) {
+                            displayName = activeFriendProfiles[data.senderCode].username;
+                            displayColor = activeFriendProfiles[data.senderCode].color;
+                        }
+                        silentAppend(displayName, data.text, displayColor);
                     });
                     if (wasAtBottom || !isSilent) {
                         container.scrollTop = container.scrollHeight;
@@ -516,19 +541,71 @@
 
         function startAutoSync(channelName) {
             if (syncInterval) clearInterval(syncInterval);
-            
-            // First initial load is full visible load
             loadMessageHistory(channelName, false);
-            
-            // Background interval cycles checks smoothly every 2500ms
             syncInterval = setInterval(() => {
                 loadMessageHistory(channelName, true);
             }, 2500);
         }
 
-        window.connectToFriend = function() {
+        // --- 5-SECOND BACKGROUND PROFILE IDENTITY SWEEPER ---
+        function startProfileChecking() {
+            if (profileInterval) clearInterval(profileInterval);
+            profileInterval = setInterval(async () => {
+                const checkedCodes = Object.keys(activeFriendProfiles);
+                if (checkedCodes.length === 0) return;
+
+                let profilesChanged = false;
+                for (let code of checkedCodes) {
+                    try {
+                        const profileSnapshot = await get(ref(db, `profiles/${code}`));
+                        if (profileSnapshot.exists()) {
+                            const remoteProfile = profileSnapshot.val();
+                            const cachedProfile = activeFriendProfiles[code];
+                            
+                            if (remoteProfile.username !== cachedProfile.username || remoteProfile.color !== cachedProfile.color) {
+                                activeFriendProfiles[code] = {
+                                    username: remoteProfile.username,
+                                    color: remoteProfile.color
+                                };
+                                profilesChanged = true;
+                                
+                                // Update sidebar private channel labels if they match
+                                const pmChannelID = [friendCode, code].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
+                                let sidebarBtn = document.getElementById(`btn-${pmChannelID}`);
+                                if (sidebarBtn) {
+                                    sidebarBtn.textContent = `💬 ${remoteProfile.username}`;
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Failed executing identity checks: ", err);
+                    }
+                }
+                // If profiles updated, force structural refresh of text views silently
+                if (profilesChanged) {
+                    loadMessageHistory(currentChannelName, true);
+                }
+            }, 5000);
+        }
+
+        window.connectToFriend = async function() {
             let targetCode = document.getElementById('friend-code-input').value.trim().toUpperCase().replace('#', '');
             if (!targetCode || targetCode === friendCode) return;
+
+            // Fetch username mapping details immediately on load connection
+            let initialTargetName = `#${targetCode}`;
+            try {
+                const pSnap = await get(ref(db, `profiles/${targetCode}`));
+                if (pSnap.exists()) {
+                    const pData = pSnap.val();
+                    activeFriendProfiles[targetCode] = { username: pData.username, color: pData.color };
+                    initialTargetName = pData.username;
+                } else {
+                    activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4' };
+                }
+            } catch(e) {
+                activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4' };
+            }
 
             const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
             const pmList = document.getElementById('pm-list');
@@ -538,12 +615,12 @@
                 btn = document.createElement('button');
                 btn.id = `btn-${pmChannelID}`;
                 btn.className = 'nav-btn';
-                btn.textContent = `💬 #${targetCode}`;
-                btn.onclick = function() { window.switchChannel(pmChannelID, `DM with #${targetCode}`, btn); };
+                btn.textContent = `💬 ${initialTargetName}`;
+                btn.onclick = function() { window.switchChannel(pmChannelID, `DM with ${initialTargetName}`, btn); };
                 pmList.appendChild(btn);
             }
             
-            window.switchChannel(pmChannelID, `DM with #${targetCode}`, btn);
+            window.switchChannel(pmChannelID, `DM with ${initialTargetName}`, btn);
             document.getElementById('friend-code-input').value = '';
         };
 
