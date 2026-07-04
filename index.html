@@ -98,7 +98,7 @@
 
         .history-notice {
             font-size: 12px;
-            color: #f2a359;
+            color: #23a55a;
             font-weight: normal;
         }
 
@@ -145,12 +145,6 @@
             color: #dbdee1;
             font-size: 15px;
             outline: none;
-        }
-
-        #message-input:disabled {
-            background-color: #2b2d31;
-            color: #949ba4;
-            cursor: not-allowed;
         }
 
         #db-status {
@@ -301,7 +295,7 @@
             </div>
             
             <div class="pm-input-box">
-                <input type="text" id="custom-server-input" placeholder="Create/Join Server (Max 3)...">
+                <input type="text" id="custom-server-input" placeholder="Create/Join Server...">
                 <button onclick="window.joinCustomServer()">Join</button>
             </div>
 
@@ -339,7 +333,7 @@
     <div id="chat-area">
         <div id="chat-header">
             <div class="header-title" id="room-title">Server 1 🌐</div>
-            <div class="history-notice">⏳ Profile Auto-Sync Enabled: Verifying user identities dynamically.</div>
+            <div class="history-notice">⚡ Rapid Send Enabled: Slowmode and limit parameters disabled.</div>
         </div>
         <div id="message-container"></div>
 
@@ -373,8 +367,8 @@
         let syncInterval = null;
         let profileInterval = null;
         let customServers = [];
-        let savedDms = []; // Track history of active friend codes
-        let nicknames = {}; // Map friend codes to customized labels
+        let savedDms = [];
+        let nicknames = {};
 
         let activeFriendProfiles = {}; 
 
@@ -570,12 +564,9 @@
                         let displayName = data.senderName;
                         let displayColor = data.color;
                         
-                        // Priority 1: Check for a local custom nickname override
                         if (nicknames[data.senderCode]) {
                             displayName = nicknames[data.senderCode];
-                        } 
-                        // Priority 2: Check for dynamic profile updates
-                        else if (activeFriendProfiles[data.senderCode]) {
+                        } else if (activeFriendProfiles[data.senderCode]) {
                             displayName = activeFriendProfiles[data.senderCode].username;
                             displayColor = activeFriendProfiles[data.senderCode].color;
                         }
@@ -639,6 +630,7 @@
             }, 5000);
         }
 
+        // --- CUSTOM SERVERS HANDLING (UNLIMITED) ---
         window.joinCustomServer = function() {
             const rawInput = document.getElementById('custom-server-input').value.trim();
             if (!rawInput) return;
@@ -648,11 +640,6 @@
 
             if (customServers.some(s => s.id === serverID)) {
                 alert("You are already in this server room!");
-                return;
-            }
-
-            if (customServers.length >= 3) {
-                alert("Custom server limit reached! (Max 3 servers allowed).");
                 return;
             }
 
@@ -682,7 +669,6 @@
             });
         }
 
-        // --- DYNAMIC DM & CUSTOM NICKNAME CONFIGURATION ---
         window.connectToFriend = async function() {
             let targetCode = document.getElementById('friend-code-input').value.trim().toUpperCase().replace('#', '');
             if (!targetCode || targetCode === friendCode) return;
@@ -720,7 +706,7 @@
             const existingNick = nicknames[targetCode] || "";
             const newNick = prompt(`Enter a private nickname for #${targetCode}:`, existingNick);
             
-            if (newNick === null) return; // Cancelled
+            if (newNick === null) return;
             
             if (newNick.trim() === "") {
                 delete nicknames[targetCode];
@@ -731,14 +717,12 @@
             localStorage.setItem('privacy_chat_nicknames', JSON.stringify(nicknames));
             rebuildDmList();
             
-            // If viewing this specific channel, update top title banner immediately
             const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
             if (currentChannelName === pmChannelID) {
                 const displayTitle = nicknames[targetCode] || (activeFriendProfiles[targetCode] ? activeFriendProfiles[targetCode].username : `#${targetCode}`);
                 roomTitle.textContent = `DM with ${displayTitle}`;
             }
             
-            // Refresh conversation logs to show the new nickname
             loadMessageHistory(currentChannelName, true);
         };
 
@@ -749,7 +733,6 @@
             savedDms.forEach(targetCode => {
                 const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
                 
-                // Get display name based on nickname or online profile
                 let resolvedLabel = `#${targetCode}`;
                 if (nicknames[targetCode]) {
                     resolvedLabel = nicknames[targetCode];
@@ -781,24 +764,20 @@
                 containerDiv.appendChild(nickBtn);
                 pmList.appendChild(containerDiv);
                 
-                // Ensure active status carries over visually on list redraws
                 if (currentChannelName === pmChannelID) {
                     btn.classList.add('active');
                 }
             });
         }
 
-        // --- CHAT FORM & 10s SLOWMODE LOGIC ---
-        const COOLDOWN_MS = 10000;
-
+        // --- CHAT FORM (SLOWMODE REMOVED) ---
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const messageText = input.value.trim();
-            if (messageText === '' || input.disabled) return;
+            if (messageText === '') return;
 
             appendMessage(username, messageText, savedColor);
             input.value = '';
-            activateSlowmode();
 
             updateStatus("🟡 Uploading stream data...", "#f2a359");
 
@@ -820,30 +799,12 @@
                     timestamp: serverTimestamp()
                 });
                 updateStatus("🟢 Message saved securely!", "#23a55a");
-                setTimeout(() => updateStatus("🟢 Realtime DB Syncing Active", "#23a55a"), 1500);
+                setTimeout(() => updateStatus("🟢 Realtime DB Syncing Active", "#23a55a"), 1000);
             } catch (err) {
                 console.error("Database write failure: ", err);
                 updateStatus(`🔴 Failed to save: ${err.message}`, "#da373c");
             }
         });
-
-        function activateSlowmode() {
-            input.disabled = true;
-            let timeLeft = COOLDOWN_MS / 1000;
-            input.placeholder = `Slowmode active... Wait ${timeLeft.toFixed(1)}s`;
-
-            const interval = setInterval(() => {
-                timeLeft -= 0.1;
-                if (timeLeft <= 0) {
-                    clearInterval(interval);
-                    input.disabled = false;
-                    input.placeholder = "Message";
-                    input.focus();
-                } else {
-                    input.placeholder = `Slowmode active... Wait ${timeLeft.toFixed(1)}s`;
-                }
-            }, 100);
-        }
 
         function silentAppend(user, text, color) {
             const messageDiv = document.createElement('div');
