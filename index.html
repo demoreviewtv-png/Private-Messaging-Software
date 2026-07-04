@@ -268,14 +268,14 @@
             <div class="channel-title">PrivacyChat</div>
             
             <div class="section-title">Servers</div>
-            <button class="nav-btn active" id="btn-server-1" onclick="switchChannel('server-1', 'Server 1 🌐')">🌐 Server 1</button>
-            <button class="nav-btn" id="btn-server-2" onclick="switchChannel('server-2', 'Server 2 🚀')">🚀 Server 2</button>
+            <button class="nav-btn active" id="btn-server-1" onclick="window.switchChannel('server-1', 'Server 1 🌐', this)">🌐 Server 1</button>
+            <button class="nav-btn" id="btn-server-2" onclick="window.switchChannel('server-2', 'Server 2 🚀', this)">🚀 Server 2</button>
 
             <div class="section-title">Private Messages</div>
             <div id="pm-list"></div>
             <div class="pm-input-box">
                 <input type="text" id="friend-code-input" placeholder="Friend Code...">
-                <button onclick="connectToFriend()">Go</button>
+                <button onclick="window.connectToFriend()">Go</button>
             </div>
         </div>
 
@@ -287,10 +287,10 @@
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
                 <div class="username-edit-box">
                     <input type="text" id="username-input" maxlength="20" autocomplete="off">
-                    <button id="save-username-btn">Save</button>
+                    <button id="save-username-btn" onclick="window.saveUsername()">Save</button>
                 </div>
                 
-                <button class="reset-btn" id="reset-id-btn">Reset Friend Code</button>
+                <button class="reset-btn" id="reset-id-btn" onclick="window.resetIdentity()">Reset Friend Code</button>
             </div>
             
             <div class="color-picker-wrapper">
@@ -305,23 +305,25 @@
     <div id="chat-area">
         <div id="chat-header">
             <div class="header-title" id="room-title">Server 1 🌐</div>
-            <div class="history-notice">⏳ History Enabled: Messages are saved to Firebase with optimized performance cache.</div>
+            <div class="history-notice">⏳ Realtime History Enabled: Messages are saved dynamically.</div>
         </div>
         <div id="message-container"></div>
 
         <form id="input-form">
             <input type="text" id="message-input" placeholder="Message" autocomplete="off" maxlength="500">
-            <div id="db-status">🔵 Connecting to database...</div>
+            <div id="db-status">🔵 Connecting to Realtime Database...</div>
         </form>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-        import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, orderBy, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+        import { getDatabase, ref, push, set, get, child, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
             authDomain: "privatems-vercel-app.firebaseapp.com",
+            // Realtime DB requires the official project database URL endpoint
+            databaseURL: "https://privatems-vercel-app-default-rtdb.firebaseio.com",
             projectId: "privatems-vercel-app",
             storageBucket: "privatems-vercel-app.firebasestorage.app",
             messagingSenderId: "259223551478",
@@ -330,13 +332,7 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        
-        // Initialize Firestore with specialized local performance caching
-        const db = initializeFirestore(app, {
-            localCache: persistentLocalCache({
-                tabManager: persistentMultipleTabManager()
-            })
-        });
+        const db = getDatabase(app);
 
         let username;
         let friendCode;
@@ -365,9 +361,13 @@
         }
 
         async function checkCodeUniqueness(code) {
-            const q = query(collection(db, "messages"), where("senderCode", "==", code));
-            const snapshot = await getDocs(q);
-            return snapshot.empty;
+            try {
+                const dbRef = ref(db);
+                const snapshot = await get(child(dbRef, `used_codes/${code}`));
+                return !snapshot.exists();
+            } catch (e) {
+                return true;
+            }
         }
 
         async function initIdentity() {
@@ -383,6 +383,8 @@
                     loops++;
                 }
                 localStorage.setItem('privacy_chat_friend_code', friendCode);
+                // Flag code as taken in realtime tree
+                await set(ref(db, `used_codes/${friendCode}`), true);
             }
 
             username = localStorage.getItem('privacy_chat_username');
@@ -398,7 +400,7 @@
             usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
             
-            updateStatus("🟢 Fast-Cache Ready & Syncing", "#23a55a");
+            updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
             loadMessageHistory(currentChannelName);
         }
 
@@ -417,8 +419,7 @@
             const oldText = saveBtn.textContent;
             saveBtn.textContent = "Saved!";
             setTimeout(() => saveBtn.textContent = oldText, 1500);
-        }
-        document.getElementById('save-username-btn').onclick = window.saveUsername;
+        };
 
         window.resetIdentity = function() {
             if (confirm("Are you sure you want to change your Friend Code? Old conversation loops will break.")) {
@@ -426,10 +427,9 @@
                 localStorage.removeItem('privacy_chat_username');
                 document.getElementById('friend-code-display').textContent = 'Loading...';
                 initIdentity();
-                switchChannel('server-1', 'Server 1 🌐');
+                window.switchChannel('server-1', 'Server 1 🌐');
             }
-        }
-        document.getElementById('reset-id-btn').onclick = window.resetIdentity;
+        };
 
         colorPicker.addEventListener('input', function(e) {
             savedColor = e.target.value;
@@ -475,37 +475,32 @@
             bindChannelEvents(currentSubscription);
 
             loadMessageHistory(targetChannel);
-        }
+        };
 
-        // --- FIREBASE LIVE HISTORY RETRIEVAL ---
+        // --- REALTIME DB HISTORY RETRIEVAL ---
         async function loadMessageHistory(channelName) {
             if (!friendCode) return;
+            container.innerHTML = '<div style="color: #949ba4; font-size: 13px;">Loading history...</div>';
+            updateStatus("🔵 Fetching realtime pipeline history...", "#5865f2");
             
-            // Grabs snapshot using indexed background query rules
             try {
-                const q = query(
-                    collection(db, "messages"),
-                    where("channel", "==", channelName),
-                    orderBy("timestamp", "asc")
-                );
-                
-                // Fetch uses cache rules first before hitting the remote network
-                const querySnapshot = await getDocs(q);
+                const messageRef = ref(db, `messages/${channelName}`);
+                const snapshot = await get(messageRef);
                 container.innerHTML = ''; 
                 
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    appendMessage(data.senderName, data.text, data.color);
-                });
-
-                if(container.children.length === 0) {
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        const data = childSnapshot.val();
+                        appendMessage(data.senderName, data.text, data.color);
+                    });
+                } else {
                     container.innerHTML = `<div style="color: #23a55a; font-size:13px;">No past history found in this room yet. Start typing!</div>`;
                 }
-                updateStatus("🟢 Fast-Cache Ready & Syncing", "#23a55a");
+                updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
             } catch (error) {
                 console.error("Error loading chat history: ", error);
-                container.innerHTML = '<div style="color: #da373c; font-size: 13px;">Error loading data history from Firebase.</div>';
-                updateStatus(`🔴 Firebase Error: ${error.message}`, "#da373c");
+                container.innerHTML = '<div style="color: #da373c; font-size: 13px;">Error loading data history from Realtime Database.</div>';
+                updateStatus(`🔴 DB Error: ${error.message}`, "#da373c");
             }
         }
 
@@ -528,7 +523,7 @@
             
             window.switchChannel(pmChannelID, `DM with #${targetCode}`, btn);
             document.getElementById('friend-code-input').value = '';
-        }
+        };
 
         // --- CHAT FORM & 10s SLOWMODE LOGIC ---
         const COOLDOWN_MS = 10000;
@@ -542,7 +537,7 @@
             input.value = '';
             activateSlowmode();
 
-            updateStatus("🟡 Syncing data pipelines...", "#f2a359");
+            updateStatus("🟡 Uploading stream data...", "#f2a359");
 
             currentSubscription.trigger('client-message', {
                 senderName: username,
@@ -552,8 +547,9 @@
             });
 
             try {
-                await addDoc(collection(db, "messages"), {
-                    channel: currentChannelName,
+                const roomMsgRef = ref(db, `messages/${currentChannelName}`);
+                const newMsgRef = push(roomMsgRef);
+                await set(newMsgRef, {
                     senderName: username,
                     senderCode: friendCode,
                     text: messageText,
@@ -561,9 +557,9 @@
                     timestamp: serverTimestamp()
                 });
                 updateStatus("🟢 Message saved securely!", "#23a55a");
-                setTimeout(() => updateStatus("🟢 Fast-Cache Ready & Syncing", "#23a55a"), 1500);
+                setTimeout(() => updateStatus("🟢 Realtime DB Syncing Active", "#23a55a"), 1500);
             } catch (err) {
-                console.error("Firebase write failure: ", err);
+                console.error("Database write failure: ", err);
                 updateStatus(`🔴 Failed to save: ${err.message}`, "#da373c");
             }
         });
