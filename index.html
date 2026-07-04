@@ -305,7 +305,7 @@
     <div id="chat-area">
         <div id="chat-header">
             <div class="header-title" id="room-title">Server 1 🌐</div>
-            <div class="history-notice">⏳ History Enabled: Messages sent here are saved dynamically to Firebase.</div>
+            <div class="history-notice">⏳ History Enabled: Messages are saved to Firebase with optimized performance cache.</div>
         </div>
         <div id="message-container"></div>
 
@@ -317,7 +317,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, where, orderBy, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+        import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, orderBy, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
@@ -330,7 +330,13 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        
+        // Initialize Firestore with specialized local performance caching
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache({
+                tabManager: persistentMultipleTabManager()
+            })
+        });
 
         let username;
         let friendCode;
@@ -349,9 +355,8 @@
             statusLabel.style.color = colorClass;
         }
 
-        // Helper to generate uppercase alphanumeric strings
         function generateRandomCode(length = 6) {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Omitted similar-looking characters like O, I, 1, 0
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let result = '';
             for (let i = 0; i < length; i++) {
                 result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -359,7 +364,6 @@
             return result;
         }
 
-        // Checks Firestore to ensure code is not already in use by active chat histories
         async function checkCodeUniqueness(code) {
             const q = query(collection(db, "messages"), where("senderCode", "==", code));
             const snapshot = await getDocs(q);
@@ -373,7 +377,6 @@
             if (!friendCode) {
                 let isUnique = false;
                 let loops = 0;
-                // Keep generating until a unique code is found
                 while (!isUnique && loops < 10) {
                     friendCode = generateRandomCode(6);
                     isUnique = await checkCodeUniqueness(friendCode);
@@ -395,7 +398,7 @@
             usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
             
-            updateStatus("🟢 Database Ready & Syncing", "#23a55a");
+            updateStatus("🟢 Fast-Cache Ready & Syncing", "#23a55a");
             loadMessageHistory(currentChannelName);
         }
 
@@ -476,9 +479,9 @@
 
         // --- FIREBASE LIVE HISTORY RETRIEVAL ---
         async function loadMessageHistory(channelName) {
-            if (!friendCode) return; // Prevent raw load sequences before init completion
-            container.innerHTML = '<div style="color: #949ba4; font-size: 13px;">Loading history...</div>';
-            updateStatus("🔵 Fetching database history...", "#5865f2");
+            if (!friendCode) return;
+            
+            // Grabs snapshot using indexed background query rules
             try {
                 const q = query(
                     collection(db, "messages"),
@@ -486,6 +489,7 @@
                     orderBy("timestamp", "asc")
                 );
                 
+                // Fetch uses cache rules first before hitting the remote network
                 const querySnapshot = await getDocs(q);
                 container.innerHTML = ''; 
                 
@@ -497,7 +501,7 @@
                 if(container.children.length === 0) {
                     container.innerHTML = `<div style="color: #23a55a; font-size:13px;">No past history found in this room yet. Start typing!</div>`;
                 }
-                updateStatus("🟢 Database Ready & Syncing", "#23a55a");
+                updateStatus("🟢 Fast-Cache Ready & Syncing", "#23a55a");
             } catch (error) {
                 console.error("Error loading chat history: ", error);
                 container.innerHTML = '<div style="color: #da373c; font-size: 13px;">Error loading data history from Firebase.</div>';
@@ -538,7 +542,7 @@
             input.value = '';
             activateSlowmode();
 
-            updateStatus("🟡 Sending message to Firebase storage...", "#f2a359");
+            updateStatus("🟡 Syncing data pipelines...", "#f2a359");
 
             currentSubscription.trigger('client-message', {
                 senderName: username,
@@ -551,13 +555,13 @@
                 await addDoc(collection(db, "messages"), {
                     channel: currentChannelName,
                     senderName: username,
-                    senderCode: friendCode, // Saved securely linked to alphanumeric friend code
+                    senderCode: friendCode,
                     text: messageText,
                     color: savedColor,
                     timestamp: serverTimestamp()
                 });
                 updateStatus("🟢 Message saved securely!", "#23a55a");
-                setTimeout(() => updateStatus("🟢 Database Ready & Syncing", "#23a55a"), 2000);
+                setTimeout(() => updateStatus("🟢 Fast-Cache Ready & Syncing", "#23a55a"), 1500);
             } catch (err) {
                 console.error("Firebase write failure: ", err);
                 updateStatus(`🔴 Failed to save: ${err.message}`, "#da373c");
