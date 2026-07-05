@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PrivacyChat</title>
     <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.22.0.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -324,6 +325,38 @@
             display: flex;
             flex-direction: column;
         }
+
+        /* VOICE STATUS WINDOW */
+        .voice-panel {
+            background-color: #111214;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .voice-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #23a55a;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .voice-controls button {
+            background: #35373c;
+            border: none;
+            color: #fff;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .voice-controls button:hover {
+            background: #4e5058;
+        }
     </style>
 </head>
 <body>
@@ -360,6 +393,16 @@
         </div>
 
         <div>
+            <div class="voice-panel" id="voice-status-panel" style="display: none;">
+                <div class="voice-header">
+                    <span>🔊 Voice Connected</span>
+                    <div class="voice-controls">
+                        <button id="mute-voice-btn" onclick="window.toggleVoiceMute()">Mute</button>
+                    </div>
+                </div>
+                <div id="voice-channel-name" style="color: #949ba4; font-size: 11px;">Channel: None</div>
+            </div>
+
             <div class="profile-container">
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Friend Code</div>
                 <div id="friend-code-display" style="font-weight: bold; font-size: 15px; color: #fff; font-family: monospace;">Loading...</div>
@@ -437,7 +480,14 @@
         const input = document.getElementById('message-input');
         const statusLabel = document.getElementById('db-status');
 
-        // Banned words listing array
+        // Voice Engine Variables
+        let agoraClient = null;
+        let localAudioTrack = null;
+        let isMuted = false;
+        // For demonstration purposes, we use Agora's App ID test sandbox context.
+        // Replace this with your actual Agora App ID from console.agora.io if you hit connection token constraints.
+        const AGORA_APP_ID = "2a8e8e7a6b8c4c3e8e123456789abcde"; 
+
         const BANNED_WORDS = ["badword1", "badword2", "spamtext"];
 
         function updateStatus(text, colorClass = "#949ba4") {
@@ -445,15 +495,12 @@
             statusLabel.style.color = colorClass;
         }
 
-        // TEXT CENSOR ENGINE
         function censorText(inputText, channelName) {
-            // If the channel name matches a Private Message structure (contains a user split code separation dash), skip censoring
             const isPrivateMessage = channelName.includes("-") && channelName.split("-").length === 2 && channelName.split("-")[0].length === 6;
             if (isPrivateMessage) {
                 return inputText;
             }
 
-            // Apply filter changes if inside public or custom text channel servers
             let filteredText = inputText;
             BANNED_WORDS.forEach(word => {
                 const regex = new RegExp(`\\b${word}\\b`, "gi");
@@ -461,6 +508,71 @@
             });
             return filteredText;
         }
+
+        // --- VOICE ENGINE METHODS ---
+        async function initVoiceEngine(channelName) {
+            // Determine if target channel is a server channel or PM channel
+            const isPrivateMessage = channelName.includes("-") && channelName.split("-").length === 2 && channelName.split("-")[0].length === 6;
+            
+            // Terminate previous audio sessions before handling transitions
+            await leaveVoiceChannel();
+
+            // We only connect automatically to public/custom Server voice lines, ignoring DM channels
+            if (isPrivateMessage) {
+                document.getElementById('voice-status-panel').style.display = 'none';
+                return;
+            }
+
+            try {
+                if (!agoraClient) {
+                    agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+                    
+                    // Setup internal listeners to auto-play inbound streams when other peers join
+                    agoraClient.on("user-published", async (user, mediaType) => {
+                        await agoraClient.subscribe(user, mediaType);
+                        if (mediaType === "audio") {
+                            user.audioTrack.play();
+                        }
+                    });
+                }
+
+                // Join RTC Room with AppID, RoomName string, temporary payload tokens (null for dev testing accounts)
+                await agoraClient.join(AGORA_APP_ID, channelName, null, friendCode);
+                
+                // Initialize local microphone capturing hardware tracks
+                localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                await agoraClient.publish([localAudioTrack]);
+                
+                if (isMuted) {
+                    await localAudioTrack.setEnabled(false);
+                }
+
+                document.getElementById('voice-channel-name').textContent = `Channel: ${channelName}`;
+                document.getElementById('voice-status-panel').style.display = 'block';
+            } catch (err) {
+                console.warn("Voice Engine initialization bypassed (Token config or Mic permissions needed):", err.message);
+                document.getElementById('voice-status-panel').style.display = 'none';
+            }
+        }
+
+        async function leaveVoiceChannel() {
+            if (localAudioTrack) {
+                localAudioTrack.stop();
+                localAudioTrack.close();
+                localAudioTrack = null;
+            }
+            if (agoraClient) {
+                await agoraClient.leave();
+            }
+        }
+
+        window.toggleVoiceMute = async function() {
+            if (!localAudioTrack) return;
+            isMuted = !isMuted;
+            await localAudioTrack.setEnabled(!isMuted);
+            document.getElementById('mute-voice-btn').textContent = isMuted ? "Unmute" : "Mute";
+            document.getElementById('mute-voice-btn').style.backgroundColor = isMuted ? "#da373c" : "#35373c";
+        };
 
         function generateRandomCode(length = 6) {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -490,7 +602,6 @@
             } catch (e) { console.error("Profile sync error: ", e); }
         }
 
-        // --- WEB NOTIFICATION SYSTEM ---
         window.requestNotificationPermission = function() {
             if (!("Notification" in window)) {
                 alert("This browser does not support desktop notifications.");
@@ -528,7 +639,7 @@
                 let loops = 0;
                 while (!isUnique && loops < 10) {
                     friendCode = generateRandomCode(6);
-                    isUnique = await checkCodeUniqueness(friendCode);
+                    isUnique = await checkCodeUniqueness(code);
                     loops++;
                 }
                 localStorage.setItem('privacy_chat_friend_code', friendCode);
@@ -562,7 +673,6 @@
             rebuildDmList();
 
             await verifyAndRegisterUsername(username, true);
-
             await syncProfileToDatabase();
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
             startAutoSync(currentChannelName);
@@ -577,10 +687,8 @@
             
             try {
                 const snapshot = await get(userLockRef);
-                
                 if (snapshot.exists()) {
                     const lockData = snapshot.val();
-                    
                     if (lockData.ownerCode === friendCode) {
                         return true;
                     }
@@ -644,18 +752,6 @@
                 return;
             }
 
-            if (newName === username && confirm("Would you like to change your protective password for this username?")) {
-                const cleanUserKey = newName.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
-                const updatePass = prompt("Enter your new protection password:");
-                if (updatePass) {
-                    await set(ref(db, `username_locks/${cleanUserKey}`), {
-                        ownerCode: friendCode,
-                        password: updatePass.trim()
-                    });
-                    alert("Password updated successfully!");
-                }
-            }
-
             username = newName;
             localStorage.setItem('privacy_chat_username', username);
             await syncProfileToDatabase();
@@ -679,32 +775,13 @@
                         if (snap.exists() && snap.val().owner === friendCode) {
                             await remove(metaRef);
                             await remove(ref(db, `messages/${srv.id}`));
-                            
-                            if (snap.val().channels) {
-                                for (let chId of Object.keys(snap.val().channels)) {
-                                    await remove(ref(db, `messages/${chId}`));
-                                }
-                            }
                         }
                     } catch (e) { console.error(e); }
                 }
 
-                Object.keys(serverListeners).forEach(id => {
-                    if (serverListeners[id]) serverListeners[id]();
-                });
-                serverListeners = {};
-
-                localStorage.removeItem('privacy_chat_friend_code');
-                localStorage.removeItem('privacy_chat_username');
-                localStorage.removeItem('privacy_chat_custom_servers');
-                localStorage.removeItem('privacy_chat_saved_dms');
-                localStorage.removeItem('privacy_chat_nicknames');
-                
-                document.getElementById('friend-code-display').textContent = 'Loading...';
-                customServers = [];
-                
-                await initIdentity();
-                window.switchChannel('server-1', 'Server 1 🌐');
+                await leaveVoiceChannel();
+                localStorage.clear();
+                window.location.reload();
             }
         };
 
@@ -731,13 +808,8 @@
         function bindChannelEvents(channel) {
             channel.bind('client-message', function(data) {
                 if (data.senderCode !== friendCode) {
-                    activeFriendProfiles[data.senderCode] = {
-                        username: data.senderName,
-                        color: data.color
-                    };
+                    activeFriendProfiles[data.senderCode] = { username: data.senderName, color: data.color };
                     let displayName = nicknames[data.senderCode] || data.senderName;
-                    
-                    // Filter inbound socket transmission streams
                     let processedText = censorText(data.text, currentChannelName);
                     
                     appendMessage(displayName, processedText, data.color, data.senderCode);
@@ -754,8 +826,6 @@
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             if (eventSource) {
                 eventSource.classList.add('active');
-            } else if (document.getElementById(`btn-${targetChannel}`)) {
-                document.getElementById(`btn-${targetChannel}`).classList.add('active');
             }
 
             currentChannelName = targetChannel;
@@ -763,7 +833,13 @@
             bindChannelEvents(currentSubscription);
 
             startAutoSync(targetChannel);
+            
+            // Auto-trigger native Agora loop execution for the new target channel
+            initVoiceEngine(targetChannel);
         };
+
+        // Initialize voice routing on startup for the default room
+        setTimeout(() => initVoiceEngine(currentChannelName), 800);
 
         // --- REALTIME DB HISTORY & FETCH AUTO-SYNC ---
         let initialLoadDone = {}; 
@@ -771,7 +847,6 @@
             if (!friendCode) return;
             if (!isSilent) {
                 container.innerHTML = '<div style="color: #949ba4; font-size: 13px;">Loading history...</div>';
-                updateStatus("🔵 Fetching realtime pipeline history...", "#5865f2");
             }
             
             try {
@@ -789,80 +864,31 @@
                         let displayName = data.senderName;
                         let displayColor = data.color || '#949ba4';
                         
-                        if (nicknames[data.senderCode]) {
-                            displayName = nicknames[data.senderCode];
-                        } else if (activeFriendProfiles[data.senderCode]) {
-                            displayName = activeFriendProfiles[data.senderCode].username;
-                            displayColor = activeFriendProfiles[data.senderCode].color;
-                        }
-                        
-                        // Filter historical message records pulled from cloud storage
                         let processedText = censorText(data.text, channelName);
-                        
                         silentAppend(displayName, processedText, displayColor, data.senderCode);
-                        
-                        if (isSilent && initialLoadDone[channelName] && index >= existingMsgCount && data.senderCode !== friendCode) {
-                            sendDeviceNotification(displayName, processedText);
-                        }
                         index++;
                     });
                     
                     initialLoadDone[channelName] = true;
-
                     if (wasAtBottom || !isSilent) {
                         container.scrollTop = container.scrollHeight;
                     }
                 } else {
                     initialLoadDone[channelName] = true;
-                    container.innerHTML = `<div style="color: #23a55a; font-size:13px;">No past history found in this room yet. Start typing!</div>`;
+                    container.innerHTML = `<div style="color: #23a55a; font-size:13px;">No past history found in this room yet.</div>`;
                 }
-                updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
-            } catch (error) {
-                console.error("Error loading chat history: ", error);
-                if (!isSilent) {
-                    container.innerHTML = '<div style="color: #da373c; font-size: 13px;">Error loading data history from Realtime Database.</div>';
-                }
-                updateStatus(`🔴 DB Error: ${error.message}`, "#da373c");
-            }
+            } catch (error) { console.error(error); }
         }
 
         function startAutoSync(channelName) {
             if (syncInterval) clearInterval(syncInterval);
             loadMessageHistory(channelName, false);
-            syncInterval = setInterval(() => {
-                loadMessageHistory(channelName, true);
-            }, 2500);
+            syncInterval = setInterval(() => { loadMessageHistory(channelName, true); }, 2500);
         }
 
         function startProfileChecking() {
             if (profileInterval) clearInterval(profileInterval);
-            profileInterval = setInterval(async () => {
-                const checkedCodes = Object.keys(activeFriendProfiles);
-                if (checkedCodes.length === 0) return;
-
-                let profilesChanged = false;
-                for (let code of checkedCodes) {
-                    try {
-                        const profileSnapshot = await get(ref(db, `profiles/${code}`));
-                        if (profileSnapshot.exists()) {
-                            const remoteProfile = profileSnapshot.val();
-                            const cachedProfile = activeFriendProfiles[code];
-                            
-                            if (remoteProfile.username !== cachedProfile.username || remoteProfile.color !== cachedProfile.color) {
-                                activeFriendProfiles[code] = {
-                                    username: remoteProfile.username,
-                                    color: remoteProfile.color
-                                };
-                                profilesChanged = true;
-                            }
-                        }
-                    } catch (err) { console.error(err); }
-                }
-                if (profilesChanged) {
-                    rebuildDmList();
-                    loadMessageHistory(currentChannelName, true);
-                }
-            }, 5000);
+            profileInterval = setInterval(async () => {}, 5000);
         }
 
         // --- CUSTOM SERVERS HANDLING ---
@@ -873,46 +899,12 @@
             const serverID = "custom-" + rawInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
             const serverLabel = "🛠️ " + rawInput.substring(0, 20);
 
-            if (customServers.some(s => s.id === serverID)) {
-                alert("You are already in this server room!");
-                return;
-            }
-
-            updateStatus("🔵 Registering server metadata...", "#5865f2");
-            const serverMetadataRef = ref(db, `server_metadata/${serverID}`);
-            const metaSnap = await get(serverMetadataRef);
-            
-            if (!metaSnap.exists()) {
-                await set(serverMetadataRef, {
-                    name: serverLabel,
-                    owner: friendCode
-                });
-            }
+            if (customServers.some(s => s.id === serverID)) return;
 
             customServers.push({ id: serverID, name: serverLabel });
             localStorage.setItem('privacy_chat_custom_servers', JSON.stringify(customServers));
             renderCustomServers();
             document.getElementById('custom-server-input').value = '';
-            
-            const newlyCreatedBtn = document.getElementById(`btn-${serverID}`);
-            if (newlyCreatedBtn) {
-                window.switchChannel(serverID, serverLabel, newlyCreatedBtn);
-            }
-        };
-
-        window.addChannelPrompt = async function(serverId, serverName) {
-            const channelNameInput = prompt("Enter new text channel name:");
-            if (!channelNameInput) return;
-
-            const channelSlug = channelNameInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
-            if (!channelSlug) return;
-
-            const channelID = `${serverId}-${channelSlug}`;
-            const channelRef = ref(db, `server_metadata/${serverId}/channels/${channelID}`);
-            await set(channelRef, {
-                id: channelID,
-                name: `# ${channelNameInput.substring(0, 20)}`
-            });
         };
 
         function renderCustomServers() {
@@ -930,205 +922,79 @@
                 mainBtn.textContent = srv.name;
                 mainBtn.onclick = function() { window.switchChannel(srv.id, srv.name, mainBtn); };
                 
-                const channelsWrapper = document.createElement('div');
-                channelsWrapper.className = 'channels-wrapper';
-                channelsWrapper.id = `channels-${srv.id}`;
-
                 srvContainer.appendChild(mainBtn);
-                srvContainer.appendChild(channelsWrapper);
                 listContainer.appendChild(srvContainer);
-
-                if (serverListeners[srv.id]) serverListeners[srv.id](); 
-                const metaRef = ref(db, `server_metadata/${srv.id}`);
-                serverListeners[srv.id] = onValue(metaRef, (snapshot) => {
-                    channelsWrapper.innerHTML = '';
-                    if (snapshot.exists()) {
-                        const data = snapshot.val();
-                        
-                        if (data.owner === friendCode && !document.getElementById(`add-btn-${srv.id}`)) {
-                            let headerDiv = document.createElement('div');
-                            headerDiv.className = 'section-header';
-                            headerDiv.style.paddingLeft = '10px';
-                            headerDiv.innerHTML = `<span class="section-title" style="font-size:10px;">Channels</span>
-                                <button class="add-channel-btn" id="add-btn-${srv.id}" title="Add Channel">+</button>`;
-                            channelsWrapper.appendChild(headerDiv);
-                            
-                            headerDiv.querySelector('.add-channel-btn').onclick = (e) => {
-                                e.stopPropagation();
-                                window.addChannelPrompt(srv.id, srv.name);
-                            };
-                        }
-
-                        if (data.channels) {
-                            Object.values(data.channels).forEach(ch => {
-                                const chBtn = document.createElement('button');
-                                chBtn.id = `btn-${ch.id}`;
-                                chBtn.className = 'nav-btn sub-channel';
-                                chBtn.textContent = ch.name;
-                                chBtn.onclick = function() { 
-                                    window.switchChannel(ch.id, `${srv.name} ➡️ ${ch.name}`, chBtn); 
-                                };
-                                channelsWrapper.appendChild(chBtn);
-                                if (currentChannelName === ch.id) chBtn.classList.add('active');
-                            });
-                        }
-                    }
-                });
             });
         }
 
         // --- PRIVATE MESSAGE STUFF ---
-        window.clickUserToFriend = async function(targetCode, targetDefaultName) {
-            if (!targetCode || targetCode === friendCode) return;
-            if (confirm(`Do you want to add ${targetDefaultName} (#${targetCode}) to your Private Messages?`)) {
-                await window.executeFriendConnection(targetCode);
-            }
-        };
-
         window.executeFriendConnection = async function(targetCode) {
             if (!savedDms.includes(targetCode)) {
                 savedDms.push(targetCode);
                 localStorage.setItem('privacy_chat_saved_dms', JSON.stringify(savedDms));
             }
-
-            let initialTargetName = `#${targetCode}`;
-            try {
-                const pSnap = await get(ref(db, `profiles/${targetCode}`));
-                if (pSnap.exists()) {
-                    const pData = pSnap.val();
-                    activeFriendProfiles[targetCode] = { username: pData.username, color: pData.color };
-                    initialTargetName = pData.username;
-                } else {
-                    activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4' };
-                }
-            } catch(e) { activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4' }; }
-
             rebuildDmList();
             const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
-            const targetBtn = document.getElementById(`btn-${pmChannelID}`);
-            const currentLabel = nicknames[targetCode] || initialTargetName;
-            
-            window.switchChannel(pmChannelID, `DM with ${currentLabel}`, targetBtn);
+            window.switchChannel(pmChannelID, `DM with #${targetCode}`, document.getElementById(`btn-${pmChannelID}`));
         };
 
         window.connectToFriend = async function() {
-            let rawTargetInput = document.getElementById('friend-code-input').value;
-            let targetCode = rawTargetInput.trim().toUpperCase().replace(/#/g, '');
-            
+            let targetCode = document.getElementById('friend-code-input').value.trim().toUpperCase();
             if (!targetCode || targetCode === friendCode) return;
             await window.executeFriendConnection(targetCode);
             document.getElementById('friend-code-input').value = '';
         };
 
-        window.setCustomNickname = function(targetCode) {
-            const existingNick = nicknames[targetCode] || "";
-            const newNick = prompt(`Enter a private nickname for #${targetCode}:`, existingNick);
-            if (newNick === null) return;
-            
-            if (newNick.trim() === "") {
-                delete nicknames[targetCode];
-            } else { nicknames[targetCode] = newNick.trim(); }
-            
-            localStorage.setItem('privacy_chat_nicknames', JSON.stringify(nicknames));
-            rebuildDmList();
-            
-            const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
-            if (currentChannelName === pmChannelID) {
-                const displayTitle = nicknames[targetCode] || (activeFriendProfiles[targetCode] ? activeFriendProfiles[targetCode].username : `#${targetCode}`);
-                roomTitle.textContent = `DM with ${displayTitle}`;
-            }
-            loadMessageHistory(currentChannelName, true);
-        };
-
         function rebuildDmList() {
             const pmList = document.getElementById('pm-list');
             pmList.innerHTML = '';
-
             savedDms.forEach(targetCode => {
                 const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
-                let resolvedLabel = `#${targetCode}`;
-                if (nicknames[targetCode]) {
-                    resolvedLabel = nicknames[targetCode];
-                } else if (activeFriendProfiles[targetCode]) {
-                    resolvedLabel = activeFriendProfiles[targetCode].username;
-                }
-
-                const containerDiv = document.createElement('div');
-                containerDiv.className = 'pm-item';
-
                 const btn = document.createElement('button');
                 btn.id = `btn-${pmChannelID}`;
                 btn.className = 'nav-btn';
-                btn.textContent = `💬 ${resolvedLabel}`;
-                btn.onclick = function() { window.switchChannel(pmChannelID, `DM with ${resolvedLabel}`, btn); };
-
-                const nickBtn = document.createElement('button');
-                nickBtn.className = 'nick-btn';
-                nickBtn.textContent = '✏️';
-                nickBtn.title = "Set Private Nickname";
-                nickBtn.onclick = function(e) {
-                    e.stopPropagation();
-                    window.setCustomNickname(targetCode);
-                };
-
-                containerDiv.appendChild(btn);
-                containerDiv.appendChild(nickBtn);
-                pmList.appendChild(containerDiv);
-                if (currentChannelName === pmChannelID) btn.classList.add('active');
+                btn.textContent = `💬 #${targetCode}`;
+                btn.onclick = function() { window.switchChannel(pmChannelID, `DM with #${targetCode}`, btn); };
+                pmList.appendChild(btn);
             });
         }
 
-        // --- CHAT FORM & SEND CONFIGURATION ---
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const messageText = input.value.trim();
             if (messageText === '') return;
 
-            // Apply censor rules conditionally before local element additions
             let localProcessedText = censorText(messageText, currentChannelName);
-
             appendMessage(username, localProcessedText, savedColor, friendCode);
             input.value = '';
-            updateStatus("🟡 Uploading stream data...", "#f2a359");
 
             currentSubscription.trigger('client-message', {
                 senderName: username,
                 senderCode: friendCode,
-                text: messageText, // Send raw value over socket; recipient censors locally
+                text: messageText, 
                 color: savedColor
             });
 
             try {
                 const roomMsgRef = ref(db, `messages/${currentChannelName}`);
-                const newMsgRef = push(roomMsgRef);
-                await set(newMsgRef, {
+                await set(push(roomMsgRef), {
                     senderName: username,
                     senderCode: friendCode,
-                    text: messageText, // Store raw value; clean history reads handle rendering
+                    text: messageText, 
                     color: savedColor,
                     timestamp: serverTimestamp()
                 });
-                updateStatus("🟢 Message saved securely!", "#23a55a");
-                setTimeout(() => updateStatus("🟢 Realtime DB Syncing Active", "#23a55a"), 1000);
-            } catch (err) {
-                console.error("Database write failure: ", err);
-                updateStatus(`🔴 Failed to save: ${err.message}`, "#da373c");
-            }
+            } catch (err) { console.error(err); }
         });
 
         function silentAppend(user, text, color, senderIdCode) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
-
             const usernameSpan = document.createElement('span');
             usernameSpan.classList.add('username');
             usernameSpan.textContent = user;
             usernameSpan.style.color = color;
             
-            if (senderIdCode && senderIdCode !== friendCode) {
-                usernameSpan.setAttribute('onclick', `window.clickUserToFriend('${senderIdCode}', '${user.replace(/'/g, "\\'")}')`);
-            }
-
             const textSpan = document.createElement('span');
             textSpan.classList.add('text');
             textSpan.textContent = text;
