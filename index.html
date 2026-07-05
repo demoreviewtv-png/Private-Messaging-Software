@@ -558,7 +558,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-        import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, off, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+        import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, onChildRemoved, off, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
@@ -578,6 +578,7 @@
         
         let databaseListeners = [];
         let messageListenerRef = null;
+        let messageRemovedListenerRef = null;
 
         let microphoneActive = true;
         let screenShareActive = false;
@@ -752,14 +753,12 @@
             icon.textContent = '🔊';
             box.appendChild(icon);
 
-            // Audio track listener
             const audio = document.createElement('audio');
             audio.autoplay = true;
             audio.controls = false;
             audio.srcObject = stream;
             box.appendChild(audio);
 
-            // Fallback video player logic
             const video = document.createElement('video');
             video.autoplay = true;
             video.playsInline = true;
@@ -988,6 +987,14 @@
             startFirebaseListener(currentChannelName);
             startProfileChecking();
 
+            setInterval(async () => {
+                if (friendCode) {
+                    await update(ref(db, `profiles/${friendCode}`), {
+                        lastSeen: serverTimestamp()
+                    });
+                }
+            }, 3000);
+
             window.addEventListener('beforeunload', () => { window.leaveVoiceChannel(); });
         }
 
@@ -1146,27 +1153,76 @@
         };
 
         function startFirebaseListener(channelName) {
-            if (messageListenerRef) {
-                off(messageListenerRef);
-            }
+            if (messageListenerRef) off(messageListenerRef);
+            if (messageRemovedListenerRef) off(messageRemovedListenerRef);
             
             container.innerHTML = '';
             messageListenerRef = ref(db, `messages/${channelName}`);
+            messageRemovedListenerRef = ref(db, `messages/${channelName}`);
             
             onChildAdded(messageListenerRef, (snapshot) => {
                 const data = snapshot.val();
                 let displayName = nicknames[data.senderCode] || data.senderName;
                 let displayColor = data.color || '#949ba4';
                 let processedText = censorText(data.text, channelName);
-                appendMessage(displayName, processedText, displayColor, data.senderCode);
+                appendMessage(displayName, processedText, displayColor, data.senderCode, snapshot.key);
+            });
+
+            onChildRemoved(messageRemovedListenerRef, (snapshot) => {
+                const staleMessageEl = document.getElementById(`msg-${snapshot.key}`);
+                if (staleMessageEl) staleMessageEl.remove();
             });
         }
 
         function startProfileChecking() {
             if (profileInterval) clearInterval(profileInterval);
+            
             profileInterval = setInterval(async () => {
                 rebuildDmList();
-            }, 5000);
+                
+                if (!currentVoiceRoomId) return;
+                const now = Date.now();
+                const fallbackCutoff = 8000;
+
+                try {
+                    const profilesSnap = await get(ref(db, 'profiles'));
+                    if (!profilesSnap.exists()) return;
+                    const allProfiles = profilesSnap.val();
+
+                    const presenceSnap = await get(ref(db, `voice_presence/${currentVoiceRoomId}`));
+                    if (!presenceSnap.exists()) return;
+                    const presenceUsers = presenceSnap.val();
+
+                    for (let peerCode in presenceUsers) {
+                        if (peerCode === friendCode) continue;
+
+                        const profile = allProfiles[peerCode];
+                        if (!profile || !profile.lastSeen || (now - profile.lastSeen) > fallbackCutoff) {
+                            if (peerConnections[peerCode]) {
+                                peerConnections[peerCode].close();
+                                delete peerConnections[peerCode];
+                            }
+
+                            const targetBox = document.getElementById(`video-box-${peerCode}`);
+                            if (targetBox) targetBox.remove();
+
+                            await remove(ref(db, `voice_presence/${currentVoiceRoomId}/${peerCode}`));
+                            await remove(ref(db, `voice_signaling/${currentVoiceRoomId}/${peerCode}`));
+
+                            const messagesSnap = await get(ref(db, `messages/${currentChannelName}`));
+                            if (messagesSnap.exists()) {
+                                messagesSnap.forEach((msgChild) => {
+                                    if (msgChild.val().senderCode === peerCode) {
+                                        remove(msgChild.ref);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }, 4000);
         }
 
         window.joinCustomServer = async function() {
@@ -1380,9 +1436,11 @@
             } catch (err) { console.error(err); }
         });
 
-        function appendMessage(user, text, color, senderIdCode) {
+        function appendMessage(user, text, color, senderIdCode, msgKey = null) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
+            if (msgKey) messageDiv.id = `msg-${msgKey}`;
+            
             messageDiv.innerHTML = `<span class="username" style="color:${color}">${user}</span><span class="text"></span>`;
             messageDiv.querySelector('.text').textContent = text;
             if (senderIdCode && senderIdCode !== friendCode) {
