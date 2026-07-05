@@ -621,7 +621,6 @@
                 updateStatus("🎙️ Init Peer Streaming Media...", "#5865f2");
                 activeVoiceRoomId = voiceRoomId;
                 
-                // ONLY requesting audio now. Camera hardware requirements removed entirely.
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 
                 document.getElementById('local-media-element').srcObject = localStream;
@@ -687,7 +686,9 @@
             const pc = new RTCPeerConnection(iceServersConfig);
             peerConnections[peerCode] = pc;
 
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            if (localStream) {
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            }
             if (screenShareStream) {
                 screenShareStream.getVideoTracks().forEach(track => pc.addTrack(track, screenShareStream));
             }
@@ -814,6 +815,11 @@
                     screenShareStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                     const screenTrack = screenShareStream.getVideoTracks()[0];
                     
+                    // Attach microphone track safely alongside screen track
+                    if (localStream.getAudioTracks().length > 0) {
+                        screenShareStream.addTrack(localStream.getAudioTracks()[0]);
+                    }
+
                     Object.values(peerConnections).forEach(pc => {
                         const senders = pc.getSenders();
                         const videoSender = senders.find(s => s.track && s.track.kind === 'video');
