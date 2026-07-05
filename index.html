@@ -373,7 +373,7 @@
 
         .voice-media-actions {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 6px;
         }
 
@@ -494,7 +494,6 @@
                 </div>
                 <div class="voice-media-actions">
                     <button class="media-toggle-btn active-state" id="toggle-mic-btn" onclick="window.toggleMicrophone()">🎙️ Mic On</button>
-                    <button class="media-toggle-btn" id="toggle-camera-btn" onclick="window.toggleVideoFeed()">📷 Camera</button>
                     <button class="media-toggle-btn" id="toggle-screen-btn" onclick="window.toggleScreenShare()">🖥️ Screen</button>
                 </div>
             </div>
@@ -536,7 +535,7 @@
                 <video id="local-media-element" autoplay playsinline muted></video>
                 <div class="video-label">You</div>
             </div>
-            </div>
+        </div>
 
         <div id="message-container"></div>
 
@@ -566,15 +565,14 @@
 
         const iceServersConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
         
-        // Peer Mesh Maps
         let peerConnections = {};
         let remoteStreams = {};
         let databaseListeners = [];
 
         let localStream = null;
+        let screenShareStream = null;
         let activeVoiceRoomId = null;
         let microphoneActive = true;
-        let cameraActive = false;
         let screenShareActive = false;
 
         let username;
@@ -616,7 +614,6 @@
             return filteredText;
         }
 
-        // --- MULTI-USER DYNAMIC MESH SIGNALING LOOP ---
         window.joinVoiceChannel = async function(voiceRoomId, displayName) {
             if (activeVoiceRoomId) await window.leaveVoiceChannel();
             
@@ -624,9 +621,8 @@
                 updateStatus("🎙️ Init Peer Streaming Media...", "#5865f2");
                 activeVoiceRoomId = voiceRoomId;
                 
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-                // Hide video tracks globally unless explicitly activated via buttons
-                localStream.getVideoTracks().forEach(t => t.enabled = false);
+                // ONLY requesting audio now. Camera hardware requirements removed entirely.
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 
                 document.getElementById('local-media-element').srcObject = localStream;
                 document.getElementById('video-streams-panel').style.display = "flex";
@@ -635,19 +631,16 @@
 
                 const roomPresenceRef = ref(db, `voice_presence/${voiceRoomId}`);
                 
-                // Write our metadata to room list to trigger other connections
                 await set(ref(db, `voice_presence/${voiceRoomId}/${friendCode}`), { 
                     username: username, 
                     joinedAt: serverTimestamp() 
                 });
 
-                // Listen for other participants arriving
                 const incomingPresenceListener = onValue(roomPresenceRef, (snapshot) => {
                     if (!snapshot.exists()) return;
                     snapshot.forEach((childSnap) => {
                         const targetPeerCode = childSnap.key;
                         if (targetPeerCode !== friendCode && !peerConnections[targetPeerCode]) {
-                            // If our Friend Code is alphabetically lower, we act as the Call Initiator
                             const isInitiator = friendCode < targetPeerCode;
                             initiatePeerConnection(voiceRoomId, targetPeerCode, childSnap.val().username, isInitiator);
                         }
@@ -655,7 +648,6 @@
                 });
                 databaseListeners.push({ ref: roomPresenceRef, listener: incomingPresenceListener });
 
-                // Listen for structural signalling handshakes targetted explicitly at us
                 const signalsRef = ref(db, `webrtc_mesh/${voiceRoomId}/${friendCode}`);
                 const signalingListener = onChildAdded(signalsRef, async (snapshot) => {
                     const signal = snapshot.val();
@@ -678,17 +670,15 @@
                 databaseListeners.push({ ref: signalsRef, listener: signalingListener });
 
                 microphoneActive = true;
-                cameraActive = false;
                 screenShareActive = false;
                 document.getElementById('toggle-mic-btn').className = "media-toggle-btn active-state";
                 document.getElementById('toggle-mic-btn').textContent = "🎙️ Mic On";
-                document.getElementById('toggle-camera-btn').className = "media-toggle-btn";
                 document.getElementById('toggle-screen-btn').className = "media-toggle-btn";
 
                 updateStatus("🟢 Connected to Mesh Voice Room", "#23a55a");
             } catch (err) {
                 console.error(err);
-                alert("Voice Connection Error: Verify device permissions.");
+                alert("Voice Connection Error: Verify microphone permissions.");
                 window.leaveVoiceChannel();
             }
         };
@@ -698,6 +688,9 @@
             peerConnections[peerCode] = pc;
 
             localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            if (screenShareStream) {
+                screenShareStream.getVideoTracks().forEach(track => pc.addTrack(track, screenShareStream));
+            }
 
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
@@ -767,7 +760,6 @@
         window.leaveVoiceChannel = async function() {
             if (!activeVoiceRoomId) return;
             
-            // Clean up real-time database endpoints and tracking listeners
             databaseListeners.forEach(item => item.listener());
             databaseListeners = [];
 
@@ -776,7 +768,6 @@
                 await remove(ref(db, `webrtc_mesh/${activeVoiceRoomId}/${friendCode}`));
             } catch (e) {}
 
-            // Terminate peer connections cleanly
             Object.keys(peerConnections).forEach(code => {
                 if (peerConnections[code]) peerConnections[code].close();
                 const element = document.getElementById(`video-box-${code}`);
@@ -787,7 +778,9 @@
             remoteStreams = {};
 
             if (localStream) localStream.getTracks().forEach(track => track.stop());
+            if (screenShareStream) screenShareStream.getTracks().forEach(track => track.stop());
             localStream = null;
+            screenShareStream = null;
             activeVoiceRoomId = null;
 
             document.getElementById('voice-status-bar').style.display = "none";
@@ -813,50 +806,46 @@
             }
         };
 
-        window.toggleVideoFeed = async function() {
-            if (!localStream) return;
-            const videoTrack = localStream.getVideoTracks()[0];
-            if (videoTrack) {
-                cameraActive = !cameraActive;
-                videoTrack.enabled = cameraActive;
-                const btn = document.getElementById('toggle-camera-btn');
-                if (cameraActive) btn.classList.add('active-state');
-                else btn.classList.remove('active-state');
-            }
-        };
-
         window.toggleScreenShare = async function() {
             if (!localStream) return;
             try {
                 const btn = document.getElementById('toggle-screen-btn');
                 if (!screenShareActive) {
-                    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                    const screenTrack = screenStream.getVideoTracks()[0];
+                    screenShareStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    const screenTrack = screenShareStream.getVideoTracks()[0];
                     
                     Object.values(peerConnections).forEach(pc => {
-                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                        if (sender) sender.replaceTrack(screenTrack);
+                        const senders = pc.getSenders();
+                        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+                        if (videoSender) {
+                            videoSender.replaceTrack(screenTrack);
+                        } else {
+                            pc.addTrack(screenTrack, screenShareStream);
+                        }
                     });
 
-                    document.getElementById('local-media-element').srcObject = screenStream;
+                    document.getElementById('local-media-element').srcObject = screenShareStream;
                     screenShareActive = true;
                     btn.classList.add('active-state');
 
                     screenTrack.onended = () => {
-                        revertToCameraTrack();
+                        removeScreenShareTrack();
                     };
                 } else {
-                    revertToCameraTrack();
+                    removeScreenShareTrack();
                 }
             } catch(e) { console.error(e); }
         };
 
-        function revertToCameraTrack() {
+        function removeScreenShareTrack() {
             const btn = document.getElementById('toggle-screen-btn');
-            const videoTrack = localStream.getVideoTracks()[0];
+            if (screenShareStream) {
+                screenShareStream.getTracks().forEach(track => track.stop());
+                screenShareStream = null;
+            }
             Object.values(peerConnections).forEach(pc => {
                 const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                if (sender) sender.replaceTrack(videoTrack);
+                if (sender) pc.removeTrack(sender);
             });
             document.getElementById('local-media-element').srcObject = localStream;
             screenShareActive = false;
