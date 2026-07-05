@@ -101,6 +101,14 @@
             font-size: 13px;
         }
 
+        .sub-channel.text-type {
+            display: none;
+        }
+
+        .sub-channel.text-type.active {
+            display: block;
+        }
+
         .voice-user {
             padding-left: 36px;
             font-size: 12px;
@@ -328,32 +336,35 @@
             margin-top: 4px;
         }
 
-        /* Voice Status Bar */
         #voice-status-bar {
             background-color: #232428;
-            padding: 10px;
+            padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            border-radius: 4px;
-            margin-bottom: 10px;
+            gap: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
             font-size: 13px;
             display: none;
+            border: 1px solid #3f4147;
         }
 
         .voice-top-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-weight: bold;
         }
 
         .disconnect-voice-btn {
             background-color: #da373c;
             color: white;
             border: none;
-            padding: 4px 8px;
+            padding: 5px 10px;
             border-radius: 4px;
             cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
         }
 
         .disconnect-voice-btn:hover {
@@ -361,26 +372,34 @@
         }
 
         .voice-media-actions {
-            display: flex;
-            gap: 4px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
         }
 
         .media-toggle-btn {
             background-color: #35373c;
             color: #dbdee1;
             border: 1px solid #4e5058;
-            padding: 3px 6px;
+            padding: 6px 4px;
             font-size: 11px;
-            border-radius: 3px;
+            border-radius: 4px;
             cursor: pointer;
-            flex: 1;
+            text-align: center;
+            font-weight: 500;
         }
 
         .media-toggle-btn:hover {
             background-color: #4e5058;
+            color: #fff;
         }
 
-        /* Stream Video Windows */
+        .media-toggle-btn.active-state {
+            background-color: #23a55a;
+            border-color: #23a55a;
+            color: white;
+        }
+
         #video-streams-panel {
             display: flex;
             gap: 10px;
@@ -423,6 +442,20 @@
     <div id="sidebar">
         <div>
             <div class="channel-title">PrivacyChat</div>
+
+            <div class="section-header">
+                <span class="section-title">Public Voice Channels</span>
+            </div>
+            <div id="public-voice-list">
+                <div>
+                    <button class="nav-btn" onclick="window.joinVoiceChannel('public-global-gen', '🔊 General Voice')">🔊 General Voice</button>
+                    <div class="channels-wrapper" id="presence-public-global-gen"></div>
+                </div>
+                <div>
+                    <button class="nav-btn" onclick="window.joinVoiceChannel('public-global-game', '🔊 Gaming Lounge')">🔊 Gaming Lounge</button>
+                    <div class="channels-wrapper" id="presence-public-global-game"></div>
+                </div>
+            </div>
             
             <div class="section-header">
                 <span class="section-title">Servers</span>
@@ -430,9 +463,11 @@
             <div id="server-list">
                 <div class="server-container" id="container-server-1" style="display: block;">
                     <button class="nav-btn active" id="btn-server-1" onclick="window.switchChannel('server-1', 'Server 1 🌐', this)">🌐 Server 1</button>
+                    <div class="channels-wrapper" id="channels-server-1"></div>
                 </div>
                 <div class="server-container" id="container-server-2" style="display: block;">
                     <button class="nav-btn" id="btn-server-2" onclick="window.switchChannel('server-2', 'Server 2 🚀', this)">🚀 Server 2</button>
+                    <div class="channels-wrapper" id="channels-server-2"></div>
                 </div>
             </div>
             
@@ -454,12 +489,13 @@
         <div>
             <div id="voice-status-bar">
                 <div class="voice-top-row">
-                    <div>🔊 Connected to <span id="active-voice-channel-name">...</span></div>
+                    <div>🔊 <span id="active-voice-channel-name">...</span></div>
                     <button class="disconnect-voice-btn" onclick="window.leaveVoiceChannel()">Leave</button>
                 </div>
                 <div class="voice-media-actions">
-                    <button class="media-toggle-btn" id="toggle-camera-btn" onclick="window.toggleVideoFeed()">📷 Video Off</button>
-                    <button class="media-toggle-btn" id="toggle-screen-btn" onclick="window.toggleScreenShare()">🖥️ Share Screen</button>
+                    <button class="media-toggle-btn active-state" id="toggle-mic-btn" onclick="window.toggleMicrophone()">🎙️ Mic On</button>
+                    <button class="media-toggle-btn" id="toggle-camera-btn" onclick="window.toggleVideoFeed()">📷 Camera</button>
+                    <button class="media-toggle-btn" id="toggle-screen-btn" onclick="window.toggleScreenShare()">🖥️ Screen</button>
                 </div>
             </div>
 
@@ -532,15 +568,17 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // --- NATIVE NATIVE WEBRTC CORE MATRIX ---
         const iceServersConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
         let peerConnection = null;
         let localStream = null;
         let remoteStream = null;
         let activeVoiceRoomId = null;
+        let microphoneActive = true;
         let cameraActive = false;
         let screenShareActive = false;
-        let callUnsubscribe = null;
+        let iceUnsubscribeCreator = null;
+        let iceUnsubscribeJoiner = null;
+        let answerUnsubscribe = null;
 
         let username;
         let friendCode;
@@ -581,15 +619,13 @@
             return filteredText;
         }
 
-        // --- PURE WEBRTC CONTROLLERS ---
         window.joinVoiceChannel = async function(voiceRoomId, displayName) {
             if (activeVoiceRoomId) await window.leaveVoiceChannel();
             
             try {
-                updateStatus("🎙️ Requesting Media Access...", "#5865f2");
+                updateStatus("🎙| Accessing Media Hardware...", "#5865f2");
                 activeVoiceRoomId = voiceRoomId;
                 
-                // Initialize clean audio stream capture from system
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 document.getElementById('local-media-element').srcObject = localStream;
                 document.getElementById('video-streams-panel').style.display = "flex";
@@ -602,60 +638,84 @@
 
                 peerConnection.ontrack = (event) => {
                     document.getElementById('remote-video-container').style.display = "block";
-                    event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+                    event.streams[0].getTracks().forEach(track => {
+                        remoteStream.addTrack(track);
+                    });
                 };
 
                 const roomRef = ref(db, `webrtc_rooms/${voiceRoomId}`);
-                const iceCandidatesRef = ref(db, `webrtc_rooms/${voiceRoomId}/ice_${friendCode}`);
+                const creatorIceRef = ref(db, `webrtc_rooms/${voiceRoomId}/ice_creator`);
+                const joinerIceRef = ref(db, `webrtc_rooms/${voiceRoomId}/ice_joiner`);
 
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) push(iceCandidatesRef, event.candidate.toJSON());
-                };
-
-                // Simple check: Is a room offer already waiting?
                 const roomSnapshot = await get(roomRef);
-                if (!roomSnapshot.exists() || !roomSnapshot.val().offer) {
-                    // Node Creator Role
+                const roomData = roomSnapshot.val();
+
+                if (!roomSnapshot.exists() || !roomData.offer) {
+                    peerConnection.onicecandidate = (event) => {
+                        if (event.candidate) push(creatorIceRef, event.candidate.toJSON());
+                    };
+
                     const offerDescription = await peerConnection.createOffer();
                     await peerConnection.setLocalDescription(offerDescription);
-                    await set(roomRef, { offer: { sdp: offerDescription.sdp, type: offerDescription.type }, creator: friendCode });
+                    
+                    await set(roomRef, { 
+                        offer: { sdp: offerDescription.sdp, type: offerDescription.type }, 
+                        creator: friendCode
+                    });
 
-                    callUnsubscribe = onValue(ref(db, `webrtc_rooms/${voiceRoomId}/answer`), (snap) => {
+                    answerUnsubscribe = onValue(ref(db, `webrtc_rooms/${voiceRoomId}/answer`), async (snap) => {
                         if (snap.exists() && !peerConnection.currentRemoteDescription) {
-                            peerConnection.setRemoteDescription(new RTCSessionDescription(snap.val()));
+                            const answerDesc = new RTCSessionDescription(snap.val());
+                            await peerConnection.setRemoteDescription(answerDesc);
+                        }
+                    });
+
+                    iceUnsubscribeJoiner = onValue(joinerIceRef, (snap) => {
+                        if (snap.exists()) {
+                            snap.forEach(c => {
+                                try { peerConnection.addIceCandidate(new RTCIceCandidate(c.val())); } catch(e){}
+                            });
                         }
                     });
                 } else {
-                    // Joining Node Role
-                    const roomData = roomSnapshot.val();
+                    peerConnection.onicecandidate = (event) => {
+                        if (event.candidate) push(joinerIceRef, event.candidate.toJSON());
+                    };
+
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(roomData.offer));
                     const answerDescription = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answerDescription);
-                    await update(roomRef, { answer: { sdp: answerDescription.sdp, type: answerDescription.type } });
+                    
+                    await update(roomRef, { 
+                        answer: { sdp: answerDescription.sdp, type: answerDescription.type } 
+                    });
 
-                    // Hook up target's ice entries
-                    onValue(ref(db, `webrtc_rooms/${voiceRoomId}/ice_${roomData.creator}`), (snap) => {
+                    iceUnsubscribeCreator = onValue(creatorIceRef, (snap) => {
                         if (snap.exists()) {
-                            snap.forEach(c => peerConnection.addIceCandidate(new RTCIceCandidate(c.val())));
+                            snap.forEach(c => {
+                                try { peerConnection.addIceCandidate(new RTCIceCandidate(c.val())); } catch(e){}
+                            });
                         }
                     });
                 }
-
-                // Handle routing setups across any side joining
-                onValue(iceCandidatesRef, (snap) => {
-                    if (snap.exists()) {
-                        snap.forEach(c => { try { peerConnection.addIceCandidate(new RTCIceCandidate(c.val())); } catch(e){} });
-                    }
-                });
 
                 await set(ref(db, `voice_presence/${voiceRoomId}/${friendCode}`), { username: username, joinedAt: serverTimestamp() });
 
                 document.getElementById('voice-status-bar').style.display = "flex";
                 document.getElementById('active-voice-channel-name').textContent = displayName;
-                updateStatus("🟢 Native WebRTC Voice Connected", "#23a55a");
+                
+                microphoneActive = true;
+                cameraActive = false;
+                screenShareActive = false;
+                document.getElementById('toggle-mic-btn').className = "media-toggle-btn active-state";
+                document.getElementById('toggle-mic-btn').textContent = "🎙️ Mic On";
+                document.getElementById('toggle-camera-btn').className = "media-toggle-btn";
+                document.getElementById('toggle-screen-btn').className = "media-toggle-btn";
+
+                updateStatus("🟢 Voice Room Connected", "#23a55a");
             } catch (err) {
-                console.error("WebRTC room startup crash: ", err);
-                alert("Hardware stream dropped: " + err.message);
+                console.error(err);
+                alert("Voice Connection Failed: Device error.");
                 window.leaveVoiceChannel();
             }
         };
@@ -663,7 +723,10 @@
         window.leaveVoiceChannel = async function() {
             if (!activeVoiceRoomId) return;
             try {
-                if (callUnsubscribe) callUnsubscribe();
+                if (answerUnsubscribe) answerUnsubscribe();
+                if (iceUnsubscribeCreator) iceUnsubscribeCreator();
+                if (iceUnsubscribeJoiner) iceUnsubscribeJoiner();
+                
                 if (localStream) localStream.getTracks().forEach(track => track.stop());
                 if (peerConnection) peerConnection.close();
                 
@@ -674,17 +737,34 @@
             activeVoiceRoomId = null;
             cameraActive = false;
             screenShareActive = false;
-            document.getElementById('toggle-camera-btn').textContent = "📷 Video Off";
-            document.getElementById('toggle-screen-btn').textContent = "🖥️ Share Screen";
             document.getElementById('voice-status-bar').style.display = "none";
             document.getElementById('video-streams-panel').style.display = "none";
             document.getElementById('remote-video-container').style.display = "none";
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
         };
 
+        window.toggleMicrophone = function() {
+            if (!localStream) return;
+            const audioTrack = localStream.getAudioTracks()[0];
+            if (audioTrack) {
+                microphoneActive = !microphoneActive;
+                audioTrack.enabled = microphoneActive;
+                
+                const btn = document.getElementById('toggle-mic-btn');
+                if (microphoneActive) {
+                    btn.classList.add('active-state');
+                    btn.textContent = "🎙| Mic On";
+                } else {
+                    btn.classList.remove('active-state');
+                    btn.textContent = "🎙| Muted";
+                }
+            }
+        };
+
         window.toggleVideoFeed = async function() {
             if (!localStream) return;
             try {
+                const btn = document.getElementById('toggle-camera-btn');
                 if (!cameraActive) {
                     const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                     const videoTrack = videoStream.getVideoTracks()[0];
@@ -696,7 +776,7 @@
                     localStream.addTrack(videoTrack);
                     document.getElementById('local-media-element').srcObject = localStream;
                     cameraActive = true;
-                    document.getElementById('toggle-camera-btn').textContent = "📷 Video On";
+                    btn.classList.add('active-state');
                 } else {
                     const videoTrack = localStream.getVideoTracks()[0];
                     if (videoTrack) {
@@ -704,14 +784,15 @@
                         localStream.removeTrack(videoTrack);
                     }
                     cameraActive = false;
-                    document.getElementById('toggle-camera-btn').textContent = "📷 Video Off";
+                    btn.classList.remove('active-state');
                 }
-            } catch(e) { alert("Camera capture failed: " + e.message); }
+            } catch(e) { alert("Camera device error."); }
         };
 
         window.toggleScreenShare = async function() {
             if (!localStream) return;
             try {
+                const btn = document.getElementById('toggle-screen-btn');
                 if (!screenShareActive) {
                     const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                     const screenTrack = screenStream.getVideoTracks()[0];
@@ -722,19 +803,19 @@
 
                     document.getElementById('local-media-element').srcObject = screenStream;
                     screenShareActive = true;
-                    document.getElementById('toggle-screen-btn').textContent = "🛑 Stop Sharing";
+                    btn.classList.add('active-state');
 
                     screenTrack.onended = () => {
                         document.getElementById('local-media-element').srcObject = localStream;
                         screenShareActive = false;
-                        document.getElementById('toggle-screen-btn').textContent = "🖥️ Share Screen";
+                        btn.classList.remove('active-state');
                     };
                 } else {
                     const videoTrack = localStream.getVideoTracks()[0];
                     if (videoTrack) videoTrack.stop();
                     screenShareActive = false;
                     document.getElementById('local-media-element').srcObject = localStream;
-                    document.getElementById('toggle-screen-btn').textContent = "🖥️ Share Screen";
+                    btn.classList.remove('active-state');
                 }
             } catch(e) { console.error(e); }
         };
@@ -784,6 +865,32 @@
             }
         }
 
+        async function setupDefaultChannels(serverId, labelText) {
+            const serverMetadataRef = ref(db, `server_metadata/${serverId}`);
+            const metaSnap = await get(serverMetadataRef);
+            if (!metaSnap.exists()) {
+                await set(serverMetadataRef, { name: labelText, owner: friendCode });
+                await set(ref(db, `server_metadata/${serverId}/channels/${serverId}-text`), { id: `${serverId}-text`, name: "# lounge", type: "text" });
+                await set(ref(db, `server_metadata/${serverId}/channels/${serverId}-voice`), { id: `${serverId}-voice`, name: "🔊 Voice Room", type: "voice" });
+            }
+        }
+
+        function setupPublicPresenceListener(roomId) {
+            onValue(ref(db, `voice_presence/${roomId}`), (pSnap) => {
+                const targetDiv = document.getElementById(`presence-${roomId}`);
+                if (!targetDiv) return;
+                targetDiv.innerHTML = '';
+                if (pSnap.exists()) {
+                    Object.values(pSnap.val()).forEach(userObj => {
+                        const uEl = document.createElement('div');
+                        uEl.className = 'voice-user';
+                        uEl.textContent = `• ${userObj.username}`;
+                        targetDiv.appendChild(uEl);
+                    });
+                }
+            });
+        }
+
         async function initIdentity() {
             updateStatus("🔵 Assigning credentials...", "#5865f2");
             friendCode = localStorage.getItem('privacy_chat_friend_code');
@@ -807,6 +914,9 @@
             usernameInput.value = username;
             usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
+
+            await setupDefaultChannels('server-1', 'Server 1 🌐');
+            await setupDefaultChannels('server-2', 'Server 2 🚀');
             
             try { customServers = JSON.parse(localStorage.getItem('privacy_chat_custom_servers')) || []; } catch (e) { customServers = []; }
             renderCustomServers();
@@ -820,10 +930,61 @@
             await verifyAndRegisterUsername(username, true);
             await syncProfileToDatabase();
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
+            
+            buildDefaultChannelsList('server-1');
+            buildDefaultChannelsList('server-2');
+            
+            setupPublicPresenceListener('public-global-gen');
+            setupPublicPresenceListener('public-global-game');
+            
             startAutoSync(currentChannelName);
             startProfileChecking();
 
             window.addEventListener('beforeunload', () => { window.leaveVoiceChannel(); });
+        }
+
+        function buildDefaultChannelsList(serverId) {
+            const wrapper = document.getElementById(`channels-${serverId}`);
+            if (!wrapper) return;
+            
+            onValue(ref(db, `server_metadata/${serverId}/channels`), (snapshot) => {
+                wrapper.innerHTML = '';
+                if (snapshot.exists()) {
+                    snapshot.forEach(childSnap => {
+                        const ch = childSnap.val();
+                        const chBtn = document.createElement('button');
+                        chBtn.id = `btn-${ch.id}`;
+                        chBtn.textContent = ch.name;
+                        
+                        if (ch.type === "voice") {
+                            chBtn.className = 'nav-btn sub-channel voice-type';
+                            chBtn.onclick = () => { window.joinVoiceChannel(ch.id, ch.name); };
+                            wrapper.appendChild(chBtn);
+
+                            const presenceDiv = document.createElement('div');
+                            presenceDiv.id = `presence-${ch.id}`;
+                            wrapper.appendChild(presenceDiv);
+
+                            onValue(ref(db, `voice_presence/${ch.id}`), (pSnap) => {
+                                presenceDiv.innerHTML = '';
+                                if (pSnap.exists()) {
+                                    Object.values(pSnap.val()).forEach(userObj => {
+                                        const uEl = document.createElement('div');
+                                        uEl.className = 'voice-user';
+                                        uEl.textContent = `• ${userObj.username}`;
+                                        presenceDiv.appendChild(uEl);
+                                    });
+                                }
+                            });
+                        } else {
+                            chBtn.className = 'nav-btn sub-channel text-type';
+                            chBtn.onclick = () => { window.switchChannel(ch.id, ch.name, chBtn); };
+                            wrapper.appendChild(chBtn);
+                            if (currentChannelName === ch.id) chBtn.classList.add('active');
+                        }
+                    });
+                }
+            });
         }
 
         async function verifyAndRegisterUsername(targetUsername, isInitialSetup = false) {
@@ -883,13 +1044,12 @@
             await syncProfileToDatabase();
         });
 
-        // --- APINATOR LIVE CONFIGURATION ---
         const pusher = new Pusher('app_0eb6e0fdc30452b7c1c55f2cc8ba6843052381e4', {
             cluster: 'us', wsHost: 'rt.apinator.io', forceTLS: true, enabledTransports: ['ws', 'wss']
         });
 
-        let currentChannelName = 'server-1';
-        let currentSubscription = pusher.subscribe('server-1');
+        let currentChannelName = 'server-1-text';
+        let currentSubscription = pusher.subscribe('server-1-text');
         bindChannelEvents(currentSubscription);
         initIdentity();
 
@@ -921,9 +1081,12 @@
             currentSubscription = pusher.subscribe(targetChannel);
             bindChannelEvents(currentSubscription);
             startAutoSync(targetChannel);
+
+            renderCustomServers();
+            buildDefaultChannelsList('server-1');
+            buildDefaultChannelsList('server-2');
         };
 
-        // --- REALTIME DB HISTORY & FETCH AUTO-SYNC ---
         let initialLoadDone = {}; 
         async function loadMessageHistory(channelName, isSilent = false) {
             if (!friendCode) return;
@@ -964,20 +1127,13 @@
             }, 5000);
         }
 
-        // --- CUSTOM SERVERS HANDLING & OWNER ADD CONTROLLERS ---
         window.joinCustomServer = async function() {
             const rawInput = document.getElementById('custom-server-input').value.trim();
             if (!rawInput) return;
             const serverID = "custom-" + rawInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
             const serverLabel = "🛠️ " + rawInput.substring(0, 20);
 
-            const serverMetadataRef = ref(db, `server_metadata/${serverID}`);
-            const metaSnap = await get(serverMetadataRef);
-            if (!metaSnap.exists()) {
-                await set(serverMetadataRef, { name: serverLabel, owner: friendCode });
-                await set(ref(db, `server_metadata/${serverID}/channels/${serverID}-text`), { id: `${serverID}-text`, name: "# lounge", type: "text" });
-                await set(ref(db, `server_metadata/${serverID}/channels/${serverID}-voice`), { id: `${serverID}-voice`, name: "🔊 Voice Room", type: "voice" });
-            }
+            await setupDefaultChannels(serverID, serverLabel);
 
             if (!customServers.some(s => s.id === serverID)) {
                 customServers.push({ id: serverID, name: serverLabel });
@@ -1047,10 +1203,11 @@
                         if (data.channels) {
                             Object.values(data.channels).forEach(ch => {
                                 const chBtn = document.createElement('button');
-                                chBtn.className = 'nav-btn sub-channel';
+                                chBtn.id = `btn-${ch.id}`;
                                 chBtn.textContent = ch.name;
                                 
                                 if (ch.type === "voice") {
+                                    chBtn.className = 'nav-btn sub-channel voice-type';
                                     chBtn.onclick = () => { window.joinVoiceChannel(ch.id, ch.name); };
                                     channelsWrapper.appendChild(chBtn);
 
@@ -1070,6 +1227,7 @@
                                         }
                                     });
                                 } else {
+                                    chBtn.className = 'nav-btn sub-channel text-type';
                                     chBtn.onclick = () => { window.switchChannel(ch.id, `${srv.name} ➡️ ${ch.name}`, chBtn); };
                                     channelsWrapper.appendChild(chBtn);
                                     if (currentChannelName === ch.id) chBtn.classList.add('active');
@@ -1083,7 +1241,6 @@
             });
         }
 
-        // --- ROBUST PRIVATE MESSAGE STUFF ---
         window.clickUserToFriend = async function(targetCode, targetDefaultName) {
             if (!targetCode || targetCode === friendCode) return;
             if (confirm(`Do you want to add ${targetDefaultName} (#${targetCode}) to your Private Messages?`)) {
@@ -1162,7 +1319,6 @@
             });
         }
 
-        // --- CHAT FORM ENGINE ---
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const messageText = input.value.trim();
