@@ -541,10 +541,67 @@
             }
             rebuildDmList();
 
+            // Auto-verify/register default username rules
+            await verifyAndRegisterUsername(username, true);
+
             await syncProfileToDatabase();
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
             startAutoSync(currentChannelName);
             startProfileChecking();
+        }
+
+        // --- USERNAME LOCKING & PASSWORD LOGIC ---
+        async function verifyAndRegisterUsername(targetUsername, isInitialSetup = false) {
+            const cleanUserKey = targetUsername.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
+            if (!cleanUserKey) return false;
+
+            const userLockRef = ref(db, `username_locks/${cleanUserKey}`);
+            
+            try {
+                const snapshot = await get(userLockRef);
+                
+                if (snapshot.exists()) {
+                    const lockData = snapshot.val();
+                    
+                    // If this device already owns it, proceed smoothly
+                    if (lockData.ownerCode === friendCode) {
+                        return true;
+                    }
+                    
+                    // Another device owns it, prompt for password verification
+                    const enteredPassword = prompt(`The username "${targetUsername}" is protected. Please enter the password created by the owner:`);
+                    if (enteredPassword === lockData.password) {
+                        // Password correct! Reassign owner token to this friend code
+                        await set(userLockRef, {
+                            ownerCode: friendCode,
+                            password: lockData.password
+                        });
+                        return true;
+                    } else {
+                        alert("Incorrect password! Access denied to this username.");
+                        if (isInitialSetup) {
+                            // Fallback to safe random identifier if bootup conflicts
+                            username = `User-${friendCode}`;
+                            localStorage.setItem('privacy_chat_username', username);
+                            usernameInput.value = username;
+                        }
+                        return false;
+                    }
+                } else {
+                    // Username is unclaimed! Establish password requirements
+                    const newPassword = prompt(`Create a protective password for the username "${targetUsername}" so other devices cannot claim it:`);
+                    const safePassword = newPassword ? newPassword.trim() : "1234";
+                    
+                    await set(userLockRef, {
+                        ownerCode: friendCode,
+                        password: safePassword
+                    });
+                    return true;
+                }
+            } catch (err) {
+                console.error("Lock validation error: ", err);
+                return false;
+            }
         }
 
         window.saveUsername = async function() {
@@ -554,6 +611,29 @@
                 usernameInput.value = username;
                 return;
             }
+
+            updateStatus("🔵 Verifying username availability...", "#5865f2");
+            const authorized = await verifyAndRegisterUsername(newName, false);
+            
+            if (!authorized) {
+                usernameInput.value = username;
+                updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
+                return;
+            }
+
+            // Optional password update prompt if you already own it
+            if (newName === username && confirm("Would you like to change your protective password for this username?")) {
+                const cleanUserKey = newName.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
+                const updatePass = prompt("Enter your new protection password:");
+                if (updatePass) {
+                    await set(ref(db, `username_locks/${cleanUserKey}`), {
+                        ownerCode: friendCode,
+                        password: updatePass.trim()
+                    });
+                    alert("Password updated successfully!");
+                }
+            }
+
             username = newName;
             localStorage.setItem('privacy_chat_username', username);
             await syncProfileToDatabase();
@@ -563,6 +643,7 @@
             const oldText = saveBtn.textContent;
             saveBtn.textContent = "Saved!";
             setTimeout(() => saveBtn.textContent = oldText, 1500);
+            updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
         };
 
         window.resetIdentity = async function() {
@@ -902,7 +983,6 @@
         };
 
         window.connectToFriend = async function() {
-            // AUTOMATIC HASH PURGING ENGINE
             let rawTargetInput = document.getElementById('friend-code-input').value;
             let targetCode = rawTargetInput.trim().toUpperCase().replace(/#/g, '');
             
