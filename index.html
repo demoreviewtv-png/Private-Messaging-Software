@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PrivacyChat</title>
     <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
-    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.22.0.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -320,7 +319,7 @@
 
         .server-container {
             margin-bottom: 15px;
-            display: none; /* Hidden by default until channels load */
+            display: none;
         }
 
         .channels-wrapper {
@@ -334,12 +333,18 @@
             background-color: #232428;
             padding: 10px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: 8px;
             border-radius: 4px;
             margin-bottom: 10px;
             font-size: 13px;
             display: none;
+        }
+
+        .voice-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .disconnect-voice-btn {
@@ -353,6 +358,63 @@
 
         .disconnect-voice-btn:hover {
             background-color: #a92b2f;
+        }
+
+        .voice-media-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .media-toggle-btn {
+            background-color: #35373c;
+            color: #dbdee1;
+            border: 1px solid #4e5058;
+            padding: 3px 6px;
+            font-size: 11px;
+            border-radius: 3px;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .media-toggle-btn:hover {
+            background-color: #4e5058;
+        }
+
+        /* Stream Video Windows */
+        #video-streams-panel {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background-color: #1e1f22;
+            border-bottom: 1px solid #2b2d31;
+            overflow-x: auto;
+            display: none;
+        }
+
+        .video-box {
+            width: 160px;
+            height: 120px;
+            background-color: #000;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .video-box video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .video-label {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 2px;
         }
     </style>
 </head>
@@ -391,8 +453,14 @@
 
         <div>
             <div id="voice-status-bar">
-                <div>🔊 Connected to <span id="active-voice-channel-name">...</span></div>
-                <button class="disconnect-voice-btn" onclick="window.leaveVoiceChannel()">Leave</button>
+                <div class="voice-top-row">
+                    <div>🔊 Connected to <span id="active-voice-channel-name">...</span></div>
+                    <button class="disconnect-voice-btn" onclick="window.leaveVoiceChannel()">Leave</button>
+                </div>
+                <div class="voice-media-actions">
+                    <button class="media-toggle-btn" id="toggle-camera-btn" onclick="window.toggleVideoFeed()">📷 Video Off</button>
+                    <button class="media-toggle-btn" id="toggle-screen-btn" onclick="window.toggleScreenShare()">🖥️ Share Screen</button>
+                </div>
             </div>
 
             <div class="profile-container">
@@ -426,6 +494,18 @@
             <div class="header-title" id="room-title">Server 1 🌐</div>
             <div class="history-notice">⚡ Clean Slates: Resetting your identity will purge any servers you own from existence.</div>
         </div>
+
+        <div id="video-streams-panel">
+            <div class="video-box" id="local-video-container">
+                <video id="local-media-element" autoplay playsinline muted></video>
+                <div class="video-label">You</div>
+            </div>
+            <div class="video-box" id="remote-video-container" style="display: none;">
+                <video id="remote-media-element" autoplay playsinline></video>
+                <div class="video-label" id="remote-video-name">Remote Peer</div>
+            </div>
+        </div>
+
         <div id="message-container"></div>
 
         <form id="input-form">
@@ -436,7 +516,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-        import { getDatabase, ref, push, set, get, child, onValue, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+        import { getDatabase, ref, push, set, get, child, onValue, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
@@ -452,11 +532,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // --- GLOBAL APIS / WEB RTC CONFIGURATION ---
-        const AGORA_APP_ID = "c341a8c574854beaac039a3390109a95"; 
-        let agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        let localAudioTrack = null;
+        // --- NATIVE NATIVE WEBRTC CORE MATRIX ---
+        const iceServersConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+        let peerConnection = null;
+        let localStream = null;
+        let remoteStream = null;
         let activeVoiceRoomId = null;
+        let cameraActive = false;
+        let screenShareActive = false;
+        let callUnsubscribe = null;
 
         let username;
         let friendCode;
@@ -497,64 +581,163 @@
             return filteredText;
         }
 
-        // --- VOICE RTC CONTROLLERS ---
+        // --- PURE WEBRTC CONTROLLERS ---
         window.joinVoiceChannel = async function(voiceRoomId, displayName) {
-            if (activeVoiceRoomId) {
-                await window.leaveVoiceChannel();
-            }
-
-            if (AGORA_APP_ID === "YOUR_AGORA_APP_ID_HERE") {
-                alert("Voice feature requires setting a valid AGORA_APP_ID inside the source code script tag.");
-                return;
-            }
-
+            if (activeVoiceRoomId) await window.leaveVoiceChannel();
+            
             try {
-                updateStatus("🎙️ Accessing hardware microphone...", "#5865f2");
+                updateStatus("🎙️ Requesting Media Access...", "#5865f2");
                 activeVoiceRoomId = voiceRoomId;
                 
-                await agoraClient.join(AGORA_APP_ID, voiceRoomId, null, friendCode);
-                localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                await agoraClient.publish([localAudioTrack]);
+                // Initialize clean audio stream capture from system
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                document.getElementById('local-media-element').srcObject = localStream;
+                document.getElementById('video-streams-panel').style.display = "flex";
+                
+                peerConnection = new RTCPeerConnection(iceServersConfig);
+                remoteStream = new MediaStream();
+                document.getElementById('remote-media-element').srcObject = remoteStream;
 
-                await set(ref(db, `voice_presence/${voiceRoomId}/${friendCode}`), {
-                    username: username,
-                    joinedAt: serverTimestamp()
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                peerConnection.ontrack = (event) => {
+                    document.getElementById('remote-video-container').style.display = "block";
+                    event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+                };
+
+                const roomRef = ref(db, `webrtc_rooms/${voiceRoomId}`);
+                const iceCandidatesRef = ref(db, `webrtc_rooms/${voiceRoomId}/ice_${friendCode}`);
+
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) push(iceCandidatesRef, event.candidate.toJSON());
+                };
+
+                // Simple check: Is a room offer already waiting?
+                const roomSnapshot = await get(roomRef);
+                if (!roomSnapshot.exists() || !roomSnapshot.val().offer) {
+                    // Node Creator Role
+                    const offerDescription = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offerDescription);
+                    await set(roomRef, { offer: { sdp: offerDescription.sdp, type: offerDescription.type }, creator: friendCode });
+
+                    callUnsubscribe = onValue(ref(db, `webrtc_rooms/${voiceRoomId}/answer`), (snap) => {
+                        if (snap.exists() && !peerConnection.currentRemoteDescription) {
+                            peerConnection.setRemoteDescription(new RTCSessionDescription(snap.val()));
+                        }
+                    });
+                } else {
+                    // Joining Node Role
+                    const roomData = roomSnapshot.val();
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(roomData.offer));
+                    const answerDescription = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answerDescription);
+                    await update(roomRef, { answer: { sdp: answerDescription.sdp, type: answerDescription.type } });
+
+                    // Hook up target's ice entries
+                    onValue(ref(db, `webrtc_rooms/${voiceRoomId}/ice_${roomData.creator}`), (snap) => {
+                        if (snap.exists()) {
+                            snap.forEach(c => peerConnection.addIceCandidate(new RTCIceCandidate(c.val())));
+                        }
+                    });
+                }
+
+                // Handle routing setups across any side joining
+                onValue(iceCandidatesRef, (snap) => {
+                    if (snap.exists()) {
+                        snap.forEach(c => { try { peerConnection.addIceCandidate(new RTCIceCandidate(c.val())); } catch(e){} });
+                    }
                 });
+
+                await set(ref(db, `voice_presence/${voiceRoomId}/${friendCode}`), { username: username, joinedAt: serverTimestamp() });
 
                 document.getElementById('voice-status-bar').style.display = "flex";
                 document.getElementById('active-voice-channel-name').textContent = displayName;
-                updateStatus("🟢 Voice Connected Successfully", "#23a55a");
+                updateStatus("🟢 Native WebRTC Voice Connected", "#23a55a");
             } catch (err) {
-                console.error("Voice connect crash: ", err);
-                alert("Microphone connection failed: " + err.message);
+                console.error("WebRTC room startup crash: ", err);
+                alert("Hardware stream dropped: " + err.message);
                 window.leaveVoiceChannel();
             }
         };
 
         window.leaveVoiceChannel = async function() {
             if (!activeVoiceRoomId) return;
-
             try {
-                if (localAudioTrack) {
-                    localAudioTrack.stop();
-                    localAudioTrack.close();
-                    localAudioTrack = null;
-                }
+                if (callUnsubscribe) callUnsubscribe();
+                if (localStream) localStream.getTracks().forEach(track => track.stop());
+                if (peerConnection) peerConnection.close();
+                
                 await remove(ref(db, `voice_presence/${activeVoiceRoomId}/${friendCode}`));
-                await agoraClient.leave();
+                await remove(ref(db, `webrtc_rooms/${activeVoiceRoomId}`));
             } catch (e) { console.error(e); }
 
             activeVoiceRoomId = null;
+            cameraActive = false;
+            screenShareActive = false;
+            document.getElementById('toggle-camera-btn').textContent = "📷 Video Off";
+            document.getElementById('toggle-screen-btn').textContent = "🖥️ Share Screen";
             document.getElementById('voice-status-bar').style.display = "none";
+            document.getElementById('video-streams-panel').style.display = "none";
+            document.getElementById('remote-video-container').style.display = "none";
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
         };
 
-        agoraClient.on("user-published", async (user, mediaType) => {
-            await agoraClient.subscribe(user, mediaType);
-            if (mediaType === "audio") {
-                user.audioTrack.play();
-            }
-        });
+        window.toggleVideoFeed = async function() {
+            if (!localStream) return;
+            try {
+                if (!cameraActive) {
+                    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    const videoTrack = videoStream.getVideoTracks()[0];
+                    
+                    const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (sender) sender.replaceTrack(videoTrack);
+                    else peerConnection.addTrack(videoTrack, localStream);
+
+                    localStream.addTrack(videoTrack);
+                    document.getElementById('local-media-element').srcObject = localStream;
+                    cameraActive = true;
+                    document.getElementById('toggle-camera-btn').textContent = "📷 Video On";
+                } else {
+                    const videoTrack = localStream.getVideoTracks()[0];
+                    if (videoTrack) {
+                        videoTrack.stop();
+                        localStream.removeTrack(videoTrack);
+                    }
+                    cameraActive = false;
+                    document.getElementById('toggle-camera-btn').textContent = "📷 Video Off";
+                }
+            } catch(e) { alert("Camera capture failed: " + e.message); }
+        };
+
+        window.toggleScreenShare = async function() {
+            if (!localStream) return;
+            try {
+                if (!screenShareActive) {
+                    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    const screenTrack = screenStream.getVideoTracks()[0];
+                    
+                    const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (sender) sender.replaceTrack(screenTrack);
+                    else peerConnection.addTrack(screenTrack, localStream);
+
+                    document.getElementById('local-media-element').srcObject = screenStream;
+                    screenShareActive = true;
+                    document.getElementById('toggle-screen-btn').textContent = "🛑 Stop Sharing";
+
+                    screenTrack.onended = () => {
+                        document.getElementById('local-media-element').srcObject = localStream;
+                        screenShareActive = false;
+                        document.getElementById('toggle-screen-btn').textContent = "🖥️ Share Screen";
+                    };
+                } else {
+                    const videoTrack = localStream.getVideoTracks()[0];
+                    if (videoTrack) videoTrack.stop();
+                    screenShareActive = false;
+                    document.getElementById('local-media-element').srcObject = localStream;
+                    document.getElementById('toggle-screen-btn').textContent = "🖥️ Share Screen";
+                }
+            } catch(e) { console.error(e); }
+        };
 
         function generateRandomCode(length = 6) {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -847,14 +1030,12 @@
                         const isOwner = data.owner === friendCode;
                         const hasChannels = data.channels && Object.keys(data.channels).length > 0;
 
-                        // Conditional display check: Show if it has channels or if the user is the owner
                         if (hasChannels || isOwner) {
                             srvContainer.style.display = "block";
                         } else {
                             srvContainer.style.display = "none";
                         }
                         
-                        // Render action buttons ONLY if current user matches the owner attribute
                         if (isOwner) {
                             let headerDiv = document.createElement('div');
                             headerDiv.className = 'owner-actions';
@@ -896,7 +1077,6 @@
                             });
                         }
                     } else {
-                        // Hide server element entirely if no database snapshot exists
                         srvContainer.style.display = "none";
                     }
                 });
