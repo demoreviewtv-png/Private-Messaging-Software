@@ -551,7 +551,7 @@
         import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, off, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
+            apiKey: "AIzaSyAxCqeBWxOkVbUWSu76RzknJYPSceniZg",
             authDomain: "privatems-vercel-app.firebaseapp.com",
             databaseURL: "https://privatems-vercel-app-default-rtdb.firebaseio.com",
             projectId: "privatems-vercel-app",
@@ -563,6 +563,8 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        
+        const DB_SECRET = "Bennysprivatems2026andshit";
         
         let currentRoom = null;
         let databaseListeners = [];
@@ -655,7 +657,8 @@
                 const roomPresenceRef = ref(db, `voice_presence/${voiceRoomId}/${friendCode}`);
                 await set(roomPresenceRef, { 
                     username: username, 
-                    joinedAt: serverTimestamp() 
+                    joinedAt: serverTimestamp(),
+                    secret: DB_SECRET
                 });
 
                 const roomPresenceListRef = ref(db, `voice_presence/${voiceRoomId}`);
@@ -771,7 +774,8 @@
                 await set(ref(db, `profiles/${friendCode}`), {
                     username: username,
                     color: savedColor,
-                    lastSeen: serverTimestamp()
+                    lastSeen: serverTimestamp(),
+                    secret: DB_SECRET
                 });
             } catch (e) { console.error(e); }
         }
@@ -798,9 +802,9 @@
             const serverMetadataRef = ref(db, `server_metadata/${serverId}`);
             const metaSnap = await get(serverMetadataRef);
             if (!metaSnap.exists()) {
-                await set(serverMetadataRef, { name: labelText, owner: friendCode });
-                await set(ref(db, `server_metadata/${serverId}/channels/${serverId}-text`), { id: `${serverId}-text`, name: "# lounge", type: "text" });
-                await set(ref(db, `server_metadata/${serverId}/channels/${serverId}-voice`), { id: `${serverId}-voice`, name: "🔊 Voice Room", type: "voice" });
+                await set(serverMetadataRef, { name: labelText, owner: friendCode, secret: DB_SECRET });
+                await set(ref(db, `server_metadata/${serverId}/channels/${serverId}-text`), { id: `${serverId}-text`, name: "# lounge", type: "text", secret: DB_SECRET });
+                await set(ref(db, `server_metadata/${serverId}/channels/${serverId}-voice`), { id: `${serverId}-voice`, name: "🔊 Voice Room", type: "voice", secret: DB_SECRET });
             }
         }
 
@@ -942,7 +946,7 @@
                     }
                 } else {
                     const newPassword = prompt(`Create a protective password for the username "${targetUsername}":`);
-                    await set(userLockRef, { ownerCode: friendCode, password: newPassword ? newPassword.trim() : "1234" });
+                    await set(userLockRef, { ownerCode: friendCode, password: newPassword ? newPassword.trim() : "1234", secret: DB_SECRET });
                     return true;
                 }
             } catch (err) { return false; }
@@ -1070,7 +1074,8 @@
             await set(ref(db, `server_metadata/${serverId}/channels/${id}`), {
                 id: id,
                 name: type === 'text' ? `# ${label}` : `🔊 ${label}`,
-                type: type
+                type: type,
+                secret: DB_SECRET
             });
         };
 
@@ -1250,7 +1255,7 @@
 
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
-                    senderName: username, senderCode: friendCode, text: messageText, color: savedColor, timestamp: serverTimestamp()
+                    senderName: username, senderCode: friendCode, text: messageText, color: savedColor, timestamp: serverTimestamp(), secret: DB_SECRET
                 });
             } catch (err) { console.error(err); }
         });
