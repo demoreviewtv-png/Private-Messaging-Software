@@ -320,6 +320,7 @@
 
         .server-container {
             margin-bottom: 15px;
+            display: none; /* Hidden by default until channels load */
         }
 
         .channels-wrapper {
@@ -365,10 +366,10 @@
                 <span class="section-title">Servers</span>
             </div>
             <div id="server-list">
-                <div class="server-container" id="container-server-1">
+                <div class="server-container" id="container-server-1" style="display: block;">
                     <button class="nav-btn active" id="btn-server-1" onclick="window.switchChannel('server-1', 'Server 1 🌐', this)">🌐 Server 1</button>
                 </div>
-                <div class="server-container" id="container-server-2">
+                <div class="server-container" id="container-server-2" style="display: block;">
                     <button class="nav-btn" id="btn-server-2" onclick="window.switchChannel('server-2', 'Server 2 🚀', this)">🚀 Server 2</button>
                 </div>
             </div>
@@ -843,9 +844,18 @@
                     channelsWrapper.innerHTML = '';
                     if (snapshot.exists()) {
                         const data = snapshot.val();
+                        const isOwner = data.owner === friendCode;
+                        const hasChannels = data.channels && Object.keys(data.channels).length > 0;
+
+                        // Conditional display check: Show if it has channels or if the user is the owner
+                        if (hasChannels || isOwner) {
+                            srvContainer.style.display = "block";
+                        } else {
+                            srvContainer.style.display = "none";
+                        }
                         
                         // Render action buttons ONLY if current user matches the owner attribute
-                        if (data.owner === friendCode) {
+                        if (isOwner) {
                             let headerDiv = document.createElement('div');
                             headerDiv.className = 'owner-actions';
                             headerDiv.innerHTML = `<button class="owner-add-btn" onclick="window.addChannelPrompt('${srv.id}', 'text')">+ Text</button> 
@@ -885,6 +895,9 @@
                                 }
                             });
                         }
+                    } else {
+                        // Hide server element entirely if no database snapshot exists
+                        srvContainer.style.display = "none";
                     }
                 });
             });
