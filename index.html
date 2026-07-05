@@ -548,7 +548,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
         import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, off, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
-        import * as LiveKit from "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.js";
+        
+        // FIX: Import LiveKit through the correct global script injection script source
+        import "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
@@ -618,14 +620,15 @@
                 updateStatus("🎙️ Requesting Sandbox Token...", "#5865f2");
                 
                 const SANDBOX_ID = "privatemsvercelapp-18je9w";
-                const tokenSource = LiveKit.TokenSource.sandboxTokenServer(SANDBOX_ID);
+                // FIX: Map code references to LivekitClient namespace target
+                const tokenSource = LivekitClient.TokenSource.sandboxTokenServer(SANDBOX_ID);
                 
                 const { serverUrl, participantToken } = await tokenSource.fetch({
                     roomName: voiceRoomId,
                     identity: username
                 });
 
-                currentRoom = new LiveKit.Room({
+                currentRoom = new LivekitClient.Room({
                     adaptiveStream: true,
                     dynacast: true
                 });
@@ -637,7 +640,7 @@
                 await currentRoom.connect(serverUrl, participantToken);
                 await currentRoom.localParticipant.setMicrophoneEnabled(true);
 
-                currentRoom.on(LiveKit.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                currentRoom.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
                     if (track.kind === "video") {
                         createRemoteVideoElement(participant.identity, participant.name || "Remote User", track);
                     } else if (track.kind === "audio") {
@@ -646,7 +649,7 @@
                     }
                 });
 
-                currentRoom.on(LiveKit.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+                currentRoom.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
                     if (track.kind === "video") {
                         const element = document.getElementById(`video-box-${participant.identity}`);
                         if (element) element.remove();
@@ -739,7 +742,8 @@
 
                 if (screenShareActive) {
                     btn.classList.add('active-state');
-                    const localScreenTrack = currentRoom.localParticipant.getTrack(LiveKit.Track.Source.ScreenShare);
+                    // FIX: Point internal property setup directly to dynamic LivekitClient namespace
+                    const localScreenTrack = currentRoom.localParticipant.getTrack(LivekitClient.Track.Source.ScreenShare);
                     if (localScreenTrack && localScreenTrack.track) {
                         localScreenTrack.track.attach(document.getElementById('local-media-element'));
                     }
