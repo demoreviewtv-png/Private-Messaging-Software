@@ -597,36 +597,22 @@
             statusLabel.style.color = colorClass;
         }
 
-        function censorText(inputText, channelName) {
-            const isPrivateMessage = channelName.includes("-") && channelName.split("-").length === 2 && channelName.split("-")[0].length === 6;
-            if (isPrivateMessage) return inputText;
-
-            let filteredText = inputText;
-            BANNED_WORDS.forEach(word => {
-                const regex = new RegExp(`\\b${word}\\b`, "gi");
-                filteredText = filteredText.replace(regex, "****");
-            });
-            return filteredText;
-        }
-
-        // AUTOMATED LIVEKIT TOKEN GENERATION VIA CLOUD SANDBOX SERVER
+        // AUTO-AUTHENTICATING LIVEKIT TOKENS VIA CLOUD SANDBOX SERVER
         window.joinVoiceChannel = async function(voiceRoomId, displayName) {
             if (currentRoom) await window.leaveVoiceChannel();
             
             try {
                 updateStatus("🎙️ Requesting Sandbox Token...", "#5865f2");
                 
-                // Construct the token engine target directly pointing to your sandbox environment
                 const SANDBOX_ID = "privatemsvercelapp-18je9w";
                 const tokenSource = LiveKit.TokenSource.sandboxTokenServer(SANDBOX_ID);
 
-                // Dynamically fetch temporary credentials tailored for this user instance
+                // FIXED: Changed participantName to participantIdentity required by SDK
                 const { serverUrl, participantToken } = await tokenSource.fetch({
                     roomName: voiceRoomId,
-                    participantName: username
+                    participantIdentity: username
                 });
 
-                // Set up the high-level room handling interface
                 currentRoom = new LiveKit.Room({
                     adaptiveStream: true,
                     dynacast: true
@@ -636,13 +622,9 @@
                 document.getElementById('voice-status-bar').style.display = "flex";
                 document.getElementById('active-voice-channel-name').textContent = displayName;
 
-                // Authenticate and open the pipeline
                 await currentRoom.connect(serverUrl, participantToken);
-
-                // Unmute hardware capture pipe automatically upon joining
                 await currentRoom.localParticipant.setMicrophoneEnabled(true);
 
-                // Stream listener pipeline for handling remote user tracks
                 currentRoom.on(LiveKit.RoomEvent.TrackSubscribed, (track, publication, participant) => {
                     if (track.kind === "video") {
                         createRemoteVideoElement(participant.identity, participant.name || "Remote User", track);
@@ -660,7 +642,6 @@
                     track.detach();
                 });
 
-                // Track internal user coordinates inside fallback Firebase presence lookup nodes
                 const roomPresenceRef = ref(db, `voice_presence/${voiceRoomId}/${friendCode}`);
                 await set(roomPresenceRef, { 
                     username: username, 
@@ -679,8 +660,8 @@
 
                 updateStatus("🟢 Connected to LiveKit Room", "#23a55a");
             } catch (err) {
-                console.error(err);
-                alert("Voice Token Server Error: Failed to secure automated sandbox connection.");
+                console.error("LiveKit Sandbox Exception Details:", err);
+                alert("Voice Token Server Error: Check your dashboard configuration.");
                 window.leaveVoiceChannel();
             }
         };
