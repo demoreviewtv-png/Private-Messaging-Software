@@ -563,9 +563,6 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-
-        // LIVEKIT CLOUD CONFIG FROM PROJECT DETAILS
-        const LIVEKIT_URL = "wss://privatems-vercel-app-2pvesa3j.livekit.cloud";
         
         let currentRoom = null;
         let databaseListeners = [];
@@ -612,25 +609,24 @@
             return filteredText;
         }
 
-        // SWAPPED NAMESPACE TO CORRECT GLOBAL 'LiveKit.*' FORMAT
+        // AUTOMATED LIVEKIT TOKEN GENERATION VIA CLOUD SANDBOX SERVER
         window.joinVoiceChannel = async function(voiceRoomId, displayName) {
             if (currentRoom) await window.leaveVoiceChannel();
             
             try {
-                updateStatus("🎙️ Requesting Token Signature...", "#5865f2");
+                updateStatus("🎙️ Requesting Sandbox Token...", "#5865f2");
                 
-                // IMPORTANT NOTE FOR SERVERLESS EMBEDS:
-                // To safely generate a temporary frontend token without setting up a Node express backend:
-                // Generate a test token via your LiveKit Dashboard console or using LiveKit CLI tool, then paste it here.
-                const DEV_TESTING_TOKEN = "PASTE_YOUR_GENERATED_LIVEKIT_TOKEN_HERE";
+                // Construct the token engine target directly pointing to your sandbox environment
+                const SANDBOX_ID = "privatemsvercelapp-18je9w";
+                const tokenSource = LiveKit.TokenSource.sandboxTokenServer(SANDBOX_ID);
 
-                if (DEV_TESTING_TOKEN === "PASTE_YOUR_GENERATED_LIVEKIT_TOKEN_HERE") {
-                    alert("Please insert a live access token generated from your LiveKit CLI or cloud dashboard panel into the code script.");
-                    updateStatus("❌ Unauthorized Audio Connection", "#da373c");
-                    return;
-                }
+                // Dynamically fetch temporary credentials tailored for this user instance
+                const { serverUrl, participantToken } = await tokenSource.fetch({
+                    roomName: voiceRoomId,
+                    participantName: username
+                });
 
-                // Correct instantiation pattern using the browser window bundle global
+                // Set up the high-level room handling interface
                 currentRoom = new LiveKit.Room({
                     adaptiveStream: true,
                     dynacast: true
@@ -640,13 +636,13 @@
                 document.getElementById('voice-status-bar').style.display = "flex";
                 document.getElementById('active-voice-channel-name').textContent = displayName;
 
-                // Fire connection thread to SFU mesh
-                await currentRoom.connect(LIVEKIT_URL, DEV_TESTING_TOKEN);
+                // Authenticate and open the pipeline
+                await currentRoom.connect(serverUrl, participantToken);
 
-                // Publish local tracking hardware pipelines automatically
+                // Unmute hardware capture pipe automatically upon joining
                 await currentRoom.localParticipant.setMicrophoneEnabled(true);
 
-                // Clean routing for incoming remote streams
+                // Stream listener pipeline for handling remote user tracks
                 currentRoom.on(LiveKit.RoomEvent.TrackSubscribed, (track, publication, participant) => {
                     if (track.kind === "video") {
                         createRemoteVideoElement(participant.identity, participant.name || "Remote User", track);
@@ -656,7 +652,6 @@
                     }
                 });
 
-                // Detach media nodes safely when clients disable cameras/disconnect
                 currentRoom.on(LiveKit.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
                     if (track.kind === "video") {
                         const element = document.getElementById(`video-box-${participant.identity}`);
@@ -665,7 +660,7 @@
                     track.detach();
                 });
 
-                // Log presence in fallback firebase location for sidebar lookups
+                // Track internal user coordinates inside fallback Firebase presence lookup nodes
                 const roomPresenceRef = ref(db, `voice_presence/${voiceRoomId}/${friendCode}`);
                 await set(roomPresenceRef, { 
                     username: username, 
@@ -685,7 +680,7 @@
                 updateStatus("🟢 Connected to LiveKit Room", "#23a55a");
             } catch (err) {
                 console.error(err);
-                alert("Voice Media Pipeline Error: Double check your token parameters.");
+                alert("Voice Token Server Error: Failed to secure automated sandbox connection.");
                 window.leaveVoiceChannel();
             }
         };
