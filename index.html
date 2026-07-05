@@ -548,7 +548,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
         import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, off, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
-        import "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
@@ -566,7 +565,6 @@
         
         const DB_SECRET = "Bennysprivatems2026andshit";
         
-        let currentRoom = null;
         let databaseListeners = [];
         let messageListenerRef = null;
 
@@ -583,6 +581,12 @@
 
         let activeFriendProfiles = {}; 
         let serverListeners = {}; 
+
+        // Native WebRTC state management variables
+        let localStream = null;
+        let peerConnections = {};
+        let currentVoiceRoomId = null;
+        const iceServersConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
         const usernameInput = document.getElementById('username-input');
         const colorPicker = document.getElementById('name-color');
@@ -612,60 +616,57 @@
         }
 
         window.joinVoiceChannel = async function(voiceRoomId, displayName) {
-            if (currentRoom) await window.leaveVoiceChannel();
+            if (currentVoiceRoomId) await window.leaveVoiceChannel();
+            currentVoiceRoomId = voiceRoomId;
             
             try {
-                updateStatus("🎙️ Requesting Sandbox Token...", "#5865f2");
+                updateStatus("🎙️ Starting Native Audio Capture...", "#5865f2");
                 
-                const SANDBOX_ID = "privatemsvercelapp-18je9w";
-                const tokenSource = LivekitClient.TokenSource.sandboxTokenServer(SANDBOX_ID);
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 
-                // FIX: Fallback layout injection if username profile data hasn't written fast enough
-                let identityPayload = username || localStorage.getItem('privacy_chat_username') || `User-${friendCode || "Guest"}`;
-
-                const { serverUrl, participantToken } = await tokenSource.fetch({
-                    roomName: voiceRoomId,
-                    identity: identityPayload
-                });
-
-                currentRoom = new LivekitClient.Room({
-                    adaptiveStream: true,
-                    dynacast: true
-                });
-
                 document.getElementById('video-streams-panel').style.display = "flex";
                 document.getElementById('voice-status-bar').style.display = "flex";
                 document.getElementById('active-voice-channel-name').textContent = displayName;
 
-                await currentRoom.connect(serverUrl, participantToken);
-                await currentRoom.localParticipant.setMicrophoneEnabled(true);
+                let identityPayload = username || localStorage.getItem('privacy_chat_username') || `User-${friendCode}`;
 
-                currentRoom.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
-                    if (track.kind === "video") {
-                        createRemoteVideoElement(participant.identity, participant.name || "Remote User", track);
-                    } else if (track.kind === "audio") {
-                        const element = track.attach();
-                        document.body.appendChild(element);
-                    }
-                });
-
-                currentRoom.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-                    if (track.kind === "video") {
-                        const element = document.getElementById(`video-box-${participant.identity}`);
-                        if (element) element.remove();
-                    }
-                    track.detach();
-                });
-
-                const roomPresenceRef = ref(db, `voice_presence/${voiceRoomId}/${friendCode}`);
-                await set(roomPresenceRef, { 
+                const myPresenceRef = ref(db, `voice_presence/${voiceRoomId}/${friendCode}`);
+                await set(myPresenceRef, { 
                     username: identityPayload, 
                     joinedAt: serverTimestamp(),
                     secret: DB_SECRET
                 });
 
+                const signalingRef = ref(db, `voice_signaling/${voiceRoomId}/${friendCode}`);
+                onChildAdded(signalingRef, async (snapshot) => {
+                    const data = snapshot.val();
+                    const sender = snapshot.key;
+                    if (!data) return;
+
+                    if (data.offer) {
+                        await handleIncomingOffer(voiceRoomId, sender, data.offer);
+                    } else if (data.answer) {
+                        if (peerConnections[sender]) {
+                            await peerConnections[sender].setRemoteDescription(new RTCSessionDescription(data.answer));
+                        }
+                    } else if (data.iceCandidate) {
+                        if (peerConnections[sender]) {
+                            await peerConnections[sender].addIceCandidate(new RTCIceCandidate(data.iceCandidate));
+                        }
+                    }
+                    await remove(snapshot.ref);
+                });
+
                 const roomPresenceListRef = ref(db, `voice_presence/${voiceRoomId}`);
-                const presenceListener = onValue(roomPresenceListRef, () => {});
+                const presenceListener = onValue(roomPresenceListRef, async (snapshot) => {
+                    if (!snapshot.exists()) return;
+                    const users = snapshot.val();
+                    for (let peerId in users) {
+                        if (peerId !== friendCode && !peerConnections[peerId]) {
+                            await initiatePeerConnection(voiceRoomId, peerId);
+                        }
+                    }
+                });
                 databaseListeners.push({ ref: roomPresenceListRef, listener: presenceListener });
 
                 microphoneActive = true;
@@ -674,16 +675,60 @@
                 document.getElementById('toggle-mic-btn').textContent = "🎙️ Mic On";
                 document.getElementById('toggle-screen-btn').className = "media-toggle-btn";
 
-                updateStatus("🟢 Connected to LiveKit Room", "#23a55a");
+                updateStatus("🟢 Native Voice Channel Active", "#23a55a");
             } catch (err) {
-                console.error("LiveKit Handshake Exception Details:", err);
-                updateStatus("❌ Voice Connection Failed", "#da373c");
-                alert("Voice Connection Error: Confirm your server configuration setup.");
+                console.error("WebRTC Setup Error:", err);
+                updateStatus("❌ Voice Hook Failed", "#da373c");
                 window.leaveVoiceChannel();
             }
         };
 
-        function createRemoteVideoElement(peerCode, displayName, track) {
+        async function initiatePeerConnection(roomId, peerId) {
+            const pc = new RTCPeerConnection(iceServersConfig);
+            peerConnections[peerId] = pc;
+
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { iceCandidate: event.candidate.toJSON() });
+                }
+            };
+
+            pc.ontrack = (event) => {
+                createRemoteVideoElement(peerId, activeFriendProfiles[peerId]?.username || `User-${peerId}`, event.streams[0]);
+            };
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            
+            await set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { offer: { type: offer.type, sdp: offer.sdp } });
+        }
+
+        async function handleIncomingOffer(roomId, peerId, offer) {
+            const pc = new RTCPeerConnection(iceServersConfig);
+            peerConnections[peerId] = pc;
+
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { iceCandidate: event.candidate.toJSON() });
+                }
+            };
+
+            pc.ontrack = (event) => {
+                createRemoteVideoElement(peerId, activeFriendProfiles[peerId]?.username || `User-${peerId}`, event.streams[0]);
+            };
+
+            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            await set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { answer: { type: answer.type, sdp: answer.sdp } });
+        }
+
+        function createRemoteVideoElement(peerCode, displayName, stream) {
             if (document.getElementById(`video-box-${peerCode}`)) return;
 
             const panel = document.getElementById('video-streams-panel');
@@ -691,7 +736,10 @@
             box.className = 'video-box';
             box.id = `video-box-${peerCode}`;
 
-            const video = track.attach();
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.playsInline = true;
+            video.srcObject = stream;
             box.appendChild(video);
 
             const label = document.createElement('div');
@@ -706,9 +754,20 @@
             databaseListeners.forEach(item => item.listener());
             databaseListeners = [];
 
-            if (currentRoom) {
-                await currentRoom.disconnect();
-                currentRoom = null;
+            if (currentVoiceRoomId) {
+                await remove(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`));
+                await remove(ref(db, `voice_signaling/${currentVoiceRoomId}/${friendCode}`));
+                currentVoiceRoomId = null;
+            }
+
+            for (let peerId in peerConnections) {
+                peerConnections[peerId].close();
+            }
+            peerConnections = {};
+
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
             }
 
             document.querySelectorAll("[id^='video-box-']").forEach(element => element.remove());
@@ -718,9 +777,9 @@
         };
 
         window.toggleMicrophone = async function() {
-            if (!currentRoom) return;
+            if (!localStream) return;
             microphoneActive = !microphoneActive;
-            await currentRoom.localParticipant.setMicrophoneEnabled(microphoneActive);
+            localStream.getAudioTracks().forEach(track => track.enabled = microphoneActive);
             
             const btn = document.getElementById('toggle-mic-btn');
             if (microphoneActive) {
@@ -733,22 +792,36 @@
         };
 
         window.toggleScreenShare = async function() {
-            if (!currentRoom) return;
+            if (!localStream || !currentVoiceRoomId) return;
             try {
                 const btn = document.getElementById('toggle-screen-btn');
                 screenShareActive = !screenShareActive;
                 
-                await currentRoom.localParticipant.setScreenShareEnabled(screenShareActive);
-
                 if (screenShareActive) {
-                    btn.classList.add('active-state');
-                    const localScreenTrack = currentRoom.localParticipant.getTrack(LivekitClient.Track.Source.ScreenShare);
-                    if (localScreenTrack && localScreenTrack.track) {
-                        localScreenTrack.track.attach(document.getElementById('local-media-element'));
+                    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    const videoTrack = screenStream.getVideoTracks()[0];
+                    
+                    document.getElementById('local-media-element').srcObject = screenStream;
+                    
+                    for (let peerId in peerConnections) {
+                        const sender = peerConnections[peerId].getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (sender) {
+                            sender.replaceTrack(videoTrack);
+                        } else {
+                            peerConnections[peerId].addTrack(videoTrack, screenStream);
+                        }
                     }
+
+                    videoTrack.onended = () => { window.toggleScreenShare(); };
+                    btn.classList.add('active-state');
                 } else {
-                    btn.classList.remove('active-state');
                     document.getElementById('local-media-element').srcObject = null;
+                    btn.classList.remove('active-state');
+                    
+                    for (let peerId in peerConnections) {
+                        const sender = peerConnections[peerId].getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (sender) peerConnections[peerId].removeTrack(sender);
+                    }
                 }
             } catch (e) {
                 console.error(e);
@@ -981,7 +1054,6 @@
             await syncProfileToDatabase();
         });
 
-        // FIX: Added wsPath configuration to ensure proper WebSocket endpoint compilation on custom routes
         const pusher = new Pusher('app_0eb6e0fdc30452b7c1c55f2cc8ba6843052381e4', {
             cluster: 'mt1',
             wsHost: 'rt.apinator.io',
