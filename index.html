@@ -704,7 +704,19 @@
             };
 
             pc.ontrack = (event) => {
-                createRemoteVideoElement(peerCode, peerName, event.streams[0]);
+                if (event.track.kind === 'video') {
+                    createRemoteVideoElement(peerCode, peerName, event.streams[0]);
+                } else if (event.track.kind === 'audio') {
+                    // Always handle incoming standalone audio track properly on client side
+                    let remoteAudio = document.getElementById(`audio-element-${peerCode}`);
+                    if (!remoteAudio) {
+                        remoteAudio = document.createElement('audio');
+                        remoteAudio.id = `audio-element-${peerCode}`;
+                        remoteAudio.autoplay = true;
+                        document.body.appendChild(remoteAudio);
+                    }
+                    remoteAudio.srcObject = event.streams[0];
+                }
             };
 
             if (isInitiator) {
@@ -773,6 +785,8 @@
                 if (peerConnections[code]) peerConnections[code].close();
                 const element = document.getElementById(`video-box-${code}`);
                 if (element) element.remove();
+                const audioEl = document.getElementById(`audio-element-${code}`);
+                if (audioEl) audioEl.remove();
             });
 
             peerConnections = {};
@@ -821,6 +835,7 @@
                         if (videoSender) {
                             videoSender.replaceTrack(screenTrack);
                         } else {
+                            // If no baseline stream/track exist yet, safely inject it explicitly 
                             pc.addTrack(screenTrack, screenShareStream);
                         }
                     });
