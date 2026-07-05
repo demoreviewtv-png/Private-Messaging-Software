@@ -55,17 +55,26 @@
             letter-spacing: 0.5px;
         }
 
-        .add-channel-btn {
-            background: none;
-            border: none;
-            color: #949ba4;
-            font-size: 16px;
-            cursor: pointer;
-            padding: 0 4px;
-            line-height: 1;
+        .owner-actions {
+            display: flex;
+            gap: 6px;
+            padding-left: 14px;
+            margin-bottom: 6px;
         }
 
-        .add-channel-btn:hover {
+        .owner-add-btn {
+            background-color: #35373c;
+            color: #23a55a;
+            border: 1px dashed #23a55a;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .owner-add-btn:hover {
+            background-color: #23a55a;
             color: #fff;
         }
 
@@ -309,28 +318,14 @@
             flex: 1;
         }
 
-        .nick-btn {
-            background: none;
-            border: none;
-            color: #949ba4;
-            font-size: 11px;
-            cursor: pointer;
-            padding: 4px;
-            border-radius: 4px;
-        }
-
-        .nick-btn:hover {
-            color: #fff;
-            background-color: #35373c;
-        }
-
         .server-container {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         .channels-wrapper {
             display: flex;
             flex-direction: column;
+            margin-top: 4px;
         }
 
         /* Voice Status Bar */
@@ -785,7 +780,7 @@
             }, 5000);
         }
 
-        // --- CUSTOM SERVERS HANDLING & VOICE NODE INJECTIONS ---
+        // --- CUSTOM SERVERS HANDLING & OWNER ADD CONTROLLERS ---
         window.joinCustomServer = async function() {
             const rawInput = document.getElementById('custom-server-input').value.trim();
             if (!rawInput) return;
@@ -832,6 +827,8 @@
 
                 const mainBtn = document.createElement('button');
                 mainBtn.className = 'nav-btn';
+                mainBtn.style.fontWeight = 'bold';
+                mainBtn.style.color = '#fff';
                 mainBtn.textContent = srv.name;
                 
                 const channelsWrapper = document.createElement('div');
@@ -847,12 +844,12 @@
                     if (snapshot.exists()) {
                         const data = snapshot.val();
                         
+                        // Render action buttons ONLY if current user matches the owner attribute
                         if (data.owner === friendCode) {
                             let headerDiv = document.createElement('div');
-                            headerDiv.className = 'section-header';
-                            headerDiv.style.paddingLeft = '24px';
-                            headerDiv.innerHTML = `<button onclick="window.addChannelPrompt('${srv.id}', 'text')">+ Text</button> 
-                                                   <button onclick="window.addChannelPrompt('${srv.id}', 'voice')">+ Voice</button>`;
+                            headerDiv.className = 'owner-actions';
+                            headerDiv.innerHTML = `<button class="owner-add-btn" onclick="window.addChannelPrompt('${srv.id}', 'text')">+ Text</button> 
+                                                   <button class="owner-add-btn" onclick="window.addChannelPrompt('${srv.id}', 'voice')">+ Voice</button>`;
                             channelsWrapper.appendChild(headerDiv);
                         }
 
