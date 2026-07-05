@@ -551,7 +551,7 @@
         import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, off, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyAxCqeBWxOkVbUWSu76RzknJYPSceniZg",
+            apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
             authDomain: "privatems-vercel-app.firebaseapp.com",
             databaseURL: "https://privatems-vercel-app-default-rtdb.firebaseio.com",
             projectId: "privatems-vercel-app",
@@ -978,6 +978,7 @@
         });
 
         const pusher = new Pusher('app_0eb6e0fdc30452b7c1c55f2cc8ba6843052381e4', {
+            cluster: 'mt1',
             wsHost: 'rt.apinator.io',
             wsPort: 443,
             wssPort: 443,
