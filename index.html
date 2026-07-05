@@ -413,9 +413,13 @@
         .video-box {
             width: 160px;
             height: 120px;
-            background-color: #000;
+            background-color: #2b2d31;
+            border: 1px solid #383a40;
             border-radius: 4px;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .video-box video {
@@ -423,6 +427,7 @@
             height: 100%;
             object-fit: cover;
             border-radius: 4px;
+            display: none;
         }
 
         .video-label {
@@ -434,6 +439,11 @@
             font-size: 10px;
             padding: 2px 4px;
             border-radius: 2px;
+        }
+
+        .voice-avatar {
+            font-size: 24px;
+            color: #23a55a;
         }
     </style>
 </head>
@@ -532,6 +542,7 @@
 
         <div id="video-streams-panel">
             <div class="video-box" id="local-video-container">
+                <div class="voice-avatar">🎙️</div>
                 <video id="local-media-element" autoplay playsinline muted></video>
                 <div class="video-label">You</div>
             </div>
@@ -582,10 +593,10 @@
         let activeFriendProfiles = {}; 
         let serverListeners = {}; 
 
-        // Native WebRTC state management variables
         let localStream = null;
         let peerConnections = {};
         let currentVoiceRoomId = null;
+        let signalingListenerRef = null;
         const iceServersConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
         const usernameInput = document.getElementById('username-input');
@@ -637,8 +648,8 @@
                     secret: DB_SECRET
                 });
 
-                const signalingRef = ref(db, `voice_signaling/${voiceRoomId}/${friendCode}`);
-                onChildAdded(signalingRef, async (snapshot) => {
+                signalingListenerRef = ref(db, `voice_signaling/${voiceRoomId}/${friendCode}`);
+                onChildAdded(signalingListenerRef, async (snapshot) => {
                     const data = snapshot.val();
                     const sender = snapshot.key;
                     if (!data) return;
@@ -736,6 +747,19 @@
             box.className = 'video-box';
             box.id = `video-box-${peerCode}`;
 
+            const icon = document.createElement('div');
+            icon.className = 'voice-avatar';
+            icon.textContent = '🔊';
+            box.appendChild(icon);
+
+            // Audio track listener
+            const audio = document.createElement('audio');
+            audio.autoplay = true;
+            audio.controls = false;
+            audio.srcObject = stream;
+            box.appendChild(audio);
+
+            // Fallback video player logic
             const video = document.createElement('video');
             video.autoplay = true;
             video.playsInline = true;
@@ -751,7 +775,16 @@
         }
 
         window.leaveVoiceChannel = async function() {
-            databaseListeners.forEach(item => item.listener());
+            if (signalingListenerRef) {
+                off(signalingListenerRef);
+                signalingListenerRef = null;
+            }
+
+            databaseListeners.forEach(item => {
+                if (item.ref && typeof item.listener === 'function') {
+                    off(item.ref, 'value', item.listener);
+                }
+            });
             databaseListeners = [];
 
             if (currentVoiceRoomId) {
@@ -761,7 +794,7 @@
             }
 
             for (let peerId in peerConnections) {
-                peerConnections[peerId].close();
+                try { peerConnections[peerId].close(); } catch(e){}
             }
             peerConnections = {};
 
@@ -773,6 +806,7 @@
             document.querySelectorAll("[id^='video-box-']").forEach(element => element.remove());
             document.getElementById('voice-status-bar').style.display = "none";
             document.getElementById('video-streams-panel').style.display = "none";
+            document.getElementById('local-media-element').srcObject = null;
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
         };
 
@@ -802,6 +836,8 @@
                     const videoTrack = screenStream.getVideoTracks()[0];
                     
                     document.getElementById('local-media-element').srcObject = screenStream;
+                    document.getElementById('local-media-element').style.display = "block";
+                    document.querySelector('#local-video-container .voice-avatar').style.display = "none";
                     
                     for (let peerId in peerConnections) {
                         const sender = peerConnections[peerId].getSenders().find(s => s.track && s.track.kind === 'video');
@@ -816,6 +852,8 @@
                     btn.classList.add('active-state');
                 } else {
                     document.getElementById('local-media-element').srcObject = null;
+                    document.getElementById('local-media-element').style.display = "none";
+                    document.querySelector('#local-video-container .voice-avatar').style.display = "block";
                     btn.classList.remove('active-state');
                     
                     for (let peerId in peerConnections) {
