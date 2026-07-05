@@ -597,21 +597,34 @@
             statusLabel.style.color = colorClass;
         }
 
-        // AUTO-AUTHENTICATING LIVEKIT TOKENS VIA CLOUD SANDBOX SERVER
+        function censorText(inputText, channelName) {
+            const isPrivateMessage = channelName.includes("-") && channelName.split("-").length === 2 && channelName.split("-")[0].length === 6;
+            if (isPrivateMessage) return inputText;
+
+            let filteredText = inputText;
+            BANNED_WORDS.forEach(word => {
+                const regex = new RegExp(`\\b${word}\\b`, "gi");
+                filteredText = filteredText.replace(regex, "****");
+            });
+            return filteredText;
+        }
+
+        // DIRECT CLOUD SANDBOX RECONCILIATION ROUTINE
         window.joinVoiceChannel = async function(voiceRoomId, displayName) {
             if (currentRoom) await window.leaveVoiceChannel();
             
             try {
                 updateStatus("🎙️ Requesting Sandbox Token...", "#5865f2");
                 
-                const SANDBOX_ID = "privatemsvercelapp-18je9w";
-                const tokenSource = LiveKit.TokenSource.sandboxTokenServer(SANDBOX_ID);
-
-                // FIXED: Changed participantName to participantIdentity required by SDK
-                const { serverUrl, participantToken } = await tokenSource.fetch({
-                    roomName: voiceRoomId,
-                    participantIdentity: username
-                });
+                // Fetch directly from sandbox HTTP engine endpoint to bypass configuration helper layers
+                const response = await fetch(`https://privatemsvercelapp-18je9w.sandbox.livekit.io/token?room=${encodeURIComponent(voiceRoomId)}&identity=${encodeURIComponent(username)}`);
+                if (!response.ok) throw new Error("Sandbox gateway rejected token request.");
+                
+                const tokenData = await response.json();
+                
+                // Direct connection strings returned via custom or fallback structures
+                const serverUrl = tokenData.serverUrl || "wss://privatemsvercelapp-18je9w.sandbox.livekit.io";
+                const participantToken = tokenData.token || tokenData.participantToken;
 
                 currentRoom = new LiveKit.Room({
                     adaptiveStream: true,
@@ -660,8 +673,8 @@
 
                 updateStatus("🟢 Connected to LiveKit Room", "#23a55a");
             } catch (err) {
-                console.error("LiveKit Sandbox Exception Details:", err);
-                alert("Voice Token Server Error: Check your dashboard configuration.");
+                console.error("LiveKit Engine Exception:", err);
+                alert("Voice Token Server Error: Direct sandbox validation failed. Make sure the toggle is 'ON' in your LiveKit Cloud dashboard settings.");
                 window.leaveVoiceChannel();
             }
         };
