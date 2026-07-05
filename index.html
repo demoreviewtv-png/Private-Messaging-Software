@@ -541,7 +541,6 @@
             }
             rebuildDmList();
 
-            // Auto-verify/register default username rules
             await verifyAndRegisterUsername(username, true);
 
             await syncProfileToDatabase();
@@ -550,7 +549,7 @@
             startProfileChecking();
         }
 
-        // --- USERNAME LOCKING & PASSWORD LOGIC ---
+        // --- USERNAME LOCKING & ORIGINAL FRIEND CODE RESTORATION ---
         async function verifyAndRegisterUsername(targetUsername, isInitialSetup = false) {
             const cleanUserKey = targetUsername.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
             if (!cleanUserKey) return false;
@@ -563,24 +562,32 @@
                 if (snapshot.exists()) {
                     const lockData = snapshot.val();
                     
-                    // If this device already owns it, proceed smoothly
                     if (lockData.ownerCode === friendCode) {
                         return true;
                     }
                     
-                    // Another device owns it, prompt for password verification
-                    const enteredPassword = prompt(`The username "${targetUsername}" is protected. Please enter the password created by the owner:`);
+                    const enteredPassword = prompt(`The username "${targetUsername}" is protected. Enter password to sync this profile:`);
                     if (enteredPassword === lockData.password) {
-                        // Password correct! Reassign owner token to this friend code
-                        await set(userLockRef, {
-                            ownerCode: friendCode,
-                            password: lockData.password
-                        });
+                        // PASSWORD MATCH FOUND: Restore original owner's Friend Code!
+                        friendCode = lockData.ownerCode;
+                        localStorage.setItem('privacy_chat_friend_code', friendCode);
+                        document.getElementById('friend-code-display').textContent = `#${friendCode}`;
+                        
+                        // Force clean reload of local servers/DMs mapped to this profile identity
+                        try {
+                            const profileDataSnap = await get(ref(db, `profiles/${friendCode}`));
+                            if (profileDataSnap.exists()) {
+                                savedColor = profileDataSnap.val().color || savedColor;
+                                colorPicker.value = savedColor;
+                                usernameInput.style.color = savedColor;
+                            }
+                        } catch(err) {}
+
+                        alert(`Identity successfully restored! Connected as profile #${friendCode}`);
                         return true;
                     } else {
-                        alert("Incorrect password! Access denied to this username.");
+                        alert("Incorrect password! Identity recovery rejected.");
                         if (isInitialSetup) {
-                            // Fallback to safe random identifier if bootup conflicts
                             username = `User-${friendCode}`;
                             localStorage.setItem('privacy_chat_username', username);
                             usernameInput.value = username;
@@ -588,8 +595,7 @@
                         return false;
                     }
                 } else {
-                    // Username is unclaimed! Establish password requirements
-                    const newPassword = prompt(`Create a protective password for the username "${targetUsername}" so other devices cannot claim it:`);
+                    const newPassword = prompt(`Create a protective password for the username "${targetUsername}" so other devices can claim this identity loop:`);
                     const safePassword = newPassword ? newPassword.trim() : "1234";
                     
                     await set(userLockRef, {
@@ -621,7 +627,6 @@
                 return;
             }
 
-            // Optional password update prompt if you already own it
             if (newName === username && confirm("Would you like to change your protective password for this username?")) {
                 const cleanUserKey = newName.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
                 const updatePass = prompt("Enter your new protection password:");
