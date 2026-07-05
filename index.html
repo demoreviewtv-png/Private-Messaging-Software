@@ -616,15 +616,15 @@
             try {
                 updateStatus("🎙️ Requesting Sandbox Token...", "#5865f2");
                 
-                // Fetch directly from sandbox HTTP engine endpoint to bypass configuration helper layers
-                const response = await fetch(`https://privatemsvercelapp-18je9w.sandbox.livekit.io/token?room=${encodeURIComponent(voiceRoomId)}&identity=${encodeURIComponent(username)}`);
-                if (!response.ok) throw new Error("Sandbox gateway rejected token request.");
+                // Use the built-in TokenSource handler with your exact Sandbox ID
+                const SANDBOX_ID = "privatemsvercelapp-18je9w";
+                const tokenSource = LiveKit.TokenSource.sandboxTokenServer(SANDBOX_ID);
                 
-                const tokenData = await response.json();
-                
-                // Direct connection strings returned via custom or fallback structures
-                const serverUrl = tokenData.serverUrl || "wss://privatemsvercelapp-18je9w.sandbox.livekit.io";
-                const participantToken = tokenData.token || tokenData.participantToken;
+                // Fetch credentials natively from LiveKit's token routing layer
+                const { serverUrl, participantToken } = await tokenSource.fetch({
+                    roomName: voiceRoomId,
+                    participantName: username
+                });
 
                 currentRoom = new LiveKit.Room({
                     adaptiveStream: true,
@@ -674,7 +674,7 @@
                 updateStatus("🟢 Connected to LiveKit Room", "#23a55a");
             } catch (err) {
                 console.error("LiveKit Engine Exception:", err);
-                alert("Voice Token Server Error: Direct sandbox validation failed. Make sure the toggle is 'ON' in your LiveKit Cloud dashboard settings.");
+                alert("Voice Connection Error: Token resolution failed. Confirm your client machine can connect to LiveKit Cloud services.");
                 window.leaveVoiceChannel();
             }
         };
