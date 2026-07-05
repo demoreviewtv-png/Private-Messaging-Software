@@ -983,8 +983,10 @@
             wsPort: 443,
             wssPort: 443,
             forceTLS: true,
+            encrypted: true,
             disableStats: true,
-            enabledTransports: ['ws', 'wss']
+            enabledTransports: ['ws', 'wss'],
+            userAuthentication: { endpoint: null }
         });
 
         let currentChannelName = 'server-1-text';
