@@ -814,11 +814,6 @@
                 if (!screenShareActive) {
                     screenShareStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                     const screenTrack = screenShareStream.getVideoTracks()[0];
-                    
-                    // Attach microphone track safely alongside screen track
-                    if (localStream.getAudioTracks().length > 0) {
-                        screenShareStream.addTrack(localStream.getAudioTracks()[0]);
-                    }
 
                     Object.values(peerConnections).forEach(pc => {
                         const senders = pc.getSenders();
@@ -846,7 +841,7 @@
         function removeScreenShareTrack() {
             const btn = document.getElementById('toggle-screen-btn');
             if (screenShareStream) {
-                screenShareStream.getTracks().forEach(track => track.stop());
+                screenShareStream.getVideoTracks().forEach(track => track.stop());
                 screenShareStream = null;
             }
             Object.values(peerConnections).forEach(pc => {
