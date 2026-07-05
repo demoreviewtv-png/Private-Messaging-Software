@@ -609,18 +609,15 @@
             return filteredText;
         }
 
-        // DIRECT CLOUD SANDBOX RECONCILIATION ROUTINE
         window.joinVoiceChannel = async function(voiceRoomId, displayName) {
             if (currentRoom) await window.leaveVoiceChannel();
             
             try {
                 updateStatus("🎙️ Requesting Sandbox Token...", "#5865f2");
                 
-                // Built-in TokenSource handler using plain ID string
                 const SANDBOX_ID = "privatemsvercelapp-18je9w";
                 const tokenSource = LiveKit.TokenSource.sandboxTokenServer(SANDBOX_ID);
                 
-                // Modern parameter mappings for Room and Identity
                 const { serverUrl, participantToken } = await tokenSource.fetch({
                     room: voiceRoomId,
                     identity: username
@@ -976,8 +973,14 @@
             await syncProfileToDatabase();
         });
 
+        // FIXED APINATOR PROXY CLIENT WEBSOCKET TRANSPORT CONFIG
         const pusher = new Pusher('app_0eb6e0fdc30452b7c1c55f2cc8ba6843052381e4', {
-            cluster: 'us', wsHost: 'rt.apinator.io', forceTLS: true, enabledTransports: ['ws', 'wss']
+            wsHost: 'rt.apinator.io',
+            wsPort: 443,
+            wssPort: 443,
+            forceTLS: true,
+            disableStats: true,
+            enabledTransports: ['ws', 'wss']
         });
 
         let currentChannelName = 'server-1-text';
