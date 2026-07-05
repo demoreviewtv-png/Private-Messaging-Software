@@ -548,7 +548,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-        import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+        import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, off, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
@@ -566,6 +566,7 @@
         
         let currentRoom = null;
         let databaseListeners = [];
+        let messageListenerRef = null;
 
         let microphoneActive = true;
         let screenShareActive = false;
@@ -573,7 +574,6 @@
         let username;
         let friendCode;
         let savedColor;
-        let syncInterval = null;
         let profileInterval = null;
         let customServers = [];
         let savedDms = [];
@@ -671,7 +671,7 @@
                 updateStatus("🟢 Connected to LiveKit Room", "#23a55a");
             } catch (err) {
                 console.error("LiveKit Engine Exception:", err);
-                alert("Voice Connection Error: Token resolution failed. Confirm your client machine can connect to LiveKit Cloud services.");
+                alert("Voice Connection Error: Confirm your server code toggle state.");
                 window.leaveVoiceChannel();
             }
         };
@@ -866,7 +866,7 @@
             setupPublicPresenceListener('public-global-gen');
             setupPublicPresenceListener('public-global-game');
             
-            startAutoSync(currentChannelName);
+            startFirebaseListener(currentChannelName);
             startProfileChecking();
 
             window.addEventListener('beforeunload', () => { window.leaveVoiceChannel(); });
@@ -973,7 +973,6 @@
             await syncProfileToDatabase();
         });
 
-        // FIXED APINATOR PROXY CLIENT WEBSOCKET TRANSPORT CONFIG
         const pusher = new Pusher('app_0eb6e0fdc30452b7c1c55f2cc8ba6843052381e4', {
             wsHost: 'rt.apinator.io',
             wsPort: 443,
@@ -1015,44 +1014,28 @@
             currentChannelName = targetChannel;
             currentSubscription = pusher.subscribe(targetChannel);
             bindChannelEvents(currentSubscription);
-            startAutoSync(targetChannel);
+            startFirebaseListener(targetChannel);
 
             renderCustomServers();
             buildDefaultChannelsList('server-1');
             buildDefaultChannelsList('server-2');
         };
 
-        let initialLoadDone = {}; 
-        async function loadMessageHistory(channelName, isSilent = false) {
-            if (!friendCode) return;
-            if (!isSilent) container.innerHTML = '<div style="color: #949ba4; font-size: 13px;">Loading history...</div>';
+        function startFirebaseListener(channelName) {
+            if (messageListenerRef) {
+                off(messageListenerRef);
+            }
             
-            try {
-                const snapshot = await get(ref(db, `messages/${channelName}`));
-                const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 40;
-                container.innerHTML = ''; 
-                
-                if (snapshot.exists()) {
-                    snapshot.forEach((childSnapshot) => {
-                        const data = childSnapshot.val();
-                        let displayName = nicknames[data.senderCode] || data.senderName;
-                        let displayColor = data.color || '#949ba4';
-                        let processedText = censorText(data.text, channelName);
-                        silentAppend(displayName, processedText, displayColor, data.senderCode);
-                    });
-                    initialLoadDone[channelName] = true;
-                    if (wasAtBottom || !isSilent) container.scrollTop = container.scrollHeight;
-                } else {
-                    initialLoadDone[channelName] = true;
-                    container.innerHTML = `<div style="color: #23a55a; font-size:13px;">No past text records found here.</div>`;
-                }
-            } catch (error) { console.error(error); }
-        }
-
-        function startAutoSync(channelName) {
-            if (syncInterval) clearInterval(syncInterval);
-            loadMessageHistory(channelName, false);
-            syncInterval = setInterval(() => { loadMessageHistory(channelName, true); }, 2500);
+            container.innerHTML = '';
+            messageListenerRef = ref(db, `messages/${channelName}`);
+            
+            onChildAdded(messageListenerRef, (snapshot) => {
+                const data = snapshot.val();
+                let displayName = nicknames[data.senderCode] || data.senderName;
+                let displayColor = data.color || '#949ba4';
+                let processedText = censorText(data.text, channelName);
+                appendMessage(displayName, processedText, displayColor, data.senderCode);
+            });
         }
 
         function startProfileChecking() {
@@ -1259,8 +1242,6 @@
             const messageText = input.value.trim();
             if (!messageText) return;
 
-            let localProcessedText = censorText(messageText, currentChannelName);
-            appendMessage(username, localProcessedText, savedColor, friendCode);
             input.value = '';
 
             currentSubscription.trigger('client-message', {
@@ -1274,7 +1255,7 @@
             } catch (err) { console.error(err); }
         });
 
-        function silentAppend(user, text, color, senderIdCode) {
+        function appendMessage(user, text, color, senderIdCode) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
             messageDiv.innerHTML = `<span class="username" style="color:${color}">${user}</span><span class="text"></span>`;
@@ -1283,10 +1264,6 @@
                 messageDiv.querySelector('.username').onclick = () => window.clickUserToFriend(senderIdCode, user);
             }
             container.appendChild(messageDiv);
-        }
-
-        function appendMessage(user, text, color, senderIdCode) {
-            silentAppend(user, text, color, senderIdCode);
             container.scrollTop = container.scrollHeight;
         }
     </script>
