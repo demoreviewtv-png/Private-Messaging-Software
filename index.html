@@ -616,14 +616,14 @@
             try {
                 updateStatus("🎙️ Requesting Sandbox Token...", "#5865f2");
                 
-                // Use the built-in TokenSource handler with your exact Sandbox ID
+                // Built-in TokenSource handler using plain ID string
                 const SANDBOX_ID = "privatemsvercelapp-18je9w";
                 const tokenSource = LiveKit.TokenSource.sandboxTokenServer(SANDBOX_ID);
                 
-                // Fetch credentials natively from LiveKit's token routing layer
+                // Modern parameter mappings for Room and Identity
                 const { serverUrl, participantToken } = await tokenSource.fetch({
-                    roomName: voiceRoomId,
-                    participantName: username
+                    room: voiceRoomId,
+                    identity: username
                 });
 
                 currentRoom = new LiveKit.Room({
