@@ -373,15 +373,15 @@
 
         .voice-media-actions {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 6px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
         }
 
         .media-toggle-btn {
             background-color: #35373c;
             color: #dbdee1;
             border: 1px solid #4e5058;
-            padding: 6px 4px;
+            padding: 6px 2px;
             font-size: 11px;
             border-radius: 4px;
             cursor: pointer;
@@ -508,6 +508,7 @@
                 </div>
                 <div class="voice-media-actions">
                     <button class="media-toggle-btn" id="toggle-mic-btn" onclick="window.toggleMicrophone()">🎙️ Mic Off</button>
+                    <button class="media-toggle-btn" id="toggle-cam-btn" onclick="window.toggleCamera()">📷 Cam Off</button>
                     <button class="media-toggle-btn" id="toggle-screen-btn" onclick="window.toggleScreenShare()">🖥️ Screen</button>
                 </div>
             </div>
@@ -585,6 +586,7 @@
         let messageRemovedListenerRef = null;
 
         let microphoneActive = false;
+        let cameraActive = false;
         let screenShareActive = false;
 
         let username = "";
@@ -660,16 +662,16 @@
             try {
                 updateStatus("🔊 Joining Voice (Listen-Only Mode)...", "#5865f2");
                 
-                // Initialize clean UI states without querying local hardware media permissions yet
                 updateVoiceUI(true, displayName);
                 microphoneActive = false;
+                cameraActive = false;
                 screenShareActive = false;
                 
-                const micBtn = document.getElementById('toggle-mic-btn');
-                if (micBtn) {
-                    micBtn.classList.remove('active-state');
-                    micBtn.textContent = "🎙️ Mic Off";
-                }
+                document.getElementById('toggle-mic-btn').className = "media-toggle-btn";
+                document.getElementById('toggle-mic-btn').textContent = "🎙️ Mic Off";
+                document.getElementById('toggle-cam-btn').className = "media-toggle-btn";
+                document.getElementById('toggle-cam-btn').textContent = "📷 Cam Off";
+                document.getElementById('toggle-screen-btn').className = "media-toggle-btn";
 
                 let identityPayload = username || localStorage.getItem('privacy_chat_username') || `User-${friendCode}`;
 
@@ -677,7 +679,6 @@
                 await set(myPresenceRef, { 
                     username: identityPayload, 
                     joinedAt: serverTimestamp(),
-                    hasMedia: false,
                     secret: DB_SECRET
                 });
 
@@ -699,7 +700,7 @@
                                 await peerConnections[sender].addIceCandidate(new RTCIceCandidate(data.iceCandidate));
                             }
                         }
-                    } catch (e) { console.error("Signaling validation safe skip:", e); }
+                    } catch (e) { console.error("Signaling step validation skip:", e); }
                     await remove(snapshot.ref);
                 });
 
@@ -717,11 +718,27 @@
 
                 updateStatus("🟢 Room Connected Safely", "#23a55a");
             } catch (err) {
-                console.error("WebRTC listen setup exception:", err);
+                console.error("WebRTC listen initialization error:", err);
                 updateStatus("❌ Voice Hook Failed", "#da373c");
                 window.leaveVoiceChannel();
             }
         };
+
+        async function verifyLocalMediaTrackAttachment() {
+            if (!localStream) {
+                localStream = new MediaStream();
+            }
+        }
+
+        async function pushRenegotiationToPeers() {
+            for (let peerId in peerConnections) {
+                try {
+                    const offer = await peerConnections[peerId].createOffer();
+                    await peerConnections[peerId].setLocalDescription(offer);
+                    await set(push(ref(db, `voice_signaling/${currentVoiceRoomId}/${peerId}`)), { offer: { type: offer.type, sdp: offer.sdp } });
+                } catch(e) { console.error(e); }
+            }
+        }
 
         async function initiatePeerConnection(roomId, peerId) {
             const pc = new RTCPeerConnection(iceServersConfig);
@@ -790,12 +807,18 @@
             video.playsInline = true;
             video.srcObject = stream;
             
-            // Hide custom placeholder icon once incoming streaming video is received safely
             video.onloadedmetadata = () => {
-                const tracks = stream.getVideoTracks();
-                if(tracks.length > 0) {
-                    icon.style.display = "none";
-                }
+                const checkTracks = () => {
+                    const videoTracks = stream.getVideoTracks();
+                    if(videoTracks.length > 0 && videoTracks[0].enabled) {
+                        icon.style.display = "none";
+                    } else {
+                        icon.style.display = "block";
+                    }
+                };
+                checkTracks();
+                stream.onaddtrack = checkTracks;
+                stream.onremovetrack = checkTracks;
             };
 
             box.appendChild(video);
@@ -827,7 +850,7 @@
                     await remove(ref(db, `voice_signaling/${currentVoiceRoomId}/${friendCode}`));
                     currentVoiceRoomId = null;
                 }
-            } catch (e) { console.error("DB clear execution safety drop out:", e); }
+            } catch (e) { console.error("DB clear layout extraction error:", e); }
 
             for (let peerId in peerConnections) {
                 try { peerConnections[peerId].close(); } catch(e){}
@@ -845,12 +868,52 @@
 
         window.toggleMicrophone = async function() {
             const btn = document.getElementById('toggle-mic-btn');
-            
-            if (!localStream) {
+            await verifyLocalMediaTrackAttachment();
+
+            if (localStream.getAudioTracks().length === 0) {
                 try {
-                    updateStatus("🎙️ Accessing device hardware...", "#5865f2");
-                    // Dynamic hardware permissions trigger on explicit button action instead of room join bounds
-                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                    updateStatus("🎙️ Requesting microphone hook...", "#5865f2");
+                    const audioCapture = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const audioTrack = audioCapture.getAudioTracks()[0];
+                    localStream.addTrack(audioTrack);
+                    
+                    for (let peerId in peerConnections) {
+                        peerConnections[peerId].addTrack(audioTrack, localStream);
+                    }
+                    await pushRenegotiationToPeers();
+                    
+                    microphoneActive = true;
+                    btn.classList.add('active-state');
+                    btn.textContent = "🎙️ Mic On";
+                    updateStatus("🟢 Audio Stream Broadcast Active", "#23a55a");
+                } catch (err) {
+                    console.error(err);
+                    updateStatus("❌ Mic Permission Denied", "#da373c");
+                    return;
+                }
+            } else {
+                microphoneActive = !microphoneActive;
+                localStream.getAudioTracks().forEach(track => track.enabled = microphoneActive);
+                if (microphoneActive) {
+                    btn.classList.add('active-state');
+                    btn.textContent = "🎙️ Mic On";
+                } else {
+                    btn.classList.remove('active-state');
+                    btn.textContent = "🎙️ Mic Off";
+                }
+            }
+        };
+
+        window.toggleCamera = async function() {
+            const btn = document.getElementById('toggle-cam-btn');
+            await verifyLocalMediaTrackAttachment();
+
+            if (localStream.getVideoTracks().length === 0) {
+                try {
+                    updateStatus("📷 Requesting camera hook...", "#5865f2");
+                    const videoCapture = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const videoTrack = videoCapture.getVideoTracks()[0];
+                    localStream.addTrack(videoTrack);
                     
                     const localVideo = document.getElementById('local-media-element');
                     if (localVideo) {
@@ -859,48 +922,39 @@
                     }
                     const localAvatar = document.querySelector('#local-video-container .voice-avatar');
                     if (localAvatar) localAvatar.style.display = "none";
-                    
-                    for (let peerId in peerConnections) {
-                        localStream.getTracks().forEach(track => {
-                            peerConnections[peerId].addTrack(track, localStream);
-                        });
-                        // Trigger WebRTC renegotiation offer sequence
-                        const offer = await peerConnections[peerId].createOffer();
-                        await peerConnections[peerId].setLocalDescription(offer);
-                        await set(push(ref(db, `voice_signaling/${currentVoiceRoomId}/${peerId}`)), { offer: { type: offer.type, sdp: offer.sdp } });
-                    }
-                    
-                    microphoneActive = true;
-                    btn.classList.add('active-state');
-                    btn.textContent = "🎙️ Mic On";
-                    
-                    if (currentVoiceRoomId) {
-                        await update(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`), {
-                            hasMedia: true
-                        });
-                    }
-                    updateStatus("🟢 Native Broadcast Live", "#23a55a");
-                } catch (err) {
-                    console.error("Device initialization rejected:", err);
-                    updateStatus("❌ Hardware Access Denied", "#da373c");
-                }
-                return;
-            }
 
-            microphoneActive = !microphoneActive;
-            localStream.getAudioTracks().forEach(track => track.enabled = microphoneActive);
-            localStream.getVideoTracks().forEach(track => track.enabled = microphoneActive);
-            
-            if (microphoneActive) {
-                btn.classList.add('active-state');
-                btn.textContent = "🎙️ Mic On";
-                document.getElementById('local-media-element').style.display = "block";
-                document.querySelector('#local-video-container .voice-avatar').style.display = "none";
+                    for (let peerId in peerConnections) {
+                        peerConnections[peerId].addTrack(videoTrack, localStream);
+                    }
+                    await pushRenegotiationToPeers();
+                    
+                    cameraActive = true;
+                    btn.classList.add('active-state');
+                    btn.textContent = "📷 Cam On";
+                    updateStatus("🟢 Video Stream Broadcast Active", "#23a55a");
+                } catch (err) {
+                    console.error(err);
+                    updateStatus("❌ Camera Permission Denied", "#da373c");
+                    return;
+                }
             } else {
-                btn.classList.remove('active-state');
-                btn.textContent = "🎙️ Muted";
-                document.getElementById('local-media-element').style.display = "none";
-                document.querySelector('#local-video-container .voice-avatar').style.display = "block";
+                cameraActive = !cameraActive;
+                localStream.getVideoTracks().forEach(track => track.enabled = cameraActive);
+                
+                const localVideo = document.getElementById('local-media-element');
+                const localAvatar = document.querySelector('#local-video-container .voice-avatar');
+                
+                if (cameraActive) {
+                    btn.classList.add('active-state');
+                    btn.textContent = "📷 Cam On";
+                    if (localVideo) localVideo.style.display = "block";
+                    if (localAvatar) localAvatar.style.display = "none";
+                } else {
+                    btn.classList.remove('active-state');
+                    btn.textContent = "📷 Cam Off";
+                    if (localVideo) localVideo.style.display = "none";
+                    if (localAvatar) localAvatar.style.display = "block";
+                }
             }
         };
 
@@ -934,6 +988,11 @@
                     btn.classList.remove('active-state');
                     
                     const localVideoTrack = localStream.getVideoTracks()[0];
+                    if (!localVideoTrack || !cameraActive) {
+                        document.getElementById('local-media-element').style.display = "none";
+                        document.querySelector('#local-video-container .voice-avatar').style.display = "block";
+                    }
+                    
                     for (let peerId in peerConnections) {
                         const sender = peerConnections[peerId].getSenders().find(s => s.track && s.track.kind === 'video');
                         if (sender && localVideoTrack) sender.replaceTrack(localVideoTrack);
