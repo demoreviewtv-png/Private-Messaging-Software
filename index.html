@@ -369,6 +369,10 @@
                     <input type="text" id="username-input" maxlength="20" autocomplete="off">
                     <button id="save-username-btn" onclick="window.saveUsername()">Save</button>
                 </div>
+
+                <button class="nav-btn" id="notify-perm-btn" style="background-color: #35373c; color: #fff; text-align: center; margin-top: 8px; margin-bottom: 8px;" onclick="window.requestNotificationPermission()">
+                    🔔 Enable Notifications
+                </button>
                 
                 <button class="reset-btn" id="reset-id-btn" onclick="window.resetIdentity()">Reset Friend Code</button>
             </div>
@@ -466,6 +470,35 @@
             } catch (e) { console.error("Profile sync error: ", e); }
         }
 
+        // --- WEB NOTIFICATION SYSTEM ---
+        window.requestNotificationPermission = function() {
+            if (!("Notification" in window)) {
+                alert("This browser does not support desktop notifications.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    new Notification("PrivacyChat", { body: "Notifications successfully enabled!" });
+                    document.getElementById('notify-perm-btn').textContent = "🔕 Notifications On";
+                }
+            });
+        };
+
+        function sendDeviceNotification(senderName, messageText) {
+            if (Notification.permission === "granted" && document.hidden) {
+                new Notification(`New message from ${senderName}`, {
+                    body: messageText
+                });
+            }
+        }
+
+        if ("Notification" in window && Notification.permission === "granted") {
+            setTimeout(() => {
+                const btn = document.getElementById('notify-perm-btn');
+                if (btn) btn.textContent = "🔕 Notifications On";
+            }, 100);
+        }
+
         async function initIdentity() {
             updateStatus("🔵 Assigning credentials...", "#5865f2");
             friendCode = localStorage.getItem('privacy_chat_friend_code');
@@ -536,36 +569,28 @@
             if (confirm("Are you sure you want to change your Friend Code? All servers you created will be DELETED forever from the database.")) {
                 updateStatus("🔴 Purging owned servers...", "#da373c");
                 
-                // Scan and delete servers owned by this friendCode
                 for (let srv of customServers) {
                     try {
                         const metaRef = ref(db, `server_metadata/${srv.id}`);
                         const snap = await get(metaRef);
                         if (snap.exists() && snap.val().owner === friendCode) {
-                            // 1. Delete main server metadata & channels
                             await remove(metaRef);
-                            // 2. Delete main server messages
                             await remove(ref(db, `messages/${srv.id}`));
                             
-                            // 3. Delete any sub-channels belonging to this server
                             if (snap.val().channels) {
                                 for (let chId of Object.keys(snap.val().channels)) {
                                     await remove(ref(db, `messages/${chId}`));
                                 }
                             }
                         }
-                    } catch (e) {
-                        console.error("Error purging server database entries: ", e);
-                    }
+                    } catch (e) { console.error(e); }
                 }
 
-                // Kill active Firebase metadata listeners
                 Object.keys(serverListeners).forEach(id => {
                     if (serverListeners[id]) serverListeners[id]();
                 });
                 serverListeners = {};
 
-                // Wipe localStorage settings cleanly
                 localStorage.removeItem('privacy_chat_friend_code');
                 localStorage.removeItem('privacy_chat_username');
                 localStorage.removeItem('privacy_chat_custom_servers');
@@ -609,6 +634,7 @@
                     };
                     let displayName = nicknames[data.senderCode] || data.senderName;
                     appendMessage(displayName, data.text, data.color, data.senderCode);
+                    sendDeviceNotification(displayName, data.text);
                 }
             });
         }
@@ -633,6 +659,7 @@
         };
 
         // --- REALTIME DB HISTORY & FETCH AUTO-SYNC ---
+        let initialLoadDone = {}; 
         async function loadMessageHistory(channelName, isSilent = false) {
             if (!friendCode) return;
             if (!isSilent) {
@@ -645,8 +672,10 @@
                 const snapshot = await get(messageRef);
                 const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 40;
                 
+                let existingMsgCount = container.querySelectorAll('.message').length;
                 container.innerHTML = ''; 
                 
+                let index = 0;
                 if (snapshot.exists()) {
                     snapshot.forEach((childSnapshot) => {
                         const data = childSnapshot.val();
@@ -661,11 +690,20 @@
                         }
                         
                         silentAppend(displayName, data.text, displayColor, data.senderCode);
+                        
+                        if (isSilent && initialLoadDone[channelName] && index >= existingMsgCount && data.senderCode !== friendCode) {
+                            sendDeviceNotification(displayName, data.text);
+                        }
+                        index++;
                     });
+                    
+                    initialLoadDone[channelName] = true;
+
                     if (wasAtBottom || !isSilent) {
                         container.scrollTop = container.scrollHeight;
                     }
                 } else {
+                    initialLoadDone[channelName] = true;
                     container.innerHTML = `<div style="color: #23a55a; font-size:13px;">No past history found in this room yet. Start typing!</div>`;
                 }
                 updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
@@ -731,7 +769,6 @@
             }
 
             updateStatus("🔵 Registering server metadata...", "#5865f2");
-            
             const serverMetadataRef = ref(db, `server_metadata/${serverID}`);
             const metaSnap = await get(serverMetadataRef);
             
@@ -744,7 +781,6 @@
 
             customServers.push({ id: serverID, name: serverLabel });
             localStorage.setItem('privacy_chat_custom_servers', JSON.stringify(customServers));
-            
             renderCustomServers();
             document.getElementById('custom-server-input').value = '';
             
@@ -763,7 +799,6 @@
 
             const channelID = `${serverId}-${channelSlug}`;
             const channelRef = ref(db, `server_metadata/${serverId}/channels/${channelID}`);
-            
             await set(channelRef, {
                 id: channelID,
                 name: `# ${channelNameInput.substring(0, 20)}`
@@ -794,7 +829,6 @@
                 listContainer.appendChild(srvContainer);
 
                 if (serverListeners[srv.id]) serverListeners[srv.id](); 
-                
                 const metaRef = ref(db, `server_metadata/${srv.id}`);
                 serverListeners[srv.id] = onValue(metaRef, (snapshot) => {
                     channelsWrapper.innerHTML = '';
@@ -857,12 +891,9 @@
                 } else {
                     activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4' };
                 }
-            } catch(e) {
-                activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4' };
-            }
+            } catch(e) { activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4' }; }
 
             rebuildDmList();
-            
             const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
             const targetBtn = document.getElementById(`btn-${pmChannelID}`);
             const currentLabel = nicknames[targetCode] || initialTargetName;
@@ -871,7 +902,10 @@
         };
 
         window.connectToFriend = async function() {
-            let targetCode = document.getElementById('friend-code-input').value.trim().toUpperCase().replace('#', '');
+            // AUTOMATIC HASH PURGING ENGINE
+            let rawTargetInput = document.getElementById('friend-code-input').value;
+            let targetCode = rawTargetInput.trim().toUpperCase().replace(/#/g, '');
+            
             if (!targetCode || targetCode === friendCode) return;
             await window.executeFriendConnection(targetCode);
             document.getElementById('friend-code-input').value = '';
@@ -884,9 +918,7 @@
             
             if (newNick.trim() === "") {
                 delete nicknames[targetCode];
-            } else {
-                nicknames[targetCode] = newNick.trim();
-            }
+            } else { nicknames[targetCode] = newNick.trim(); }
             
             localStorage.setItem('privacy_chat_nicknames', JSON.stringify(nicknames));
             rebuildDmList();
@@ -905,7 +937,6 @@
 
             savedDms.forEach(targetCode => {
                 const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
-                
                 let resolvedLabel = `#${targetCode}`;
                 if (nicknames[targetCode]) {
                     resolvedLabel = nicknames[targetCode];
@@ -920,9 +951,7 @@
                 btn.id = `btn-${pmChannelID}`;
                 btn.className = 'nav-btn';
                 btn.textContent = `💬 ${resolvedLabel}`;
-                btn.onclick = function() { 
-                    window.switchChannel(pmChannelID, `DM with ${resolvedLabel}`, btn); 
-                };
+                btn.onclick = function() { window.switchChannel(pmChannelID, `DM with ${resolvedLabel}`, btn); };
 
                 const nickBtn = document.createElement('button');
                 nickBtn.className = 'nick-btn';
@@ -936,10 +965,7 @@
                 containerDiv.appendChild(btn);
                 containerDiv.appendChild(nickBtn);
                 pmList.appendChild(containerDiv);
-                
-                if (currentChannelName === pmChannelID) {
-                    btn.classList.add('active');
-                }
+                if (currentChannelName === pmChannelID) btn.classList.add('active');
             });
         }
 
@@ -951,7 +977,6 @@
 
             appendMessage(username, messageText, savedColor, friendCode);
             input.value = '';
-
             updateStatus("🟡 Uploading stream data...", "#f2a359");
 
             currentSubscription.trigger('client-message', {
