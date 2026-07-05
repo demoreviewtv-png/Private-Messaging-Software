@@ -548,8 +548,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
         import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, off, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
-        
-        // FIX: Import LiveKit through the correct global script injection script source
         import "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js";
 
         const firebaseConfig = {
@@ -575,8 +573,8 @@
         let microphoneActive = true;
         let screenShareActive = false;
 
-        let username;
-        let friendCode;
+        let username = "";
+        let friendCode = "";
         let savedColor;
         let profileInterval = null;
         let customServers = [];
@@ -620,12 +618,14 @@
                 updateStatus("🎙️ Requesting Sandbox Token...", "#5865f2");
                 
                 const SANDBOX_ID = "privatemsvercelapp-18je9w";
-                // FIX: Map code references to LivekitClient namespace target
                 const tokenSource = LivekitClient.TokenSource.sandboxTokenServer(SANDBOX_ID);
                 
+                // FIX: Fallback layout injection if username profile data hasn't written fast enough
+                let identityPayload = username || localStorage.getItem('privacy_chat_username') || `User-${friendCode || "Guest"}`;
+
                 const { serverUrl, participantToken } = await tokenSource.fetch({
                     roomName: voiceRoomId,
-                    identity: username
+                    identity: identityPayload
                 });
 
                 currentRoom = new LivekitClient.Room({
@@ -659,7 +659,7 @@
 
                 const roomPresenceRef = ref(db, `voice_presence/${voiceRoomId}/${friendCode}`);
                 await set(roomPresenceRef, { 
-                    username: username, 
+                    username: identityPayload, 
                     joinedAt: serverTimestamp(),
                     secret: DB_SECRET
                 });
@@ -742,7 +742,6 @@
 
                 if (screenShareActive) {
                     btn.classList.add('active-state');
-                    // FIX: Point internal property setup directly to dynamic LivekitClient namespace
                     const localScreenTrack = currentRoom.localParticipant.getTrack(LivekitClient.Track.Source.ScreenShare);
                     if (localScreenTrack && localScreenTrack.track) {
                         localScreenTrack.track.attach(document.getElementById('local-media-element'));
@@ -982,9 +981,11 @@
             await syncProfileToDatabase();
         });
 
+        // FIX: Added wsPath configuration to ensure proper WebSocket endpoint compilation on custom routes
         const pusher = new Pusher('app_0eb6e0fdc30452b7c1c55f2cc8ba6843052381e4', {
             cluster: 'mt1',
             wsHost: 'rt.apinator.io',
+            wsPath: '',
             wsPort: 443,
             wssPort: 443,
             forceTLS: true,
