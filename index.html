@@ -437,9 +437,29 @@
         const input = document.getElementById('message-input');
         const statusLabel = document.getElementById('db-status');
 
+        // Banned words listing array
+        const BANNED_WORDS = ["badword1", "badword2", "spamtext"];
+
         function updateStatus(text, colorClass = "#949ba4") {
             statusLabel.innerHTML = text;
             statusLabel.style.color = colorClass;
+        }
+
+        // TEXT CENSOR ENGINE
+        function censorText(inputText, channelName) {
+            // If the channel name matches a Private Message structure (contains a user split code separation dash), skip censoring
+            const isPrivateMessage = channelName.includes("-") && channelName.split("-").length === 2 && channelName.split("-")[0].length === 6;
+            if (isPrivateMessage) {
+                return inputText;
+            }
+
+            // Apply filter changes if inside public or custom text channel servers
+            let filteredText = inputText;
+            BANNED_WORDS.forEach(word => {
+                const regex = new RegExp(`\\b${word}\\b`, "gi");
+                filteredText = filteredText.replace(regex, "****");
+            });
+            return filteredText;
         }
 
         function generateRandomCode(length = 6) {
@@ -487,7 +507,7 @@
         function sendDeviceNotification(senderName, messageText) {
             if (Notification.permission === "granted" && document.hidden) {
                 new Notification(`New message from ${senderName}`, {
-                    body: messageText
+                    body: censorText(messageText, currentChannelName)
                 });
             }
         }
@@ -549,7 +569,6 @@
             startProfileChecking();
         }
 
-        // --- USERNAME LOCKING & ORIGINAL FRIEND CODE RESTORATION ---
         async function verifyAndRegisterUsername(targetUsername, isInitialSetup = false) {
             const cleanUserKey = targetUsername.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
             if (!cleanUserKey) return false;
@@ -568,12 +587,10 @@
                     
                     const enteredPassword = prompt(`The username "${targetUsername}" is protected. Enter password to sync this profile:`);
                     if (enteredPassword === lockData.password) {
-                        // PASSWORD MATCH FOUND: Restore original owner's Friend Code!
                         friendCode = lockData.ownerCode;
                         localStorage.setItem('privacy_chat_friend_code', friendCode);
                         document.getElementById('friend-code-display').textContent = `#${friendCode}`;
                         
-                        // Force clean reload of local servers/DMs mapped to this profile identity
                         try {
                             const profileDataSnap = await get(ref(db, `profiles/${friendCode}`));
                             if (profileDataSnap.exists()) {
@@ -719,8 +736,12 @@
                         color: data.color
                     };
                     let displayName = nicknames[data.senderCode] || data.senderName;
-                    appendMessage(displayName, data.text, data.color, data.senderCode);
-                    sendDeviceNotification(displayName, data.text);
+                    
+                    // Filter inbound socket transmission streams
+                    let processedText = censorText(data.text, currentChannelName);
+                    
+                    appendMessage(displayName, processedText, data.color, data.senderCode);
+                    sendDeviceNotification(displayName, processedText);
                 }
             });
         }
@@ -775,10 +796,13 @@
                             displayColor = activeFriendProfiles[data.senderCode].color;
                         }
                         
-                        silentAppend(displayName, data.text, displayColor, data.senderCode);
+                        // Filter historical message records pulled from cloud storage
+                        let processedText = censorText(data.text, channelName);
+                        
+                        silentAppend(displayName, processedText, displayColor, data.senderCode);
                         
                         if (isSilent && initialLoadDone[channelName] && index >= existingMsgCount && data.senderCode !== friendCode) {
-                            sendDeviceNotification(displayName, data.text);
+                            sendDeviceNotification(displayName, processedText);
                         }
                         index++;
                     });
@@ -1060,14 +1084,17 @@
             const messageText = input.value.trim();
             if (messageText === '') return;
 
-            appendMessage(username, messageText, savedColor, friendCode);
+            // Apply censor rules conditionally before local element additions
+            let localProcessedText = censorText(messageText, currentChannelName);
+
+            appendMessage(username, localProcessedText, savedColor, friendCode);
             input.value = '';
             updateStatus("🟡 Uploading stream data...", "#f2a359");
 
             currentSubscription.trigger('client-message', {
                 senderName: username,
                 senderCode: friendCode,
-                text: messageText,
+                text: messageText, // Send raw value over socket; recipient censors locally
                 color: savedColor
             });
 
@@ -1077,7 +1104,7 @@
                 await set(newMsgRef, {
                     senderName: username,
                     senderCode: friendCode,
-                    text: messageText,
+                    text: messageText, // Store raw value; clean history reads handle rendering
                     color: savedColor,
                     timestamp: serverTimestamp()
                 });
