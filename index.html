@@ -6,6 +6,47 @@
     <title>PrivacyChat</title>
     <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
     <style>
+        :root {
+            --bg-main: #313338;
+            --bg-sidebar: #2b2d31;
+            --bg-tertiary: #1e1f22;
+            --bg-modifier-selected: #35373c;
+            --text-normal: #dbdee1;
+            --text-muted: #949ba4;
+            --text-header: #fff;
+            --brand-color: #5865f2;
+            --success-color: #23a55a;
+            --danger-color: #da373c;
+            --input-bg: #383a40;
+            --border-color: #1e1f22;
+        }
+
+        body.theme-light {
+            --bg-main: #ffffff;
+            --bg-sidebar: #f2f3f5;
+            --bg-tertiary: #e3e5e8;
+            --bg-modifier-selected: #e0e2e5;
+            --text-normal: #313338;
+            --text-muted: #5c5e66;
+            --text-header: #060607;
+            --brand-color: #4752c4;
+            --input-bg: #ebedef;
+            --border-color: #cbd5e1;
+        }
+
+        body.theme-ocean {
+            --bg-main: #0f1d2a;
+            --bg-sidebar: #0b1520;
+            --bg-tertiary: #070d14;
+            --bg-modifier-selected: #172a3c;
+            --text-normal: #cbd5e1;
+            --text-muted: #64748b;
+            --text-header: #f8fafc;
+            --brand-color: #38bdf8;
+            --input-bg: #1e293b;
+            --border-color: #1e293b;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -16,25 +57,25 @@
         body {
             display: flex;
             height: 100vh;
-            background-color: #313338;
-            color: #dbdee1;
+            background-color: var(--bg-main);
+            color: var(--text-normal);
         }
 
         #sidebar {
             width: 260px;
-            background-color: #2b2d31;
+            background-color: var(--bg-sidebar);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             padding: 20px;
-            border-right: 1px solid #1e1f22;
+            border-right: 1px solid var(--border-color);
             overflow-y: auto;
         }
 
         .channel-title {
             font-weight: bold;
             font-size: 18px;
-            color: #fff;
+            color: var(--text-header);
             margin-bottom: 10px;
         }
 
@@ -49,7 +90,7 @@
         .section-title {
             font-size: 12px;
             font-weight: bold;
-            color: #949ba4;
+            color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -62,9 +103,9 @@
         }
 
         .owner-add-btn {
-            background-color: #35373c;
-            color: #23a55a;
-            border: 1px dashed #23a55a;
+            background-color: var(--bg-modifier-selected);
+            color: var(--success-color);
+            border: 1px dashed var(--success-color);
             font-size: 11px;
             font-weight: bold;
             padding: 3px 6px;
@@ -73,7 +114,7 @@
         }
 
         .owner-add-btn:hover {
-            background-color: #23a55a;
+            background-color: var(--success-color);
             color: #fff;
         }
 
@@ -84,7 +125,7 @@
             margin: 2px 0;
             background: none;
             border: none;
-            color: #949ba4;
+            color: var(--text-muted);
             text-align: left;
             border-radius: 4px;
             cursor: pointer;
@@ -92,8 +133,8 @@
         }
 
         .nav-btn:hover, .nav-btn.active {
-            background-color: #35373c;
-            color: #fff;
+            background-color: var(--bg-modifier-selected);
+            color: var(--text-header);
         }
 
         .sub-channel {
@@ -112,13 +153,13 @@
         .voice-user {
             padding-left: 36px;
             font-size: 12px;
-            color: #23a55a;
+            color: var(--success-color);
             margin: 2px 0;
         }
 
         .privacy-badge {
             font-size: 12px;
-            background-color: #23a55a;
+            background-color: var(--success-color);
             color: white;
             padding: 5px 8px;
             border-radius: 4px;
@@ -130,13 +171,13 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background-color: #313338;
+            background-color: var(--bg-main);
         }
 
         #chat-header {
             padding: 15px 20px;
-            background-color: #313338;
-            border-bottom: 1px solid #1e1f22;
+            background-color: var(--bg-main);
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             gap: 4px;
@@ -144,13 +185,13 @@
 
         .header-title {
             font-weight: bold;
-            color: #fff;
+            color: var(--text-header);
             font-size: 16px;
         }
 
         .history-notice {
             font-size: 12px;
-            color: #23a55a;
+            color: var(--success-color);
             font-weight: normal;
         }
 
@@ -181,14 +222,14 @@
         }
 
         .message .text {
-            color: #dbdee1;
+            color: var(--text-normal);
             font-size: 15px;
             word-break: break-word;
         }
 
         #input-form {
             padding: 20px;
-            background-color: #313338;
+            background-color: var(--bg-main);
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -199,8 +240,8 @@
             padding: 12px 15px;
             border: none;
             border-radius: 8px;
-            background-color: #383a40;
-            color: #dbdee1;
+            background-color: var(--input-bg);
+            color: var(--text-normal);
             font-size: 15px;
             outline: none;
         }
@@ -211,14 +252,14 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            color: #949ba4;
+            color: var(--text-muted);
         }
 
         .color-picker-wrapper {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
         #name-color {
@@ -238,16 +279,16 @@
 
         .pm-input-box input {
             flex: 1;
-            background: #1e1f22;
+            background: var(--bg-tertiary);
             border: none;
             padding: 5px;
-            color: #fff;
+            color: var(--text-header);
             border-radius: 4px;
             font-size: 12px;
         }
 
         .pm-input-box button {
-            background: #5865f2;
+            background: var(--brand-color);
             border: none;
             color: white;
             padding: 0 8px;
@@ -256,7 +297,7 @@
         }
 
         .profile-container {
-            background-color: #1e1f22;
+            background-color: var(--bg-tertiary);
             padding: 12px;
             border-radius: 6px;
             margin-bottom: 15px;
@@ -272,10 +313,10 @@
 
         .username-edit-box input {
             flex: 1;
-            background: #2b2d31;
-            border: 1px solid #383a40;
+            background: var(--bg-sidebar);
+            border: 1px solid var(--input-bg);
             padding: 4px 6px;
-            color: #fff;
+            color: var(--text-header);
             border-radius: 4px;
             font-size: 13px;
             font-weight: bold;
@@ -283,9 +324,9 @@
         }
 
         .username-edit-box button {
-            background: #35373c;
+            background: var(--bg-modifier-selected);
             border: none;
-            color: #dbdee1;
+            color: var(--text-normal);
             padding: 0 8px;
             border-radius: 4px;
             cursor: pointer;
@@ -300,7 +341,7 @@
         .reset-btn {
             background: none;
             border: none;
-            color: #da373c;
+            color: var(--danger-color);
             font-size: 11px;
             cursor: pointer;
             text-decoration: underline;
@@ -357,7 +398,7 @@
         }
 
         .disconnect-voice-btn {
-            background-color: #da373c;
+            background-color: var(--danger-color);
             color: white;
             border: none;
             padding: 5px 10px;
@@ -378,8 +419,8 @@
         }
 
         .media-toggle-btn {
-            background-color: #35373c;
-            color: #dbdee1;
+            background-color: var(--bg-modifier-selected);
+            color: var(--text-normal);
             border: 1px solid #4e5058;
             padding: 6px 2px;
             font-size: 11px;
@@ -395,8 +436,8 @@
         }
 
         .media-toggle-btn.active-state {
-            background-color: #23a55a;
-            border-color: #23a55a;
+            background-color: var(--success-color);
+            border-color: var(--success-color);
             color: white;
         }
 
@@ -404,8 +445,8 @@
             display: flex;
             gap: 10px;
             padding: 10px;
-            background-color: #1e1f22;
-            border-bottom: 1px solid #2b2d31;
+            background-color: var(--bg-tertiary);
+            border-bottom: 1px solid var(--bg-sidebar);
             overflow-x: auto;
             display: none;
         }
@@ -413,13 +454,19 @@
         .video-box {
             width: 160px;
             height: 120px;
-            background-color: #2b2d31;
-            border: 1px solid #383a40;
+            background-color: var(--bg-sidebar);
+            border: 1px solid var(--input-bg);
             border-radius: 4px;
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: border 0.15s, box-shadow 0.15s;
+        }
+
+        .video-box.is-talking {
+            border: 2px solid var(--success-color) !important;
+            box-shadow: 0 0 8px var(--success-color);
         }
 
         .video-box video {
@@ -445,7 +492,7 @@
 
         .voice-avatar {
             font-size: 24px;
-            color: #23a55a;
+            color: var(--success-color);
             position: absolute;
             z-index: 5;
         }
@@ -498,6 +545,15 @@
                 <input type="text" id="friend-code-input" placeholder="Friend Code...">
                 <button onclick="window.connectToFriend()">Go</button>
             </div>
+
+            <div class="section-header">
+                <span class="section-title">Group Chats</span>
+            </div>
+            <div id="group-list"></div>
+            <div class="pm-input-box">
+                <input type="text" id="group-chat-input" placeholder="Group ID or Name...">
+                <button onclick="window.joinOrCreateGroupChat()">Join</button>
+            </div>
         </div>
 
         <div>
@@ -514,16 +570,16 @@
             </div>
 
             <div class="profile-container">
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Friend Code</div>
-                <div id="friend-code-display" style="font-weight: bold; font-size: 15px; color: #fff; font-family: monospace;">Loading...</div>
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Friend Code</div>
+                <div id="friend-code-display" style="font-weight: bold; font-size: 15px; color: var(--text-header); font-family: monospace;">Loading...</div>
                 
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
                 <div class="username-edit-box">
                     <input type="text" id="username-input" maxlength="20" autocomplete="off">
                     <button id="save-username-btn" onclick="window.saveUsername()">Save</button>
                 </div>
 
-                <button class="nav-btn" id="notify-perm-btn" style="background-color: #35373c; color: #fff; text-align: center; margin-top: 8px; margin-bottom: 8px;" onclick="window.requestNotificationPermission()">
+                <button class="nav-btn" id="notify-perm-btn" style="background-color: var(--bg-modifier-selected); color: var(--text-header); text-align: center; margin-top: 8px; margin-bottom: 8px;" onclick="window.requestNotificationPermission()">
                     🔔 Enable Notifications
                 </button>
                 
@@ -531,8 +587,17 @@
             </div>
             
             <div class="color-picker-wrapper">
-                <label for="name-color" style="font-size: 12px; color: #949ba4;">Name Color:</label>
+                <label for="name-color" style="font-size: 12px; color: var(--text-muted);">Name Color:</label>
                 <input type="color" id="name-color" value="#5865f2">
+            </div>
+
+            <div class="color-picker-wrapper">
+                <label for="theme-select" style="font-size: 12px; color: var(--text-muted);">Theme:</label>
+                <select id="theme-select" onchange="window.changeTheme(this.value)" style="background: var(--bg-tertiary); color: var(--text-normal); border: 1px solid var(--input-bg); padding: 4px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="ocean">Ocean</option>
+                </select>
             </div>
 
             <div class="privacy-badge">Zero IP Tracking Active</div>
@@ -595,6 +660,7 @@
         let profileInterval = null;
         let customServers = [];
         let savedDms = [];
+        let savedGroups = [];
         let nicknames = {};
 
         let activeFriendProfiles = {}; 
@@ -829,6 +895,40 @@
             box.appendChild(label);
 
             panel.appendChild(box);
+
+            if (stream.getAudioTracks().length > 0) {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const source = audioContext.createMediaStreamSource(stream);
+                    const analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 512;
+                    source.connect(analyser);
+
+                    const bufferLength = analyser.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+
+                    const checkTalking = () => {
+                        const currentBox = document.getElementById(`video-box-${peerCode}`);
+                        if (!currentBox) {
+                            audioContext.close();
+                            return;
+                        }
+                        analyser.getByteFrequencyData(dataArray);
+                        let total = 0;
+                        for (let i = 0; i < bufferLength; i++) {
+                            total += dataArray[i];
+                        }
+                        let volume = total / bufferLength;
+                        if (volume > 15) {
+                            currentBox.classList.add('is-talking');
+                        } else {
+                            currentBox.classList.remove('is-talking');
+                        }
+                        requestAnimationFrame(checkTalking);
+                    };
+                    checkTalking();
+                } catch(err) { console.error("Talking analysis breakdown:", err); }
+            }
         }
 
         window.leaveVoiceChannel = async function() {
@@ -1076,6 +1176,14 @@
             });
         }
 
+        window.changeTheme = function(theme) {
+            document.body.className = '';
+            if (theme !== 'dark') {
+                document.body.classList.add(`theme-${theme}`);
+            }
+            localStorage.setItem('privacy_chat_theme', theme);
+        };
+
         async function initIdentity() {
             updateStatus("🔵 Assigning credentials...", "#5865f2");
             friendCode = localStorage.getItem('privacy_chat_friend_code');
@@ -1100,6 +1208,10 @@
             usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
 
+            const savedTheme = localStorage.getItem('privacy_chat_theme') || 'dark';
+            document.getElementById('theme-select').value = savedTheme;
+            window.changeTheme(savedTheme);
+
             await setupDefaultChannels('server-1', 'Server 1 🌐');
             await setupDefaultChannels('server-2', 'Server 2 🚀');
             
@@ -1108,9 +1220,11 @@
 
             try {
                 savedDms = JSON.parse(localStorage.getItem('privacy_chat_saved_dms')) || [];
+                savedGroups = JSON.parse(localStorage.getItem('privacy_chat_saved_groups')) || [];
                 nicknames = JSON.parse(localStorage.getItem('privacy_chat_nicknames')) || {};
             } catch (e) { }
             rebuildDmList();
+            rebuildGroupList();
 
             await verifyAndRegisterUsername(username, true);
             await syncProfileToDatabase();
@@ -1288,6 +1402,8 @@
             renderCustomServers();
             buildDefaultChannelsList('server-1');
             buildDefaultChannelsList('server-2');
+            rebuildDmList();
+            rebuildGroupList();
         };
 
         function startFirebaseListener(channelName) {
@@ -1405,7 +1521,7 @@
                 const mainBtn = document.createElement('button');
                 mainBtn.className = 'nav-btn';
                 mainBtn.style.fontWeight = 'bold';
-                mainBtn.style.color = '#fff';
+                mainBtn.style.color = 'var(--text-header)';
                 mainBtn.textContent = srv.name;
                 
                 const channelsWrapper = document.createElement('div');
@@ -1525,6 +1641,39 @@
             await window.executeFriendConnection(rawTargetInput);
             document.getElementById('friend-code-input').value = '';
         };
+
+        window.joinOrCreateGroupChat = function() {
+            let rawInput = document.getElementById('group-chat-input').value.trim();
+            if (!rawInput) return;
+            let groupID = "group-" + rawInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
+            if (!savedGroups.some(g => g.id === groupID)) {
+                savedGroups.push({ id: groupID, name: rawInput });
+                localStorage.setItem('privacy_chat_saved_groups', JSON.stringify(savedGroups));
+            }
+            rebuildGroupList();
+            window.switchChannel(groupID, `Group: ${rawInput}`);
+            document.getElementById('group-chat-input').value = '';
+        };
+
+        function rebuildGroupList() {
+            const groupList = document.getElementById('group-list');
+            if (!groupList) return;
+            groupList.innerHTML = '';
+            savedGroups.forEach(g => {
+                const containerDiv = document.createElement('div');
+                containerDiv.className = 'pm-item';
+
+                const btn = document.createElement('button');
+                btn.id = `btn-${g.id}`;
+                btn.className = 'nav-btn';
+                btn.textContent = `👥 ${g.name}`;
+                btn.onclick = function() { window.switchChannel(g.id, `Group: ${g.name}`, btn); };
+
+                containerDiv.appendChild(btn);
+                groupList.appendChild(containerDiv);
+                if (currentChannelName === g.id) btn.classList.add('active');
+            });
+        }
 
         function rebuildDmList() {
             const pmList = document.getElementById('pm-list');
