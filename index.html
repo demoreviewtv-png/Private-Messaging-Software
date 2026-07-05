@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PrivacyChat</title>
     <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -549,6 +548,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
         import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, off, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+        import * as LiveKit from "https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
@@ -621,7 +621,7 @@
                 const tokenSource = LiveKit.TokenSource.sandboxTokenServer(SANDBOX_ID);
                 
                 const { serverUrl, participantToken } = await tokenSource.fetch({
-                    room: voiceRoomId,
+                    roomName: voiceRoomId,
                     identity: username
                 });
 
@@ -673,8 +673,9 @@
 
                 updateStatus("🟢 Connected to LiveKit Room", "#23a55a");
             } catch (err) {
-                console.error("LiveKit Engine Exception:", err);
-                alert("Voice Connection Error: Confirm your server code toggle state.");
+                console.error("LiveKit Handshake Exception Details:", err);
+                updateStatus("❌ Voice Connection Failed", "#da373c");
+                alert("Voice Connection Error: Confirm your server configuration setup.");
                 window.leaveVoiceChannel();
             }
         };
@@ -986,7 +987,8 @@
             encrypted: true,
             disableStats: true,
             enabledTransports: ['ws', 'wss'],
-            userAuthentication: { endpoint: null }
+            userAuthentication: { endpoint: null },
+            channelAuthorization: { endpoint: null }
         });
 
         let currentChannelName = 'server-1-text';
