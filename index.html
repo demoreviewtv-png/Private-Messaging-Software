@@ -44,11 +44,27 @@
             transform: translateX(-260px);
         }
 
+        .channel-title-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
         .channel-title {
             font-weight: bold;
             font-size: 18px;
             color: #fff;
-            margin-bottom: 10px;
+        }
+
+        .sidebar-close-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: #dbdee1;
+            font-size: 24px;
+            cursor: pointer;
+            line-height: 1;
         }
 
         .section-header {
@@ -586,13 +602,21 @@
                 left: 0;
                 top: 0;
                 height: 100%;
-                width: 100vw;
-                transform: translateX(0);
+                width: 280px;
+                transform: translateX(-280px);
             }
             #sidebar.minimized {
-                transform: translateX(-100vw);
-                width: 100vw;
+                transform: translateX(-280px);
+                width: 0;
+                padding: 20px 0;
+            }
+            #sidebar:not(.minimized) {
+                transform: translateX(0);
+                width: 280px;
                 padding: 20px;
+            }
+            .sidebar-close-btn {
+                display: block;
             }
             .sidebar-overlay.active {
                 display: block;
@@ -604,9 +628,12 @@
 
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="window.toggleSidebar()"></div>
 
-    <div id="sidebar">
+    <div id="sidebar" class="minimized">
         <div>
-            <div class="channel-title">PrivacyChat</div>
+            <div class="channel-title-wrapper">
+                <div class="channel-title">PrivacyChat</div>
+                <button class="sidebar-close-btn" onclick="window.toggleSidebar()">&times;</button>
+            </div>
 
             <div class="profile-container">
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Friend Code</div>
@@ -825,6 +852,7 @@
 
         const BANNED_WORDS = ["fuck", "shit", "nigga", "nigger", "sh1t", "n1gga", "fuckin", "motherfucker"];
 
+        // Explicitly scoping to window layout inside modules
         window.toggleSidebar = function() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -912,41 +940,151 @@
             }
         }
 
-        window.joinVoiceChannel = async function(voiceRoomId, displayName) {
-            if (currentVoiceRoomId) await window.leaveVoiceChannel();
-            currentVoiceRoomId = voiceRoomId;
+        // Configuration mapping initialization hook
+        const pusher = new Pusher('9b03947b66df21a08620', {
+            cluster: 'us2',
+            forceTLS: true,
+            userAuthentication: { endpoint: null },
+            channelAuthorization: { endpoint: null }
+        });
+
+        let currentChannelName = 'server-1-text';
+        let currentSubscription = pusher.subscribe('server-1-text');
+        bindChannelEvents(currentSubscription);
+
+        initIdentity();
+
+        function bindChannelEvents(channel) {
+            channel.bind('client-message', function(data) {
+                if (data.senderCode !== friendCode) {
+                    activeFriendProfiles[data.senderCode] = { username: data.senderName, color: data.color, pfp: data.pfp || "👤" };
+                    let displayName = nicknames[data.senderCode] || data.senderName;
+                    let processedText = censorText(data.text, currentChannelName);
+                    appendMessage(displayName, processedText, data.color, data.senderCode, null, data.pfp || "👤");
+                    sendDeviceNotification(displayName, processedText);
+                }
+            });
+        }
+
+        window.switchChannel = function(targetChannel, displayName, eventSource = null) {
+            pusher.unsubscribe(currentChannelName);
+            container.innerHTML = '';
+            roomTitle.textContent = displayName;
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            if (eventSource) {
+                eventSource.classList.add('active');
+            } else if (document.getElementById(`btn-${targetChannel}`)) {
+                document.getElementById(`btn-${targetChannel}`).classList.add('active');
+            }
+            currentChannelName = targetChannel;
+            currentSubscription = pusher.subscribe(targetChannel);
+            bindChannelEvents(currentSubscription);
+            startFirebaseListener(targetChannel);
+            renderCustomServers();
+            rebuildDmList();
+            rebuildGroupList();
+            buildDefaultChannelsList('server-1');
+            buildDefaultChannelsList('server-2');
             
+            if(window.innerWidth <= 600) {
+                document.getElementById('sidebar').classList.add('minimized');
+                document.getElementById('sidebar-overlay').classList.remove('active');
+            }
+        };
+
+        function startFirebaseListener(channelName) {
+            if (messageListenerRef) off(messageListenerRef);
+            if (messageRemovedListenerRef) off(messageRemovedListenerRef);
+            container.innerHTML = '';
+            messageListenerRef = ref(db, `messages/${channelName}`);
+            messageRemovedListenerRef = ref(db, `messages/${channelName}`);
+            onChildAdded(messageListenerRef, (snapshot) => {
+                const data = snapshot.val();
+                let displayName = nicknames[data.senderCode] || data.senderName;
+                let displayColor = data.color || '#949ba4';
+                let processedText = censorText(data.text, channelName);
+                appendMessage(displayName, processedText, displayColor, data.senderCode, snapshot.key, data.pfp || "👤");
+            });
+            onChildRemoved(messageRemovedListenerRef, (snapshot) => {
+                const staleMessageEl = document.getElementById(`msg-${snapshot.key}`);
+                if (staleMessageEl) staleMessageEl.remove();
+            });
+        }
+
+        function startProfileSyncLoop() {
+            if (profileInterval) clearInterval(profileInterval);
+            syncProfileToDatabase();
+            profileInterval = setInterval(syncProfileToDatabase, 10000);
+        }
+
+        async function syncProfileToDatabase() {
+            if (!friendCode) return;
             try {
-                updateStatus("🔊 Joining Voice...", "#5865f2");
-                
-                updateVoiceUI(true, displayName);
-                microphoneActive = false;
-                cameraActive = false;
-                screenShareActive = false;
-                
-                document.getElementById('toggle-mic-btn').className = "media-toggle-btn";
-                document.getElementById('toggle-mic-btn').textContent = "🎙️ Mic Off";
-                document.getElementById('toggle-cam-btn').className = "media-toggle-btn";
-                document.getElementById('toggle-cam-btn').textContent = "📷 Cam Off";
-                document.getElementById('toggle-screen-btn').className = "media-toggle-btn";
+                await set(ref(db, `profiles/${friendCode}`), {
+                    username: username,
+                    color: savedColor,
+                    pfp: savedPfp,
+                    lastSeen: serverTimestamp(),
+                    secret: DB_SECRET
+                });
+            } catch (e) { console.error("Identity update failure:", e); }
+        }
 
-                let identityPayload = username || localStorage.getItem('privacy_chat_username') || `User-${friendCode}`;
+        window.saveUsername = async function() {
+            const desired = usernameInput.value.trim();
+            if (!desired || desired.length < 3) {
+                alert("Username must be at least 3 characters.");
+                return;
+            }
+            const cleanUserKey = desired.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            if (BANNED_WORDS.some(w => cleanUserKey.includes(w))) {
+                alert("Prohibited phrasing caught by localized filters.");
+                return;
+            }
+            const verified = await verifyAndRegisterUsername(desired, false);
+            if (verified) {
+                username = desired;
+                localStorage.setItem('privacy_chat_username', username);
+                await syncProfileToDatabase();
+                alert("Profile changes registered safely.");
+            } else {
+                alert("Username is protected or allocation conflict occurred.");
+            }
+        };
 
-                const myPresenceRef = ref(db, `voice_presence/${voiceRoomId}/${friendCode}`);
-                await set(myPresenceRef, { 
-                    username: identityPayload, 
+        window.resetIdentity = async function() {
+            if(!confirm("Resetting your identity triggers profile extraction. Continue?")) return;
+            window.leaveVoiceChannel();
+            try {
+                if(friendCode) {
+                    await remove(ref(db, `profiles/${friendCode}`));
+                }
+            } catch(e){}
+            localStorage.clear();
+            location.reload();
+        };
+
+        window.joinVoiceChannel = async function(voiceRoomId, displayName) {
+            if (currentVoiceRoomId) {
+                await window.leaveVoiceChannel();
+            }
+            currentVoiceRoomId = voiceRoomId;
+            updateVoiceUI(true, displayName);
+            updateStatus("🔵 Joining voice room...", "#5865f2");
+            try {
+                await verifyLocalMediaTrackAttachment();
+                await set(ref(db, `voice_presence/${voiceRoomId}/${friendCode}`), {
+                    username: username,
                     pfp: savedPfp,
                     joinedAt: serverTimestamp(),
                     micActive: false,
                     secret: DB_SECRET
                 });
-
                 signalingListenerRef = ref(db, `voice_signaling/${voiceRoomId}/${friendCode}`);
                 onChildAdded(signalingListenerRef, async (snapshot) => {
                     const data = snapshot.val();
                     const sender = snapshot.key;
                     if (!data) return;
-
                     try {
                         if (data.offer) {
                             await handleIncomingOffer(voiceRoomId, sender, data.offer);
@@ -959,10 +1097,9 @@
                                 await peerConnections[sender].addIceCandidate(new RTCIceCandidate(data.iceCandidate));
                             }
                         }
-                    } catch (e) { console.error("Signaling step validation skip:", e); }
+                    } catch (e) { console.error("Signaling step:", e); }
                     await remove(snapshot.ref);
                 });
-
                 const roomPresenceListRef = ref(db, `voice_presence/${voiceRoomId}`);
                 const presenceListener = onValue(roomPresenceListRef, async (snapshot) => {
                     if (!snapshot.exists()) return;
@@ -971,7 +1108,6 @@
                         if (peerId !== friendCode && !peerConnections[peerId]) {
                             await initiatePeerConnection(voiceRoomId, peerId, users[peerId].pfp || "👤");
                         }
-                        
                         const videoBox = document.getElementById(`video-box-${peerId}`);
                         if (videoBox) {
                             if (users[peerId].micActive) {
@@ -983,10 +1119,9 @@
                     }
                 });
                 databaseListeners.push({ ref: roomPresenceListRef, listener: presenceListener });
-
                 updateStatus("🟢 Room Connected Safely", "#23a55a");
             } catch (err) {
-                console.error("WebRTC listen initialization error:", err);
+                console.error(err);
                 updateStatus("❌ Voice Hook Failed", "#da373c");
                 window.leaveVoiceChannel();
             }
@@ -1008,73 +1143,69 @@
             }
         }
 
-        async function initiatePeerConnection(roomId, peerId, fallbackPfp = "👤") {
+        async function initiatePeerConnection(roomId, peerCode, fallbackPfp) {
+            if (peerConnections[peerCode]) return;
             const pc = new RTCPeerConnection(iceServersConfig);
-            peerConnections[peerId] = pc;
-
+            peerConnections[peerCode] = pc;
             if (localStream) {
                 localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
             }
-
-            pc.onicecandidate = (event) => {
+            pc.onicecandidate = async (event) => {
                 if (event.candidate) {
-                    set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { iceCandidate: event.candidate.toJSON() });
+                    await set(push(ref(db, `voice_signaling/${roomId}/${peerCode}`)), { iceCandidate: event.candidate.toJSON() });
                 }
             };
-
+            const remoteStream = new MediaStream();
             pc.ontrack = (event) => {
-                createRemoteVideoElement(peerId, activeFriendProfiles[peerId]?.username || `User-${peerId}`, event.streams[0], activeFriendProfiles[peerId]?.pfp || fallbackPfp);
+                event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+                let peerProfile = activeFriendProfiles[peerCode] || { username: `User-${peerCode}` };
+                createRemoteVideoElement(peerCode, peerProfile.username, remoteStream, fallbackPfp);
             };
-
-            const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
-            await pc.setLocalDescription(offer);
-            
-            await set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { offer: {type: offer.type, sdp: offer.sdp} });
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                await set(push(ref(db, `voice_signaling/${roomId}/${peerCode}`)), { offer: { type: offer.type, sdp: offer.sdp } });
+            } catch (e) { console.error(e); }
         }
 
-        async function handleIncomingOffer(roomId, peerId, offer) {
+        async function handleIncomingOffer(roomId, peerCode, offer) {
+            if (peerConnections[peerCode]) return;
             const pc = new RTCPeerConnection(iceServersConfig);
-            peerConnections[peerId] = pc;
-
+            peerConnections[peerCode] = pc;
             if (localStream) {
                 localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
             }
-
-            pc.onicecandidate = (event) => {
+            pc.onicecandidate = async (event) => {
                 if (event.candidate) {
-                    set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { iceCandidate: event.candidate.toJSON() });
+                    await set(push(ref(db, `voice_signaling/${roomId}/${peerCode}`)), { iceCandidate: event.candidate.toJSON() });
                 }
             };
-
+            const remoteStream = new MediaStream();
             pc.ontrack = (event) => {
-                createRemoteVideoElement(peerId, activeFriendProfiles[peerId]?.username || `User-${peerId}`, event.streams[0], activeFriendProfiles[peerId]?.pfp || "👤");
+                event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+                let peerProfile = activeFriendProfiles[peerCode] || { username: `User-${peerCode}` };
+                createRemoteVideoElement(peerCode, peerProfile.username, remoteStream, savedPfp);
             };
-
             await pc.setRemoteDescription(new RTCSessionDescription(offer));
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-
-            await set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { answer: { type: answer.type, sdp: answer.sdp } });
+            await set(push(ref(db, `voice_signaling/${roomId}/${peerCode}`)), { answer: { type: answer.type, sdp: answer.sdp } });
         }
 
         function createRemoteVideoElement(peerCode, displayName, stream, fallbackPfp = "👤") {
             if (document.getElementById(`video-box-${peerCode}`)) return;
-
             const panel = document.getElementById('video-streams-panel');
             const box = document.createElement('div');
             box.className = 'video-box';
             box.id = `video-box-${peerCode}`;
-
             const icon = document.createElement('div');
             icon.className = 'voice-avatar';
             icon.textContent = fallbackPfp;
             box.appendChild(icon);
-
             const video = document.createElement('video');
             video.autoplay = true;
             video.playsInline = true;
             video.srcObject = stream;
-            
             video.onloadedmetadata = () => {
                 const checkTracks = () => {
                     const videoTracks = stream.getVideoTracks();
@@ -1088,14 +1219,11 @@
                 stream.onaddtrack = checkTracks;
                 stream.onremovetrack = checkTracks;
             };
-
             box.appendChild(video);
-
             const label = document.createElement('div');
             label.className = 'video-label';
             label.textContent = displayName;
             box.appendChild(label);
-
             panel.appendChild(box);
         }
 
@@ -1105,61 +1233,55 @@
                     off(signalingListenerRef);
                     signalingListenerRef = null;
                 }
-
                 databaseListeners.forEach(item => {
                     if (item.ref && typeof item.listener === 'function') {
                         off(item.ref, 'value', item.listener);
                     }
                 });
                 databaseListeners = [];
-
                 if (currentVoiceRoomId) {
                     await remove(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`));
                     await remove(ref(db, `voice_signaling/${currentVoiceRoomId}/${friendCode}`));
                     currentVoiceRoomId = null;
                 }
-            } catch (e) { console.error("DB clear layout extraction error:", e); }
-
+            } catch (e) { console.error(e); }
             for (let peerId in peerConnections) {
                 try { peerConnections[peerId].close(); } catch(e){}
             }
             peerConnections = {};
-
             if (localStream) {
                 try { localStream.getTracks().forEach(track => track.stop()); } catch(e){}
                 localStream = null;
             }
-
             const localVidBox = document.getElementById('local-video-container');
             if (localVidBox) localVidBox.classList.remove('speaking-active');
-
             updateVoiceUI(false);
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
         };
 
         window.toggleMicrophone = async function() {
             const btn = document.getElementById('toggle-mic-btn');
-            await verifyLocalMediaTrackAttachment();
-
-            if (localStream.getAudioTracks().length === 0) {
+            if (!microphoneActive) {
                 try {
-                    updateStatus("🎙️ Requesting microphone hook...", "#5865f2");
+                    updateStatus("🔵 Requesting mic permission...", "#5865f2");
                     const audioCapture = await navigator.mediaDevices.getUserMedia({ audio: true });
                     const audioTrack = audioCapture.getAudioTracks()[0];
+                    await verifyLocalMediaTrackAttachment();
                     localStream.addTrack(audioTrack);
-                    
                     for (let peerId in peerConnections) {
                         peerConnections[peerId].addTrack(audioTrack, localStream);
                     }
                     await pushRenegotiationToPeers();
-                    
                     microphoneActive = true;
                     btn.classList.add('active-state');
                     btn.textContent = "🎙️ Mic On";
-                    updateStatus("🟢 Audio Stream Broadcast Active", "#23a55a");
+                    await update(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`), { micActive: true });
+                    const localVidBox = document.getElementById('local-video-container');
+                    if (localVidBox) localVidBox.classList.add('speaking-active');
+                    updateStatus("🟢 Broadcast stream linked safely", "#23a55a");
                 } catch (err) {
                     console.error(err);
-                    updateStatus("❌ Mic Permission Denied", "#da373c");
+                    updateStatus("❌ Microphone Allocation Denied", "#da373c");
                     return;
                 }
             } else {
@@ -1168,35 +1290,25 @@
                 if (microphoneActive) {
                     btn.classList.add('active-state');
                     btn.textContent = "🎙️ Mic On";
+                    await update(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`), { micActive: true });
+                    document.getElementById('local-video-container').classList.add('speaking-active');
                 } else {
                     btn.classList.remove('active-state');
                     btn.textContent = "🎙️ Mic Off";
-                }
-            }
-
-            if (currentVoiceRoomId) {
-                update(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`), {
-                    micActive: microphoneActive
-                });
-                const localVidBox = document.getElementById('local-video-container');
-                if (localVidBox) {
-                    if (microphoneActive) localVidBox.classList.add('speaking-active');
-                    else localVidBox.classList.remove('speaking-active');
+                    await update(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`), { micActive: false });
+                    document.getElementById('local-video-container').classList.remove('speaking-active');
                 }
             }
         };
 
         window.toggleCamera = async function() {
             const btn = document.getElementById('toggle-cam-btn');
-            await verifyLocalMediaTrackAttachment();
-
-            if (localStream.getVideoTracks().length === 0) {
+            if (!cameraActive) {
                 try {
-                    updateStatus("📷 Requesting camera hook...", "#5865f2");
+                    updateStatus("🔵 Requesting video stream...", "#5865f2");
                     const videoCapture = await navigator.mediaDevices.getUserMedia({ video: true });
                     const videoTrack = videoCapture.getVideoTracks()[0];
                     localStream.addTrack(videoTrack);
-                    
                     const localVideo = document.getElementById('local-media-element');
                     if (localVideo) {
                         localVideo.srcObject = localStream;
@@ -1204,12 +1316,10 @@
                     }
                     const localAvatar = document.querySelector('#local-video-container .voice-avatar');
                     if (localAvatar) localAvatar.style.display = "none";
-
                     for (let peerId in peerConnections) {
                         peerConnections[peerId].addTrack(videoTrack, localStream);
                     }
                     await pushRenegotiationToPeers();
-                    
                     cameraActive = true;
                     btn.classList.add('active-state');
                     btn.textContent = "📷 Cam On";
@@ -1222,10 +1332,8 @@
             } else {
                 cameraActive = !cameraActive;
                 localStream.getVideoTracks().forEach(track => track.enabled = cameraActive);
-                
                 const localVideo = document.getElementById('local-media-element');
                 const localAvatar = document.querySelector('#local-video-container .voice-avatar');
-                
                 if (cameraActive) {
                     btn.classList.add('active-state');
                     btn.textContent = "📷 Cam On";
@@ -1245,75 +1353,32 @@
             try {
                 const btn = document.getElementById('toggle-screen-btn');
                 screenShareActive = !screenShareActive;
-                
                 if (screenShareActive) {
                     const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                     const videoTrack = screenStream.getVideoTracks()[0];
-                    
                     document.getElementById('local-media-element').srcObject = screenStream;
                     document.getElementById('local-media-element').style.display = "block";
                     document.querySelector('#local-video-container .voice-avatar').style.display = "none";
-                    
                     for (let peerId in peerConnections) {
                         const sender = peerConnections[peerId].getSenders().find(s => s.track && s.track.kind === 'video');
                         if (sender) {
                             sender.replaceTrack(videoTrack);
                         } else {
-                            peerConnections[peerId].addTrack(videoTrack, screenStream);
+                            peerConnections[peerId].addTrack(videoTrack, localStream);
                         }
                     }
-
-                    videoTrack.onended = () => { window.toggleScreenShare(); };
+                    videoTrack.onended = () => {
+                        window.toggleScreenShare();
+                    };
                     btn.classList.add('active-state');
+                    btn.textContent = "🖥️ Screen On";
                 } else {
-                    document.getElementById('local-media-element').srcObject = localStream;
                     btn.classList.remove('active-state');
-                    
-                    const localVideoTrack = localStream.getVideoTracks()[0];
-                    if (!localVideoTrack || !cameraActive) {
-                        document.getElementById('local-media-element').style.display = "none";
-                        document.querySelector('#local-video-container .voice-avatar').style.display = "flex";
-                    }
-                    
-                    for (let peerId in peerConnections) {
-                        const sender = peerConnections[peerId].getSenders().find(s => s.track && s.track.kind === 'video');
-                        if (sender && localVideoTrack) sender.replaceTrack(localVideoTrack);
-                    }
+                    btn.textContent = "🖥️ Screen";
+                    window.leaveVoiceChannel();
                 }
-            } catch (e) {
-                console.error(e);
-                screenShareActive = false;
-            }
+            } catch(e) { console.error(e); screenShareActive = false; }
         };
-
-        function generateRandomCode(length = 6) {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-            let result = '';
-            for (let i = 0; i < length; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
-        }
-
-        async function checkCodeUniqueness(code) {
-            try {
-                const snapshot = await get(child(ref(db), `profiles/${code}`));
-                return !snapshot.exists();
-            } catch (e) { return true; }
-        }
-
-        async function syncProfileToDatabase() {
-            if (!friendCode) return;
-            try {
-                await set(ref(db, `profiles/${friendCode}`), {
-                    username: username,
-                    color: savedColor,
-                    pfp: savedPfp,
-                    lastSeen: serverTimestamp(),
-                    secret: DB_SECRET
-                });
-            } catch (e) { console.error(e); }
-        }
 
         window.requestNotificationPermission = function() {
             if (!("Notification" in window)) return;
@@ -1327,9 +1392,7 @@
 
         function sendDeviceNotification(senderName, messageText) {
             if (Notification.permission === "granted" && document.hidden) {
-                new Notification(`New message from ${senderName}`, {
-                    body: censorText(messageText, currentChannelName)
-                });
+                new Notification(`New message from ${senderName}`, { body: censorText(messageText, currentChannelName) });
             }
         }
 
@@ -1362,7 +1425,6 @@
         async function initIdentity() {
             updateStatus("🔵 Assigning credentials...", "#5865f2");
             friendCode = localStorage.getItem('privacy_chat_friend_code');
-            
             if (!friendCode) {
                 let isUnique = false;
                 let loops = 0;
@@ -1373,76 +1435,69 @@
                 }
                 localStorage.setItem('privacy_chat_friend_code', friendCode);
             }
-
             username = localStorage.getItem('privacy_chat_username') || `User-${friendCode}`;
             localStorage.setItem('privacy_chat_username', username);
             savedColor = localStorage.getItem('privacy_chat_color') || '#5865f2';
-            savedPfp = localStorage.getItem('privacy_chat_pfp') || '👤';
-
-            document.getElementById('friend-code-display').textContent = `#${friendCode}`;
-            usernameInput.value = username;
-            usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
-
-            const localAvatar = document.getElementById('local-voice-avatar');
-            if(localAvatar) localAvatar.textContent = savedPfp;
-
+            savedPfp = localStorage.getItem('privacy_chat_pfp') || '👤';
+            
             document.querySelectorAll('.pfp-option').forEach(opt => {
                 if(opt.textContent === savedPfp) opt.classList.add('selected');
             });
+            const localAvatar = document.getElementById('local-voice-avatar');
+            if(localAvatar) localAvatar.textContent = savedPfp;
 
-            // Auto-hide layout on smaller viewports initially
-            if (window.innerWidth <= 600) {
-                document.getElementById('sidebar').classList.add('minimized');
+            document.getElementById('friend-code-display').textContent = `#${friendCode}`;
+            usernameInput.value = username;
+
+            colorPicker.addEventListener('input', (e) => {
+                savedColor = e.target.value;
+                localStorage.setItem('privacy_chat_color', savedColor);
+                syncProfileToDatabase();
+            });
+
+            const tBg = localStorage.getItem('theme_bg');
+            const tSide = localStorage.getItem('theme_sidebar');
+            const tText = localStorage.getItem('theme_text');
+            if (tBg && tSide && tText) {
+                window.applyTheme(tBg, tSide, tText, false);
             }
 
-            const savedBg = localStorage.getItem('theme_bg') || '#313338';
-            const savedSidebar = localStorage.getItem('theme_sidebar') || '#2b2d31';
-            const savedText = localStorage.getItem('theme_text') || '#dbdee1';
-            window.applyTheme(savedBg, savedSidebar, savedText, false);
+            try {
+                const customServersRaw = localStorage.getItem('privacy_chat_custom_servers');
+                if (customServersRaw) customServers = JSON.parse(customServersRaw);
+                const savedDmsRaw = localStorage.getItem('privacy_chat_dms');
+                if (savedDmsRaw) savedDms = JSON.parse(savedDmsRaw);
+                const savedGroupsRaw = localStorage.getItem('privacy_chat_groups');
+                if (savedGroupsRaw) savedGroups = JSON.parse(savedGroupsRaw);
+                const savedNicknamesRaw = localStorage.getItem('privacy_chat_nicknames');
+                if (savedNicknamesRaw) nicknames = JSON.parse(savedNicknamesRaw);
+            } catch(e) {}
 
             await setupDefaultChannels('server-1', 'Server 1 🌐');
             await setupDefaultChannels('server-2', 'Server 2 🚀');
-            
-            try { customServers = JSON.parse(localStorage.getItem('privacy_chat_custom_servers')) || []; } catch (e) { customServers = []; }
-            renderCustomServers();
 
-            try {
-                savedDms = JSON.parse(localStorage.getItem('privacy_chat_saved_dms')) || [];
-                savedGroups = JSON.parse(localStorage.getItem('privacy_chat_saved_groups')) || [];
-                nicknames = JSON.parse(localStorage.getItem('privacy_chat_nicknames')) || {};
-            } catch (e) { }
-            rebuildDmList();
-            rebuildGroupList();
-
-            await verifyAndRegisterUsername(username, true);
-            await syncProfileToDatabase();
-            updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
-            
-            buildDefaultChannelsList('server-1');
-            buildDefaultChannelsList('server-2');
-            
             setupPublicPresenceListener('public-global-gen');
             setupPublicPresenceListener('public-global-game');
-            
-            startFirebaseListener(currentChannelName);
-            startProfileChecking();
 
-            setInterval(async () => {
-                if (friendCode) {
-                    await update(ref(db, `profiles/${friendCode}`), {
-                        lastSeen: serverTimestamp()
-                    });
+            startProfileSyncLoop();
+            window.switchChannel('server-1-text', 'Server 1 🌐');
+            updateStatus("🟢 Connected to Realtime Database Safely", "#23a55a");
+
+            setTimeout(() => {
+                if (Notification.permission === "granted") {
+                    document.getElementById('notify-perm-btn').textContent = "🔕 Notifications On";
                 }
             }, 3000);
 
-            window.addEventListener('beforeunload', () => { window.leaveVoiceChannel(); });
+            window.addEventListener('beforeunload', () => {
+                window.leaveVoiceChannel();
+            });
         }
 
         function buildDefaultChannelsList(serverId) {
             const wrapper = document.getElementById(`channels-${serverId}`);
             if (!wrapper) return;
-            
             onValue(ref(db, `server_metadata/${serverId}/channels`), (snapshot) => {
                 wrapper.innerHTML = '';
                 if (snapshot.exists()) {
@@ -1451,16 +1506,13 @@
                         const chBtn = document.createElement('button');
                         chBtn.id = `btn-${ch.id}`;
                         chBtn.textContent = ch.name;
-                        
                         if (ch.type === "voice") {
                             chBtn.className = 'nav-btn sub-channel voice-type';
                             chBtn.onclick = () => { window.joinVoiceChannel(ch.id, ch.name); };
                             wrapper.appendChild(chBtn);
-
                             const presenceDiv = document.createElement('div');
                             presenceDiv.id = `presence-${ch.id}`;
                             wrapper.appendChild(presenceDiv);
-
                             onValue(ref(db, `voice_presence/${ch.id}`), (pSnap) => {
                                 presenceDiv.innerHTML = '';
                                 if (pSnap.exists()) {
@@ -1498,190 +1550,40 @@
                         localStorage.setItem('privacy_chat_friend_code', friendCode);
                         document.getElementById('friend-code-display').textContent = `#${friendCode}`;
                         return true;
-                    } else {
-                        alert("Incorrect password!");
-                        if (isInitialSetup) {
-                            username = `User-${friendCode}`;
-                            localStorage.setItem('privacy_chat_username', username);
-                            usernameInput.value = username;
-                        }
-                        return false;
                     }
-                } else {
-                    const newPassword = prompt(`Create a protective password for the username "${targetUsername}":`);
-                    await set(userLockRef, { ownerCode: friendCode, password: newPassword ? newPassword.trim() : "1234", secret: DB_SECRET });
-                    return true;
+                    return false;
                 }
-            } catch (err) { return false; }
+                const makePassword = prompt(`Protect "${targetUsername}" with a password? (Leave blank for none):`);
+                if (makePassword !== null) {
+                    await set(userLockRef, { ownerCode: friendCode, password: makePassword, secret: DB_SECRET });
+                }
+                return true;
+            } catch (e) { return true; }
         }
 
-        window.saveUsername = async function() {
-            const newName = usernameInput.value.trim();
-            if (!newName) return;
-            const authorized = await verifyAndRegisterUsername(newName, false);
-            if (!authorized) { usernameInput.value = username; return; }
-            username = newName;
-            localStorage.setItem('privacy_chat_username', username);
-            await syncProfileToDatabase();
-        };
-
-        window.resetIdentity = async function() {
-            if (confirm("Reset identity code? This deletes your servers and localized layouts.")) {
-                await window.leaveVoiceChannel();
-                localStorage.clear();
-                location.reload();
+        function generateRandomCode(length) {
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            let result = "";
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
             }
-        };
-
-        colorPicker.addEventListener('input', async (e) => {
-            savedColor = e.target.value;
-            usernameInput.style.color = savedColor;
-            localStorage.setItem('privacy_chat_color', savedColor);
-            await syncProfileToDatabase();
-        });
-
-        const pusher = new Pusher('app_0eb6e0fdc30452b7c1c55f2cc8ba6843052381e4', {
-            cluster: 'mt1',
-            wsHost: 'rt.apinator.io',
-            wsPath: '',
-            wsPort: 443,
-            wssPort: 443,
-            forceTLS: true,
-            encrypted: true,
-            disableStats: true,
-            enabledTransports: ['ws', 'wss'],
-            userAuthentication: { endpoint: null },
-            channelAuthorization: { endpoint: null }
-        });
-
-        let currentChannelName = 'server-1-text';
-        let currentSubscription = pusher.subscribe('server-1-text');
-        bindChannelEvents(currentSubscription);
-        initIdentity();
-
-        function bindChannelEvents(channel) {
-            channel.bind('client-message', function(data) {
-                if (data.senderCode !== friendCode) {
-                    activeFriendProfiles[data.senderCode] = { username: data.senderName, color: data.color, pfp: data.pfp || "👤" };
-                    let displayName = nicknames[data.senderCode] || data.senderName;
-                    let processedText = censorText(data.text, currentChannelName);
-                    appendMessage(displayName, processedText, data.color, data.senderCode, null, data.pfp || "👤");
-                    sendDeviceNotification(displayName, processedText);
-                }
-            });
+            return result;
         }
 
-        window.switchChannel = function(targetChannel, displayName, eventSource = null) {
-            pusher.unsubscribe(currentChannelName);
-            container.innerHTML = '';
-            roomTitle.textContent = displayName;
-            
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            if (eventSource) {
-                eventSource.classList.add('active');
-            } else if (document.getElementById(`btn-${targetChannel}`)) {
-                document.getElementById(`btn-${targetChannel}`).classList.add('active');
-            }
-
-            currentChannelName = targetChannel;
-            currentSubscription = pusher.subscribe(targetChannel);
-            bindChannelEvents(currentSubscription);
-            startFirebaseListener(targetChannel);
-
-            renderCustomServers();
-            rebuildDmList();
-            rebuildGroupList();
-            buildDefaultChannelsList('server-1');
-            buildDefaultChannelsList('server-2');
-
-            // Automatically shut structural menu on small viewports
-            if(window.innerWidth <= 600) {
-                document.getElementById('sidebar').classList.add('minimized');
-                document.getElementById('sidebar-overlay').classList.remove('active');
-            }
-        };
-
-        function startFirebaseListener(channelName) {
-            if (messageListenerRef) off(messageListenerRef);
-            if (messageRemovedListenerRef) off(messageRemovedListenerRef);
-            
-            container.innerHTML = '';
-            messageListenerRef = ref(db, `messages/${channelName}`);
-            messageRemovedListenerRef = ref(db, `messages/${channelName}`);
-            
-            onChildAdded(messageListenerRef, (snapshot) => {
-                const data = snapshot.val();
-                let displayName = nicknames[data.senderCode] || data.senderName;
-                let displayColor = data.color || '#949ba4';
-                let processedText = censorText(data.text, channelName);
-                appendMessage(displayName, processedText, displayColor, data.senderCode, snapshot.key, data.pfp || "👤");
-            });
-
-            onChildRemoved(messageRemovedListenerRef, (snapshot) => {
-                const staleMessageEl = document.getElementById(`msg-${snapshot.key}`);
-                if (staleMessageEl) staleMessageEl.remove();
-            });
-        }
-
-        function startProfileChecking() {
-            if (profileInterval) clearInterval(profileInterval);
-            
-            profileInterval = setInterval(async () => {
-                rebuildDmList();
-                
-                if (!currentVoiceRoomId) return;
-                const now = Date.now();
-                const fallbackCutoff = 8000;
-
-                try {
-                    const profilesSnap = await get(ref(db, 'profiles'));
-                    if (!profilesSnap.exists()) return;
-                    const allProfiles = profilesSnap.val();
-
-                    const presenceSnap = await get(ref(db, `voice_presence/${currentVoiceRoomId}`));
-                    if (!presenceSnap.exists()) return;
-                    const presenceUsers = presenceSnap.val();
-
-                    for (let peerCode in presenceUsers) {
-                        if (peerCode === friendCode) continue;
-
-                        const profile = allProfiles[peerCode];
-                        if (!profile || !profile.lastSeen || (now - profile.lastSeen) > fallbackCutoff) {
-                            if (peerConnections[peerCode]) {
-                                try { peerConnections[peerCode].close(); } catch(e){}
-                                delete peerConnections[peerCode];
-                            }
-
-                            const targetBox = document.getElementById(`video-box-${peerCode}`);
-                            if (targetBox) targetBox.remove();
-
-                            await remove(ref(db, `voice_presence/${currentVoiceRoomId}/${peerCode}`));
-                            await remove(ref(db, `voice_signaling/${currentVoiceRoomId}/${peerCode}`));
-
-                            const messagesSnap = await get(ref(db, `messages/${currentChannelName}`));
-                            if (messagesSnap.exists()) {
-                                messagesSnap.forEach((msgChild) => {
-                                    if (msgChild.val().senderCode === peerCode) {
-                                        remove(msgChild.ref);
-                                    }
-                                });
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-            }, 4000);
+        async function checkCodeUniqueness(code) {
+            try {
+                const snap = await get(ref(db, `profiles/${code}`));
+                return !snap.exists();
+            } catch(e) { return true; }
         }
 
         window.joinCustomServer = async function() {
-            const rawInput = document.getElementById('custom-server-input').value.trim();
-            if (!rawInput) return;
-            const serverID = "custom-" + rawInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
-            const serverLabel = "🛠️ " + rawInput.substring(0, 20);
-
+            let serverInput = document.getElementById('custom-server-input').value.trim();
+            if (!serverInput) return;
+            const serverID = serverInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
+            if (!serverID) return;
+            const serverLabel = `👑 ${serverInput}`;
             await setupDefaultChannels(serverID, serverLabel);
-
             if (!customServers.some(s => s.id === serverID)) {
                 customServers.push({ id: serverID, name: serverLabel });
                 localStorage.setItem('privacy_chat_custom_servers', JSON.stringify(customServers));
@@ -1695,74 +1597,57 @@
             if (!label) return;
             const slug = label.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
             const id = `${serverId}-${slug}`;
-            
-            await set(ref(db, `server_metadata/${serverId}/channels/${id}`), {
-                id: id,
-                name: type === 'text' ? `# ${label}` : `🔊 ${label}`,
-                type: type,
-                secret: DB_SECRET
-            });
+            await set(ref(db, `server_metadata/${serverId}/channels/${id}`), { id: id, name: type === 'text' ? `# ${label}` : `🔊 ${label}`, type: type, secret: DB_SECRET });
         };
 
         function renderCustomServers() {
             document.querySelectorAll("[id^='container-custom-']").forEach(el => el.remove());
             const listContainer = document.getElementById('server-list');
-            
             customServers.forEach(srv => {
+                if(document.getElementById(`container-${srv.id}`)) return;
                 const srvContainer = document.createElement('div');
                 srvContainer.className = 'server-container';
                 srvContainer.id = `container-${srv.id}`;
-
                 const mainBtn = document.createElement('button');
                 mainBtn.className = 'nav-btn';
                 mainBtn.style.fontWeight = 'bold';
                 mainBtn.style.color = '#fff';
                 mainBtn.textContent = srv.name;
-                
                 const channelsWrapper = document.createElement('div');
                 channelsWrapper.className = 'channels-wrapper';
-
                 srvContainer.appendChild(mainBtn);
                 srvContainer.appendChild(channelsWrapper);
                 listContainer.appendChild(srvContainer);
-
-                if (serverListeners[srv.id]) serverListeners[srv.id](); 
+                if (serverListeners[srv.id]) serverListeners[srv.id]();
                 serverListeners[srv.id] = onValue(ref(db, `server_metadata/${srv.id}`), (snapshot) => {
                     channelsWrapper.innerHTML = '';
                     if (snapshot.exists()) {
                         const data = snapshot.val();
                         const isOwner = data.owner === friendCode;
                         const hasChannels = data.channels && Object.keys(data.channels).length > 0;
-
                         if (hasChannels || isOwner) {
                             srvContainer.style.display = "block";
                         } else {
                             srvContainer.style.display = "none";
                         }
-                        
                         if (isOwner) {
                             let headerDiv = document.createElement('div');
                             headerDiv.className = 'owner-actions';
-                            headerDiv.innerHTML = `<button class="owner-add-btn" onclick="window.addChannelPrompt('${srv.id}', 'text')">+ Text</button> 
-                                                   <button class="owner-add-btn" onclick="window.addChannelPrompt('${srv.id}', 'voice')">+ Voice</button>`;
+                            headerDiv.innerHTML = `<button class="owner-add-btn" onclick="window.addChannelPrompt('${srv.id}', 'text')">+ Text</button> <button class="owner-add-btn" onclick="window.addChannelPrompt('${srv.id}', 'voice')">+ Voice</button>`;
                             channelsWrapper.appendChild(headerDiv);
                         }
-
                         if (data.channels) {
                             Object.values(data.channels).forEach(ch => {
                                 const chBtn = document.createElement('button');
                                 chBtn.id = `btn-${ch.id}`;
                                 chBtn.textContent = ch.name;
-                                
                                 if (ch.type === "voice") {
                                     chBtn.className = 'nav-btn sub-channel voice-type';
                                     chBtn.onclick = () => { window.joinVoiceChannel(ch.id, ch.name); };
                                     channelsWrapper.appendChild(chBtn);
-
                                     const presenceDiv = document.createElement('div');
                                     presenceDiv.id = `presence-${ch.id}`;
                                     channelsWrapper.appendChild(presenceDiv);
-
                                     onValue(ref(db, `voice_presence/${ch.id}`), (pSnap) => {
                                         presenceDiv.innerHTML = '';
                                         if (pSnap.exists()) {
@@ -1776,58 +1661,40 @@
                                     });
                                 } else {
                                     chBtn.className = 'nav-btn sub-channel text-type';
-                                    chBtn.onclick = () => { window.switchChannel(ch.id, `${srv.name} ➡️ ${ch.name}`, chBtn); };
+                                    chBtn.style.display = "block";
+                                    chBtn.onclick = () => { window.switchChannel(ch.id, ch.name, chBtn); };
                                     channelsWrapper.appendChild(chBtn);
                                     if (currentChannelName === ch.id) chBtn.classList.add('active');
                                 }
                             });
                         }
-                    } else {
-                        srvContainer.style.display = "none";
                     }
                 });
             });
         }
 
-        window.clickUserToFriend = async function(targetCode, targetDefaultName) {
-            if (!targetCode || targetCode === friendCode) return;
-            if (confirm(`Do you want to add ${targetDefaultName} (#${targetCode}) to your Private Messages?`)) {
-                await window.executeFriendConnection(targetCode);
+        window.executeFriendConnection = async function(targetCode, initialTargetName = "Loading...") {
+            targetCode = targetCode.trim().toUpperCase();
+            if (targetCode === friendCode) return;
+            if (!savedDms.some(d => d.code === targetCode)) {
+                savedDms.push({ code: targetCode, name: initialTargetName });
+                localStorage.setItem('privacy_chat_dms', JSON.stringify(savedDms));
             }
-        };
-
-        window.executeFriendConnection = async function(targetCode) {
-            targetCode = targetCode.trim().toUpperCase().replace(/#/g, '');
-            if (!targetCode || targetCode === friendCode) return;
-
-            if (!savedDms.includes(targetCode)) {
-                savedDms.push(targetCode);
-                localStorage.setItem('privacy_chat_saved_dms', JSON.stringify(savedDms));
-            }
-
-            let initialTargetName = `#${targetCode}`;
             try {
                 const pSnap = await get(ref(db, `profiles/${targetCode}`));
                 if (pSnap.exists()) {
                     const pData = pSnap.val();
-                    activeFriendProfiles[targetCode] = { 
-                        username: pData.username || initialTargetName, 
-                        color: pData.color || '#949ba4',
-                        pfp: pData.pfp || "👤"
-                    };
+                    activeFriendProfiles[targetCode] = { username: pData.username || initialTargetName, color: pData.color || '#949ba4', pfp: pData.pfp || "👤" };
                     initialTargetName = pData.username || initialTargetName;
                 } else {
                     activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4', pfp: "👤" };
                 }
-            } catch(e) { 
-                activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4', pfp: "👤" }; 
+            } catch(e) {
+                activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4', pfp: "👤" };
             }
-
             rebuildDmList();
-            
             const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
             const currentLabel = nicknames[targetCode] || initialTargetName;
-            
             window.switchChannel(pmChannelID, `DM with ${currentLabel}`);
         };
 
@@ -1841,69 +1708,79 @@
         window.connectToGroup = function() {
             let rawGroupInput = document.getElementById('group-id-input').value.trim();
             if (!rawGroupInput) return;
-            
-            const groupSlug = "group-" + rawGroupInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20);
-            
-            if (!savedGroups.includes(groupSlug)) {
-                savedGroups.push(groupSlug);
-                localStorage.setItem('privacy_chat_saved_groups', JSON.stringify(savedGroups));
+            const groupID = rawGroupInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
+            if (!groupID) return;
+            if (!savedGroups.some(g => g.id === groupID)) {
+                savedGroups.push({ id: groupID, name: `Group: ${rawGroupInput}` });
+                localStorage.setItem('privacy_chat_groups', JSON.stringify(savedGroups));
             }
-            
             rebuildGroupList();
-            window.switchChannel(groupSlug, `👥 Group: ${rawGroupInput}`);
+            window.switchChannel(`group-${groupID}`, `Group Chat: ${rawGroupInput}`);
             document.getElementById('group-id-input').value = '';
         };
 
+        window.clickUserToFriend = function(targetCode, currentName) {
+            window.executeFriendConnection(targetCode, currentName);
+        };
+
+        window.setCustomNickname = function(targetCode) {
+            const existing = nicknames[targetCode] || "";
+            const res = prompt("Enter a custom nickname for this user (or leave empty to reset):", existing);
+            if (res === null) return;
+            if (res.trim() === "") {
+                delete nicknames[targetCode];
+            } else {
+                nicknames[targetCode] = res.trim();
+            }
+            localStorage.setItem('privacy_chat_nicknames', JSON.stringify(nicknames));
+            rebuildDmList();
+            if (currentChannelName.includes(targetCode)) {
+                let currentProfile = activeFriendProfiles[targetCode] || { username: `User-${targetCode}` };
+                roomTitle.textContent = `DM with ${nicknames[targetCode] || currentProfile.username}`;
+            }
+        };
+
         function rebuildDmList() {
-            const pmList = document.getElementById('pm-list');
-            if (!pmList) return;
-            pmList.innerHTML = '';
-
-            savedDms.forEach(targetCode => {
-                const pmChannelID = [friendCode, targetCode].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '');
-                let resolvedLabel = `#${targetCode}`;
-                
-                if (nicknames[targetCode]) {
-                    resolvedLabel = nicknames[targetCode];
-                } else if (activeFriendProfiles[targetCode] && activeFriendProfiles[targetCode].username) {
-                    resolvedLabel = activeFriendProfiles[targetCode].username;
+            const dmsWrapper = document.getElementById('pm-list');
+            dmsWrapper.innerHTML = '';
+            savedDms.forEach(dm => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'pm-item';
+                let currentProfile = activeFriendProfiles[dm.code] || { username: dm.name, color: '#949ba4', pfp: "👤" };
+                let resolvedLabel = nicknames[dm.code] || currentProfile.username;
+                const dmBtn = document.createElement('button');
+                dmBtn.className = 'nav-btn';
+                dmBtn.id = `btn-${[friendCode, dm.code].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '')}`;
+                dmBtn.innerHTML = `<span class="small-pfp">${currentProfile.pfp || '👤'}</span> ${resolvedLabel}`;
+                dmBtn.onclick = () => window.executeFriendConnection(dm.code, currentProfile.username);
+                const nickBtn = document.createElement('button');
+                nickBtn.textContent = "✏️";
+                nickBtn.style.cssText = "background:none; border:none; color:#949ba4; cursor:pointer; padding: 5px; font-size:12px;";
+                nickBtn.title = "Set Nickname";
+                nickBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    window.setCustomNickname(dm.code);
+                };
+                itemDiv.appendChild(dmBtn);
+                itemDiv.appendChild(nickBtn);
+                dmsWrapper.appendChild(itemDiv);
+                if (currentChannelName === [friendCode, dm.code].sort().join('-').replace(/[^a-zA-Z0-9-_]/g, '')) {
+                    dmBtn.classList.add('active');
                 }
-
-                const containerDiv = document.createElement('div');
-                containerDiv.className = 'pm-item';
-
-                const btn = document.createElement('button');
-                btn.id = `btn-${pmChannelID}`;
-                btn.className = 'nav-btn';
-                btn.textContent = `💬 ${resolvedLabel}`;
-                btn.onclick = function() { window.switchChannel(pmChannelID, `DM with ${resolvedLabel}`, btn); };
-
-                containerDiv.appendChild(btn);
-                pmList.appendChild(containerDiv);
-                if (currentChannelName === pmChannelID) btn.classList.add('active');
             });
         }
 
         function rebuildGroupList() {
-            const groupListEl = document.getElementById('group-list');
-            if (!groupListEl) return;
-            groupListEl.innerHTML = '';
-
-            savedGroups.forEach(groupSlug => {
-                const containerDiv = document.createElement('div');
-                containerDiv.className = 'pm-item';
-
-                const displayLabel = groupSlug.replace('group-', '').toUpperCase();
-
-                const btn = document.createElement('button');
-                btn.id = `btn-${groupSlug}`;
-                btn.className = 'nav-btn';
-                btn.textContent = `👥 ${displayLabel}`;
-                btn.onclick = function() { window.switchChannel(groupSlug, `👥 Group: ${displayLabel}`, btn); };
-
-                containerDiv.appendChild(btn);
-                groupListEl.appendChild(containerDiv);
-                if (currentChannelName === groupSlug) btn.classList.add('active');
+            const groupWrapper = document.getElementById('group-list');
+            groupWrapper.innerHTML = '';
+            savedGroups.forEach(g => {
+                const gBtn = document.createElement('button');
+                gBtn.className = 'nav-btn';
+                gBtn.id = `btn-group-${g.id}`;
+                gBtn.textContent = `💬 ${g.name}`;
+                gBtn.onclick = () => window.switchChannel(`group-${g.id}`, `Group Chat: ${g.name}`);
+                groupWrapper.appendChild(gBtn);
+                if (currentChannelName === `group-${g.id}`) gBtn.classList.add('active');
             });
         }
 
@@ -1911,13 +1788,10 @@
             e.preventDefault();
             const messageText = input.value.trim();
             if (!messageText) return;
-
             input.value = '';
-
             currentSubscription.trigger('client-message', {
                 senderName: username, senderCode: friendCode, text: messageText, color: savedColor, pfp: savedPfp
             });
-
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
                     senderName: username, senderCode: friendCode, text: messageText, color: savedColor, pfp: savedPfp, timestamp: serverTimestamp(), secret: DB_SECRET
@@ -1929,7 +1803,6 @@
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
             if (msgKey) messageDiv.id = `msg-${msgKey}`;
-            
             messageDiv.innerHTML = `
                 <div class="msg-pfp">${msgPfp}</div>
                 <div class="msg-body">
