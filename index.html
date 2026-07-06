@@ -260,7 +260,7 @@
             padding: 12px;
             border-radius: 6px;
             margin-bottom: 15px;
-            margin-top: 20px;
+            margin-top: 5px;
         }
 
         .username-edit-box {
@@ -420,12 +420,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: border-color 0.2s ease;
+            transition: border 0.2s ease;
         }
 
-        .video-box:has(video[style*="display: block"]):hover,
-        .video-box:has(video:not([style*="display: none"])):hover {
-            border-color: #5865f2;
+        .video-box.speaking-active {
+            border: 3px solid #23a55a !important;
         }
 
         .video-box video {
@@ -435,7 +434,6 @@
             border-radius: 4px;
             display: block;
             background-color: #000;
-            cursor: pointer;
         }
 
         .video-label {
@@ -448,7 +446,6 @@
             padding: 2px 4px;
             border-radius: 2px;
             z-index: 10;
-            pointer-events: none;
         }
 
         .voice-avatar {
@@ -456,7 +453,6 @@
             color: #23a55a;
             position: absolute;
             z-index: 5;
-            pointer-events: none;
         }
     </style>
 </head>
@@ -465,6 +461,58 @@
     <div id="sidebar">
         <div>
             <div class="channel-title">PrivacyChat</div>
+
+            <div class="profile-container">
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Friend Code</div>
+                <div id="friend-code-display" style="font-weight: bold; font-size: 15px; color: #fff; font-family: monospace;">Loading...</div>
+                
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
+                <div class="username-edit-box">
+                    <input type="text" id="username-input" maxlength="20" autocomplete="off">
+                    <button id="save-username-btn" onclick="window.saveUsername()">Save</button>
+                </div>
+
+                <button class="nav-btn" id="notify-perm-btn" style="background-color: #35373c; color: #fff; text-align: center; margin-top: 8px; margin-bottom: 8px;" onclick="window.requestNotificationPermission()">
+                    🔔 Enable Notifications
+                </button>
+                
+                <button class="reset-btn" id="reset-id-btn" onclick="window.resetIdentity()">Reset Friend Code</button>
+            </div>
+
+            <div class="section-header">
+                <span class="section-title">Themes & Colors</span>
+            </div>
+            <div class="theme-container" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Presets</div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button onclick="window.applyTheme('#313338', '#2b2d31', '#dbdee1')" style="background:#313338; width:22px; height:22px; border:1px solid #fff; border-radius:4px; cursor:pointer;" title="Discord Dark"></button>
+                    <button onclick="window.applyTheme('#ffffff', '#f2f3f5', '#060607')" style="background:#ffffff; width:22px; height:22px; border:1px solid #ccc; border-radius:4px; cursor:pointer;" title="Light Theme"></button>
+                    <button onclick="window.applyTheme('#000000', '#050505', '#e3e5e8')" style="background:#000000; width:22px; height:22px; border:1px solid #444; border-radius:4px; cursor:pointer;" title="AMOLED Black"></button>
+                    <button onclick="window.applyTheme('#0f172a', '#1e293b', '#f8fafc')" style="background:#0f172a; width:22px; height:22px; border:1px solid #444; border-radius:4px; cursor:pointer;" title="Midnight Blue"></button>
+                    <button onclick="window.applyTheme('#1a0f1a', '#2d1b2d', '#fae8ff')" style="background:#1a0f1a; width:22px; height:22px; border:1px solid #444; border-radius:4px; cursor:pointer;" title="Cyber Plum"></button>
+                </div>
+                
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; margin-top: 4px;">Custom Themes</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 10px; color: #949ba4; text-align: center;">
+                    <div>
+                        <input type="color" id="theme-bg-color" value="#313338" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;">
+                        Chat BG
+                    </div>
+                    <div>
+                        <input type="color" id="theme-side-color" value="#2b2d31" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;">
+                        Sidebar
+                    </div>
+                    <div>
+                        <input type="color" id="theme-text-color" value="#dbdee1" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;">
+                        Text Color
+                    </div>
+                </div>
+
+                <div class="color-picker-wrapper" style="margin-bottom: 0; margin-top: 6px; justify-content: space-between;">
+                    <label for="name-color" style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Name Color:</label>
+                    <input type="color" id="name-color" value="#5865f2">
+                </div>
+            </div>
 
             <div class="section-header">
                 <span class="section-title">Public Voice Channels</span>
@@ -494,7 +542,7 @@
                 </div>
             </div>
             
-            <div class="pm-input-box">
+            <div class="pm-input-box" style="margin-bottom: 15px;">
                 <input type="text" id="custom-server-input" placeholder="Create/Join Server...">
                 <button onclick="window.joinCustomServer()">Join</button>
             </div>
@@ -503,9 +551,18 @@
                 <span class="section-title">Private Messages</span>
             </div>
             <div id="pm-list"></div>
-            <div class="pm-input-box">
+            <div class="pm-input-box" style="margin-bottom: 15px;">
                 <input type="text" id="friend-code-input" placeholder="Friend Code...">
                 <button onclick="window.connectToFriend()">Go</button>
+            </div>
+
+            <div class="section-header">
+                <span class="section-title">Group Chats</span>
+            </div>
+            <div id="group-list"></div>
+            <div class="pm-input-box" style="margin-bottom: 15px;">
+                <input type="text" id="group-id-input" placeholder="Group Name or ID...">
+                <button onclick="window.connectToGroup()">Join</button>
             </div>
         </div>
 
@@ -520,28 +577,6 @@
                     <button class="media-toggle-btn" id="toggle-cam-btn" onclick="window.toggleCamera()">📷 Cam Off</button>
                     <button class="media-toggle-btn" id="toggle-screen-btn" onclick="window.toggleScreenShare()">🖥️ Screen</button>
                 </div>
-            </div>
-
-            <div class="profile-container">
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Friend Code</div>
-                <div id="friend-code-display" style="font-weight: bold; font-size: 15px; color: #fff; font-family: monospace;">Loading...</div>
-                
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
-                <div class="username-edit-box">
-                    <input type="text" id="username-input" maxlength="20" autocomplete="off">
-                    <button id="save-username-btn" onclick="window.saveUsername()">Save</button>
-                </div>
-
-                <button class="nav-btn" id="notify-perm-btn" style="background-color: #35373c; color: #fff; text-align: center; margin-top: 8px; margin-bottom: 8px;" onclick="window.requestNotificationPermission()">
-                    🔔 Enable Notifications
-                </button>
-                
-                <button class="reset-btn" id="reset-id-btn" onclick="window.resetIdentity()">Reset Friend Code</button>
-            </div>
-            
-            <div class="color-picker-wrapper">
-                <label for="name-color" style="font-size: 12px; color: #949ba4;">Name Color:</label>
-                <input type="color" id="name-color" value="#5865f2">
             </div>
 
             <div class="privacy-badge">Zero IP Tracking Active</div>
@@ -604,6 +639,7 @@
         let profileInterval = null;
         let customServers = [];
         let savedDms = [];
+        let savedGroups = [];
         let nicknames = {};
 
         let activeFriendProfiles = {}; 
@@ -625,14 +661,45 @@
 
         const BANNED_WORDS = ["fuck", "shit", "nigga", "nigger", "sh1t", "n1gga", "fuckin", "motherfucker"];
 
+        window.applyTheme = function(bg, sidebar, text, save = true) {
+            let styleEl = document.getElementById('custom-theme-styles');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'custom-theme-styles';
+                document.head.appendChild(styleEl);
+            }
+            styleEl.innerHTML = `
+                body, #chat-area, #chat-header, #input-form { background-color: ${bg} !important; color: ${text} !important; }
+                #sidebar { background-color: ${sidebar} !important; }
+                .message .text { color: ${text} !important; }
+            `;
+            
+            document.getElementById('theme-bg-color').value = bg;
+            document.getElementById('theme-side-color').value = sidebar;
+            document.getElementById('theme-text-color').value = text;
+            
+            if (save) {
+                localStorage.setItem('theme_bg', bg);
+                localStorage.setItem('theme_sidebar', sidebar);
+                localStorage.setItem('theme_text', text);
+            }
+        };
+
+        window.updateCustomTheme = function() {
+            const bg = document.getElementById('theme-bg-color').value;
+            const sidebar = document.getElementById('theme-side-color').value;
+            const text = document.getElementById('theme-text-color').value;
+            window.applyTheme(bg, sidebar, text, true);
+        };
+
         function updateStatus(text, colorClass = "#949ba4") {
             statusLabel.innerHTML = text;
             statusLabel.style.color = colorClass;
         }
 
         function censorText(inputText, channelName) {
-            const isPrivateMessage = channelName.includes("-") && channelName.split("-").length === 2 && channelName.split("-")[0].length === 6;
-            if (isPrivateMessage) return inputText;
+            const isPrivateOrGroup = channelName.includes("-");
+            if (isPrivateOrGroup) return inputText;
 
             let filteredText = inputText;
             BANNED_WORDS.forEach(word => {
@@ -664,26 +731,12 @@
             }
         }
 
-        function toggleElementFullscreen(el) {
-            if (!document.fullscreenElement) {
-                el.requestFullscreen().catch(err => {
-                    console.error("Fullscreen request failed:", err);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        document.getElementById('local-media-element').addEventListener('dblclick', function() {
-            toggleElementFullscreen(this);
-        });
-
         window.joinVoiceChannel = async function(voiceRoomId, displayName) {
             if (currentVoiceRoomId) await window.leaveVoiceChannel();
             currentVoiceRoomId = voiceRoomId;
             
             try {
-                updateStatus("🔊 Joining Voice (Listen-Only Mode)...", "#5865f2");
+                updateStatus("🔊 Joining Voice...", "#5865f2");
                 
                 updateVoiceUI(true, displayName);
                 microphoneActive = false;
@@ -702,6 +755,7 @@
                 await set(myPresenceRef, { 
                     username: identityPayload, 
                     joinedAt: serverTimestamp(),
+                    micActive: false,
                     secret: DB_SECRET
                 });
 
@@ -734,6 +788,16 @@
                     for (let peerId in users) {
                         if (peerId !== friendCode && !peerConnections[peerId]) {
                             await initiatePeerConnection(voiceRoomId, peerId);
+                        }
+                        
+                        // Handle box outlines for speaking users dynamically
+                        const videoBox = document.getElementById(`video-box-${peerId}`);
+                        if (videoBox) {
+                            if (users[peerId].micActive) {
+                                videoBox.classList.add('speaking-active');
+                            } else {
+                                videoBox.classList.remove('speaking-active');
+                            }
                         }
                     }
                 });
@@ -784,7 +848,7 @@
             const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
             await pc.setLocalDescription(offer);
             
-            await set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { offer: { type: offer.type, sdp: offer.sdp } });
+            await set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { offer: {type: offer.type, sdp: offer.sdp} });
         }
 
         async function handleIncomingOffer(roomId, peerId, offer) {
@@ -830,10 +894,6 @@
             video.playsInline = true;
             video.srcObject = stream;
             
-            video.addEventListener('dblclick', function() {
-                toggleElementFullscreen(this);
-            });
-
             video.onloadedmetadata = () => {
                 const checkTracks = () => {
                     const videoTracks = stream.getVideoTracks();
@@ -889,6 +949,9 @@
                 localStream = null;
             }
 
+            const localVidBox = document.getElementById('local-video-container');
+            if (localVidBox) localVidBox.classList.remove('speaking-active');
+
             updateVoiceUI(false);
             updateStatus("🟢 Realtime DB Syncing Active", "#23a55a");
         };
@@ -927,6 +990,18 @@
                 } else {
                     btn.classList.remove('active-state');
                     btn.textContent = "🎙️ Mic Off";
+                }
+            }
+
+            // Realtime tracking layout alignment inside voice room
+            if (currentVoiceRoomId) {
+                update(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`), {
+                    micActive: microphoneActive
+                });
+                const localVidBox = document.getElementById('local-video-container');
+                if (localVidBox) {
+                    if (microphoneActive) localVidBox.classList.add('speaking-active');
+                    else localVidBox.classList.remove('speaking-active');
                 }
             }
         };
@@ -1127,6 +1202,11 @@
             usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
 
+            const savedBg = localStorage.getItem('theme_bg') || '#313338';
+            const savedSidebar = localStorage.getItem('theme_sidebar') || '#2b2d31';
+            const savedText = localStorage.getItem('theme_text') || '#dbdee1';
+            window.applyTheme(savedBg, savedSidebar, savedText, false);
+
             await setupDefaultChannels('server-1', 'Server 1 🌐');
             await setupDefaultChannels('server-2', 'Server 2 🚀');
             
@@ -1135,9 +1215,11 @@
 
             try {
                 savedDms = JSON.parse(localStorage.getItem('privacy_chat_saved_dms')) || [];
+                savedGroups = JSON.parse(localStorage.getItem('privacy_chat_saved_groups')) || [];
                 nicknames = JSON.parse(localStorage.getItem('privacy_chat_nicknames')) || {};
             } catch (e) { }
             rebuildDmList();
+            rebuildGroupList();
 
             await verifyAndRegisterUsername(username, true);
             await syncProfileToDatabase();
@@ -1250,7 +1332,7 @@
         };
 
         window.resetIdentity = async function() {
-            if (confirm("Reset identity code? This deletes your servers.")) {
+            if (confirm("Reset identity code? This deletes your servers and localized layouts.")) {
                 await window.leaveVoiceChannel();
                 localStorage.clear();
                 location.reload();
@@ -1313,6 +1395,8 @@
             startFirebaseListener(targetChannel);
 
             renderCustomServers();
+            rebuildDmList();
+            rebuildGroupList();
             buildDefaultChannelsList('server-1');
             buildDefaultChannelsList('server-2');
         };
@@ -1553,6 +1637,23 @@
             document.getElementById('friend-code-input').value = '';
         };
 
+        // Group Handling RESTORATION
+        window.connectToGroup = function() {
+            let rawGroupInput = document.getElementById('group-id-input').value.trim();
+            if (!rawGroupInput) return;
+            
+            const groupSlug = "group-" + rawGroupInput.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20);
+            
+            if (!savedGroups.includes(groupSlug)) {
+                savedGroups.push(groupSlug);
+                localStorage.setItem('privacy_chat_saved_groups', JSON.stringify(savedGroups));
+            }
+            
+            rebuildGroupList();
+            window.switchChannel(groupSlug, `👥 Group: ${rawGroupInput}`);
+            document.getElementById('group-id-input').value = '';
+        };
+
         function rebuildDmList() {
             const pmList = document.getElementById('pm-list');
             if (!pmList) return;
@@ -1580,6 +1681,29 @@
                 containerDiv.appendChild(btn);
                 pmList.appendChild(containerDiv);
                 if (currentChannelName === pmChannelID) btn.classList.add('active');
+            });
+        }
+
+        function rebuildGroupList() {
+            const groupListEl = document.getElementById('group-list');
+            if (!groupListEl) return;
+            groupListEl.innerHTML = '';
+
+            savedGroups.forEach(groupSlug => {
+                const containerDiv = document.createElement('div');
+                containerDiv.className = 'pm-item';
+
+                const displayLabel = groupSlug.replace('group-', '').toUpperCase();
+
+                const btn = document.createElement('button');
+                btn.id = `btn-${groupSlug}`;
+                btn.className = 'nav-btn';
+                btn.textContent = `👥 ${displayLabel}`;
+                btn.onclick = function() { window.switchChannel(groupSlug, `👥 Group: ${displayLabel}`, btn); };
+
+                containerDiv.appendChild(btn);
+                groupListEl.appendChild(containerDiv);
+                if (currentChannelName === groupSlug) btn.classList.add('active');
             });
         }
 
