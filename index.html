@@ -420,6 +420,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: border-color 0.2s ease;
+        }
+
+        .video-box:has(video[style*="display: block"]):hover,
+        .video-box:has(video:not([style*="display: none"])):hover {
+            border-color: #5865f2;
         }
 
         .video-box video {
@@ -429,6 +435,7 @@
             border-radius: 4px;
             display: block;
             background-color: #000;
+            cursor: pointer;
         }
 
         .video-label {
@@ -441,6 +448,7 @@
             padding: 2px 4px;
             border-radius: 2px;
             z-index: 10;
+            pointer-events: none;
         }
 
         .voice-avatar {
@@ -448,6 +456,7 @@
             color: #23a55a;
             position: absolute;
             z-index: 5;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -458,49 +467,19 @@
             <div class="channel-title">PrivacyChat</div>
 
             <div class="section-header">
-                <span class="section-title">Themes & Colors</span>
+                <span class="section-title">Public Voice Channels</span>
             </div>
-            <div class="theme-container" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;">
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Presets</div>
-                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                    <button onclick="window.applyTheme('#313338', '#2b2d31', '#dbdee1')" style="background:#313338; width:22px; height:22px; border:1px solid #fff; border-radius:4px; cursor:pointer;" title="Discord Dark"></button>
-                    <button onclick="window.applyTheme('#ffffff', '#f2f3f5', '#060607')" style="background:#ffffff; width:22px; height:22px; border:1px solid #ccc; border-radius:4px; cursor:pointer;" title="Light Theme"></button>
-                    <button onclick="window.applyTheme('#000000', '#050505', '#e3e5e8')" style="background:#000000; width:22px; height:22px; border:1px solid #444; border-radius:4px; cursor:pointer;" title="AMOLED Black"></button>
-                    <button onclick="window.applyTheme('#0f172a', '#1e293b', '#f8fafc')" style="background:#0f172a; width:22px; height:22px; border:1px solid #444; border-radius:4px; cursor:pointer;" title="Midnight Blue"></button>
-                    <button onclick="window.applyTheme('#1a0f1a', '#2d1b2d', '#fae8ff')" style="background:#1a0f1a; width:22px; height:22px; border:1px solid #444; border-radius:4px; cursor:pointer;" title="Cyber Plum"></button>
+            <div id="public-voice-list">
+                <div>
+                    <button class="nav-btn" onclick="window.joinVoiceChannel('public-global-gen', '🔊 General Voice')">🔊 General Voice</button>
+                    <div class="channels-wrapper" id="presence-public-global-gen"></div>
                 </div>
-                
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; margin-top: 4px;">Custom Themes</div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 10px; color: #949ba4; text-align: center;">
-                    <div>
-                        <input type="color" id="theme-bg-color" value="#313338" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;">
-                        Chat BG
-                    </div>
-                    <div>
-                        <input type="color" id="theme-side-color" value="#2b2d31" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;">
-                        Sidebar
-                    </div>
-                    <div>
-                        <input type="color" id="theme-text-color" value="#dbdee1" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;">
-                        Text Color
-                    </div>
-                </div>
-
-                <div class="color-picker-wrapper" style="margin-bottom: 0; margin-top: 6px; justify-content: space-between;">
-                    <label for="name-color" style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Name Color:</label>
-                    <input type="color" id="name-color" value="#5865f2">
+                <div>
+                    <button class="nav-btn" onclick="window.joinVoiceChannel('public-global-game', '🔊 Gaming Lounge')">🔊 Gaming Lounge</button>
+                    <div class="channels-wrapper" id="presence-public-global-game"></div>
                 </div>
             </div>
-
-            <div class="section-header">
-                <span class="section-title">Private Messages</span>
-            </div>
-            <div id="pm-list"></div>
-            <div class="pm-input-box" style="margin-bottom: 15px;">
-                <input type="text" id="friend-code-input" placeholder="Friend Code...">
-                <button onclick="window.connectToFriend()">Go</button>
-            </div>
-
+            
             <div class="section-header">
                 <span class="section-title">Servers</span>
             </div>
@@ -515,23 +494,18 @@
                 </div>
             </div>
             
-            <div class="pm-input-box" style="margin-bottom: 15px;">
+            <div class="pm-input-box">
                 <input type="text" id="custom-server-input" placeholder="Create/Join Server...">
                 <button onclick="window.joinCustomServer()">Join</button>
             </div>
 
             <div class="section-header">
-                <span class="section-title">Public Voice Channels</span>
+                <span class="section-title">Private Messages</span>
             </div>
-            <div id="public-voice-list">
-                <div>
-                    <button class="nav-btn" onclick="window.joinVoiceChannel('public-global-gen', '🔊 General Voice')">🔊 General Voice</button>
-                    <div class="channels-wrapper" id="presence-public-global-gen"></div>
-                </div>
-                <div>
-                    <button class="nav-btn" onclick="window.joinVoiceChannel('public-global-game', '🔊 Gaming Lounge')">🔊 Gaming Lounge</button>
-                    <div class="channels-wrapper" id="presence-public-global-game"></div>
-                </div>
+            <div id="pm-list"></div>
+            <div class="pm-input-box">
+                <input type="text" id="friend-code-input" placeholder="Friend Code...">
+                <button onclick="window.connectToFriend()">Go</button>
             </div>
         </div>
 
@@ -563,6 +537,11 @@
                 </button>
                 
                 <button class="reset-btn" id="reset-id-btn" onclick="window.resetIdentity()">Reset Friend Code</button>
+            </div>
+            
+            <div class="color-picker-wrapper">
+                <label for="name-color" style="font-size: 12px; color: #949ba4;">Name Color:</label>
+                <input type="color" id="name-color" value="#5865f2">
             </div>
 
             <div class="privacy-badge">Zero IP Tracking Active</div>
@@ -646,38 +625,6 @@
 
         const BANNED_WORDS = ["fuck", "shit", "nigga", "nigger", "sh1t", "n1gga", "fuckin", "motherfucker"];
 
-        // Dynamic theme helper injection
-        window.applyTheme = function(bg, sidebar, text, save = true) {
-            let styleEl = document.getElementById('custom-theme-styles');
-            if (!styleEl) {
-                styleEl = document.createElement('style');
-                styleEl.id = 'custom-theme-styles';
-                document.head.appendChild(styleEl);
-            }
-            styleEl.innerHTML = `
-                body, #chat-area, #chat-header, #input-form { background-color: ${bg} !important; color: ${text} !important; }
-                #sidebar { background-color: ${sidebar} !important; }
-                .message .text { color: ${text} !important; }
-            `;
-            
-            document.getElementById('theme-bg-color').value = bg;
-            document.getElementById('theme-side-color').value = sidebar;
-            document.getElementById('theme-text-color').value = text;
-            
-            if (save) {
-                localStorage.setItem('theme_bg', bg);
-                localStorage.setItem('theme_sidebar', sidebar);
-                localStorage.setItem('theme_text', text);
-            }
-        };
-
-        window.updateCustomTheme = function() {
-            const bg = document.getElementById('theme-bg-color').value;
-            const sidebar = document.getElementById('theme-side-color').value;
-            const text = document.getElementById('theme-text-color').value;
-            window.applyTheme(bg, sidebar, text, true);
-        };
-
         function updateStatus(text, colorClass = "#949ba4") {
             statusLabel.innerHTML = text;
             statusLabel.style.color = colorClass;
@@ -716,6 +663,20 @@
                 if (localAvatar) localAvatar.style.display = "block";
             }
         }
+
+        function toggleElementFullscreen(el) {
+            if (!document.fullscreenElement) {
+                el.requestFullscreen().catch(err => {
+                    console.error("Fullscreen request failed:", err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        document.getElementById('local-media-element').addEventListener('dblclick', function() {
+            toggleElementFullscreen(this);
+        });
 
         window.joinVoiceChannel = async function(voiceRoomId, displayName) {
             if (currentVoiceRoomId) await window.leaveVoiceChannel();
@@ -869,6 +830,10 @@
             video.playsInline = true;
             video.srcObject = stream;
             
+            video.addEventListener('dblclick', function() {
+                toggleElementFullscreen(this);
+            });
+
             video.onloadedmetadata = () => {
                 const checkTracks = () => {
                     const videoTracks = stream.getVideoTracks();
@@ -1161,12 +1126,6 @@
             usernameInput.value = username;
             usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
-
-            // Load saved theme configs or default to standard dark theme
-            const savedBg = localStorage.getItem('theme_bg') || '#313338';
-            const savedSidebar = localStorage.getItem('theme_sidebar') || '#2b2d31';
-            const savedText = localStorage.getItem('theme_text') || '#dbdee1';
-            window.applyTheme(savedBg, savedSidebar, savedText, false);
 
             await setupDefaultChannels('server-1', 'Server 1 🌐');
             await setupDefaultChannels('server-2', 'Server 2 🚀');
