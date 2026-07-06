@@ -18,6 +18,8 @@
             height: 100vh;
             background-color: #313338;
             color: #dbdee1;
+            overflow: hidden;
+            position: relative;
         }
 
         #sidebar {
@@ -29,6 +31,17 @@
             padding: 20px;
             border-right: 1px solid #1e1f22;
             overflow-y: auto;
+            transition: transform 0.3s ease, width 0.3s ease, padding 0.3s ease;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        #sidebar.minimized {
+            width: 0;
+            padding: 20px 0;
+            overflow: hidden;
+            border-right: none;
+            transform: translateX(-260px);
         }
 
         .channel-title {
@@ -114,6 +127,9 @@
             font-size: 12px;
             color: #23a55a;
             margin: 2px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .privacy-badge {
@@ -131,12 +147,37 @@
             display: flex;
             flex-direction: column;
             background-color: #313338;
+            min-width: 0;
         }
 
         #chat-header {
             padding: 15px 20px;
             background-color: #313338;
             border-bottom: 1px solid #1e1f22;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-toggle-btn {
+            background: none;
+            border: none;
+            color: #dbdee1;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .menu-toggle-btn:hover {
+            background-color: #35373c;
+            color: #fff;
+        }
+
+        .header-title-container {
             display: flex;
             flex-direction: column;
             gap: 4px;
@@ -160,10 +201,29 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 14px;
         }
 
         .message {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .msg-pfp {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #383a40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+            border: 1px solid #1e1f22;
+        }
+
+        .msg-body {
             display: flex;
             flex-direction: column;
         }
@@ -217,6 +277,7 @@
         .color-picker-wrapper {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 10px;
             margin-bottom: 15px;
         }
@@ -265,16 +326,17 @@
 
         .username-edit-box {
             display: flex;
-            gap: 5px;
+            flex-direction: column;
+            gap: 6px;
             margin-top: 3px;
             margin-bottom: 8px;
         }
 
         .username-edit-box input {
-            flex: 1;
+            width: 100%;
             background: #2b2d31;
             border: 1px solid #383a40;
-            padding: 4px 6px;
+            padding: 6px;
             color: #fff;
             border-radius: 4px;
             font-size: 13px;
@@ -283,18 +345,51 @@
         }
 
         .username-edit-box button {
+            width: 100%;
             background: #35373c;
             border: none;
             color: #dbdee1;
-            padding: 0 8px;
+            padding: 6px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 11px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
         }
         
         .username-edit-box button:hover {
             background: #4e5058;
             color: #fff;
+        }
+
+        .pfp-selector-wrapper {
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        .pfp-grid {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .pfp-option {
+            width: 28px;
+            height: 28px;
+            background-color: #2b2d31;
+            border: 1px solid #383a40;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .pfp-option:hover, .pfp-option.selected {
+            border-color: #5865f2;
+            background-color: #35373c;
         }
 
         .reset-btn {
@@ -449,14 +544,65 @@
         }
 
         .voice-avatar {
-            font-size: 24px;
+            font-size: 28px;
             color: #23a55a;
             position: absolute;
             z-index: 5;
+            background: #1e1f22;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #383a40;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.5);
+            z-index: 90;
+        }
+
+        .small-pfp {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #1e1f22;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+
+        @media (max-width: 600px) {
+            #sidebar {
+                position: absolute;
+                left: 0;
+                top: 0;
+                height: 100%;
+                width: 100vw;
+                transform: translateX(0);
+            }
+            #sidebar.minimized {
+                transform: translateX(-100vw);
+                width: 100vw;
+                padding: 20px;
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
         }
     </style>
 </head>
 <body>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="window.toggleSidebar()"></div>
 
     <div id="sidebar">
         <div>
@@ -469,10 +615,24 @@
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
                 <div class="username-edit-box">
                     <input type="text" id="username-input" maxlength="20" autocomplete="off">
-                    <button id="save-username-btn" onclick="window.saveUsername()">Save</button>
+                    <button id="save-username-btn" onclick="window.saveUsername()">Save Changes</button>
                 </div>
 
-                <button class="nav-btn" id="notify-perm-btn" style="background-color: #35373c; color: #fff; text-align: center; margin-top: 8px; margin-bottom: 8px;" onclick="window.requestNotificationPermission()">
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 4px;">Profile Picture</div>
+                <div class="pfp-selector-wrapper">
+                    <div class="pfp-grid" id="pfp-grid-container">
+                        <div class="pfp-option" onclick="window.selectPfp('👤', this)">👤</div>
+                        <div class="pfp-option" onclick="window.selectPfp('🐱', this)">🐱</div>
+                        <div class="pfp-option" onclick="window.selectPfp('🦊', this)">🦊</div>
+                        <div class="pfp-option" onclick="window.selectPfp('🐸', this)">🐸</div>
+                        <div class="pfp-option" onclick="window.selectPfp('🤖', this)">🤖</div>
+                        <div class="pfp-option" onclick="window.selectPfp('👻', this)">👻</div>
+                        <div class="pfp-option" onclick="window.selectPfp('🍕', this)">🍕</div>
+                        <div class="pfp-option" onclick="window.selectPfp('👽', this)">👽</div>
+                    </div>
+                </div>
+
+                <button class="nav-btn" id="notify-perm-btn" style="background-color: #35373c; color: #fff; text-align: center; margin-top: 4px; margin-bottom: 8px;" onclick="window.requestNotificationPermission()">
                     🔔 Enable Notifications
                 </button>
                 
@@ -508,7 +668,7 @@
                     </div>
                 </div>
 
-                <div class="color-picker-wrapper" style="margin-bottom: 0; margin-top: 6px; justify-content: space-between;">
+                <div class="color-picker-wrapper" style="margin-bottom: 0; margin-top: 6px;">
                     <label for="name-color" style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Name Color:</label>
                     <input type="color" id="name-color" value="#5865f2">
                 </div>
@@ -585,13 +745,16 @@
 
     <div id="chat-area">
         <div id="chat-header">
-            <div class="header-title" id="room-title">Server 1 🌐</div>
-            <div class="history-notice">⚡ Clean Slates: Resetting your identity will purge any servers you own from existence.</div>
+            <button class="menu-toggle-btn" onclick="window.toggleSidebar()">☰</button>
+            <div class="header-title-container">
+                <div class="header-title" id="room-title">Server 1 🌐</div>
+                <div class="history-notice">⚡ Clean Slates: Resetting your identity will purge any servers you own from existence.</div>
+            </div>
         </div>
 
         <div id="video-streams-panel">
             <div class="video-box" id="local-video-container">
-                <div class="voice-avatar">🎙️</div>
+                <div class="voice-avatar" id="local-voice-avatar">👤</div>
                 <video id="local-media-element" autoplay playsinline muted style="display: none;"></video>
                 <div class="video-label">You</div>
             </div>
@@ -636,6 +799,7 @@
         let username = "";
         let friendCode = "";
         let savedColor;
+        let savedPfp = "👤";
         let profileInterval = null;
         let customServers = [];
         let savedDms = [];
@@ -660,6 +824,23 @@
         const statusLabel = document.getElementById('db-status');
 
         const BANNED_WORDS = ["fuck", "shit", "nigga", "nigger", "sh1t", "n1gga", "fuckin", "motherfucker"];
+
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('minimized');
+            overlay.classList.toggle('active');
+        };
+
+        window.selectPfp = async function(emoji, element) {
+            document.querySelectorAll('.pfp-option').forEach(opt => opt.classList.remove('selected'));
+            if(element) element.classList.add('selected');
+            savedPfp = emoji;
+            localStorage.setItem('privacy_chat_pfp', emoji);
+            const localAvatar = document.getElementById('local-voice-avatar');
+            if(localAvatar) localAvatar.textContent = emoji;
+            await syncProfileToDatabase();
+        };
 
         window.applyTheme = function(bg, sidebar, text, save = true) {
             let styleEl = document.getElementById('custom-theme-styles');
@@ -727,7 +908,7 @@
                     localVideo.style.display = "none";
                 }
                 const localAvatar = document.querySelector('#local-video-container .voice-avatar');
-                if (localAvatar) localAvatar.style.display = "block";
+                if (localAvatar) localAvatar.style.display = "flex";
             }
         }
 
@@ -754,6 +935,7 @@
                 const myPresenceRef = ref(db, `voice_presence/${voiceRoomId}/${friendCode}`);
                 await set(myPresenceRef, { 
                     username: identityPayload, 
+                    pfp: savedPfp,
                     joinedAt: serverTimestamp(),
                     micActive: false,
                     secret: DB_SECRET
@@ -787,10 +969,9 @@
                     const users = snapshot.val();
                     for (let peerId in users) {
                         if (peerId !== friendCode && !peerConnections[peerId]) {
-                            await initiatePeerConnection(voiceRoomId, peerId);
+                            await initiatePeerConnection(voiceRoomId, peerId, users[peerId].pfp || "👤");
                         }
                         
-                        // Handle box outlines for speaking users dynamically
                         const videoBox = document.getElementById(`video-box-${peerId}`);
                         if (videoBox) {
                             if (users[peerId].micActive) {
@@ -827,7 +1008,7 @@
             }
         }
 
-        async function initiatePeerConnection(roomId, peerId) {
+        async function initiatePeerConnection(roomId, peerId, fallbackPfp = "👤") {
             const pc = new RTCPeerConnection(iceServersConfig);
             peerConnections[peerId] = pc;
 
@@ -842,7 +1023,7 @@
             };
 
             pc.ontrack = (event) => {
-                createRemoteVideoElement(peerId, activeFriendProfiles[peerId]?.username || `User-${peerId}`, event.streams[0]);
+                createRemoteVideoElement(peerId, activeFriendProfiles[peerId]?.username || `User-${peerId}`, event.streams[0], activeFriendProfiles[peerId]?.pfp || fallbackPfp);
             };
 
             const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
@@ -866,7 +1047,7 @@
             };
 
             pc.ontrack = (event) => {
-                createRemoteVideoElement(peerId, activeFriendProfiles[peerId]?.username || `User-${peerId}`, event.streams[0]);
+                createRemoteVideoElement(peerId, activeFriendProfiles[peerId]?.username || `User-${peerId}`, event.streams[0], activeFriendProfiles[peerId]?.pfp || "👤");
             };
 
             await pc.setRemoteDescription(new RTCSessionDescription(offer));
@@ -876,7 +1057,7 @@
             await set(push(ref(db, `voice_signaling/${roomId}/${peerId}`)), { answer: { type: answer.type, sdp: answer.sdp } });
         }
 
-        function createRemoteVideoElement(peerCode, displayName, stream) {
+        function createRemoteVideoElement(peerCode, displayName, stream, fallbackPfp = "👤") {
             if (document.getElementById(`video-box-${peerCode}`)) return;
 
             const panel = document.getElementById('video-streams-panel');
@@ -886,7 +1067,7 @@
 
             const icon = document.createElement('div');
             icon.className = 'voice-avatar';
-            icon.textContent = '🔊';
+            icon.textContent = fallbackPfp;
             box.appendChild(icon);
 
             const video = document.createElement('video');
@@ -900,7 +1081,7 @@
                     if(videoTracks.length > 0 && videoTracks[0].enabled) {
                         icon.style.display = "none";
                     } else {
-                        icon.style.display = "block";
+                        icon.style.display = "flex";
                     }
                 };
                 checkTracks();
@@ -993,7 +1174,6 @@
                 }
             }
 
-            // Realtime tracking layout alignment inside voice room
             if (currentVoiceRoomId) {
                 update(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`), {
                     micActive: microphoneActive
@@ -1055,7 +1235,7 @@
                     btn.classList.remove('active-state');
                     btn.textContent = "📷 Cam Off";
                     if (localVideo) localVideo.style.display = "none";
-                    if (localAvatar) localAvatar.style.display = "block";
+                    if (localAvatar) localAvatar.style.display = "flex";
                 }
             }
         };
@@ -1092,7 +1272,7 @@
                     const localVideoTrack = localStream.getVideoTracks()[0];
                     if (!localVideoTrack || !cameraActive) {
                         document.getElementById('local-media-element').style.display = "none";
-                        document.querySelector('#local-video-container .voice-avatar').style.display = "block";
+                        document.querySelector('#local-video-container .voice-avatar').style.display = "flex";
                     }
                     
                     for (let peerId in peerConnections) {
@@ -1128,6 +1308,7 @@
                 await set(ref(db, `profiles/${friendCode}`), {
                     username: username,
                     color: savedColor,
+                    pfp: savedPfp,
                     lastSeen: serverTimestamp(),
                     secret: DB_SECRET
                 });
@@ -1171,7 +1352,7 @@
                     Object.values(pSnap.val()).forEach(userObj => {
                         const uEl = document.createElement('div');
                         uEl.className = 'voice-user';
-                        uEl.textContent = `• ${userObj.username}`;
+                        uEl.innerHTML = `<span class="small-pfp">${userObj.pfp || '👤'}</span> • ${userObj.username}`;
                         targetDiv.appendChild(uEl);
                     });
                 }
@@ -1196,11 +1377,24 @@
             username = localStorage.getItem('privacy_chat_username') || `User-${friendCode}`;
             localStorage.setItem('privacy_chat_username', username);
             savedColor = localStorage.getItem('privacy_chat_color') || '#5865f2';
+            savedPfp = localStorage.getItem('privacy_chat_pfp') || '👤';
 
             document.getElementById('friend-code-display').textContent = `#${friendCode}`;
             usernameInput.value = username;
             usernameInput.style.color = savedColor;
             colorPicker.value = savedColor;
+
+            const localAvatar = document.getElementById('local-voice-avatar');
+            if(localAvatar) localAvatar.textContent = savedPfp;
+
+            document.querySelectorAll('.pfp-option').forEach(opt => {
+                if(opt.textContent === savedPfp) opt.classList.add('selected');
+            });
+
+            // Auto-hide layout on smaller viewports initially
+            if (window.innerWidth <= 600) {
+                document.getElementById('sidebar').classList.add('minimized');
+            }
 
             const savedBg = localStorage.getItem('theme_bg') || '#313338';
             const savedSidebar = localStorage.getItem('theme_sidebar') || '#2b2d31';
@@ -1273,7 +1467,7 @@
                                     Object.values(pSnap.val()).forEach(userObj => {
                                         const uEl = document.createElement('div');
                                         uEl.className = 'voice-user';
-                                        uEl.textContent = `• ${userObj.username}`;
+                                        uEl.innerHTML = `<span class="small-pfp">${userObj.pfp || '👤'}</span> • ${userObj.username}`;
                                         presenceDiv.appendChild(uEl);
                                     });
                                 }
@@ -1368,10 +1562,10 @@
         function bindChannelEvents(channel) {
             channel.bind('client-message', function(data) {
                 if (data.senderCode !== friendCode) {
-                    activeFriendProfiles[data.senderCode] = { username: data.senderName, color: data.color };
+                    activeFriendProfiles[data.senderCode] = { username: data.senderName, color: data.color, pfp: data.pfp || "👤" };
                     let displayName = nicknames[data.senderCode] || data.senderName;
                     let processedText = censorText(data.text, currentChannelName);
-                    appendMessage(displayName, processedText, data.color, data.senderCode);
+                    appendMessage(displayName, processedText, data.color, data.senderCode, null, data.pfp || "👤");
                     sendDeviceNotification(displayName, processedText);
                 }
             });
@@ -1399,6 +1593,12 @@
             rebuildGroupList();
             buildDefaultChannelsList('server-1');
             buildDefaultChannelsList('server-2');
+
+            // Automatically shut structural menu on small viewports
+            if(window.innerWidth <= 600) {
+                document.getElementById('sidebar').classList.add('minimized');
+                document.getElementById('sidebar-overlay').classList.remove('active');
+            }
         };
 
         function startFirebaseListener(channelName) {
@@ -1414,7 +1614,7 @@
                 let displayName = nicknames[data.senderCode] || data.senderName;
                 let displayColor = data.color || '#949ba4';
                 let processedText = censorText(data.text, channelName);
-                appendMessage(displayName, processedText, displayColor, data.senderCode, snapshot.key);
+                appendMessage(displayName, processedText, displayColor, data.senderCode, snapshot.key, data.pfp || "👤");
             });
 
             onChildRemoved(messageRemovedListenerRef, (snapshot) => {
@@ -1569,7 +1769,7 @@
                                             Object.values(pSnap.val()).forEach(userObj => {
                                                 const uEl = document.createElement('div');
                                                 uEl.className = 'voice-user';
-                                                uEl.textContent = `• ${userObj.username}`;
+                                                uEl.innerHTML = `<span class="small-pfp">${userObj.pfp || '👤'}</span> • ${userObj.username}`;
                                                 presenceDiv.appendChild(uEl);
                                             });
                                         }
@@ -1612,14 +1812,15 @@
                     const pData = pSnap.val();
                     activeFriendProfiles[targetCode] = { 
                         username: pData.username || initialTargetName, 
-                        color: pData.color || '#949ba4' 
+                        color: pData.color || '#949ba4',
+                        pfp: pData.pfp || "👤"
                     };
                     initialTargetName = pData.username || initialTargetName;
                 } else {
-                    activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4' };
+                    activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4', pfp: "👤" };
                 }
             } catch(e) { 
-                activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4' }; 
+                activeFriendProfiles[targetCode] = { username: initialTargetName, color: '#949ba4', pfp: "👤" }; 
             }
 
             rebuildDmList();
@@ -1637,7 +1838,6 @@
             document.getElementById('friend-code-input').value = '';
         };
 
-        // Group Handling RESTORATION
         window.connectToGroup = function() {
             let rawGroupInput = document.getElementById('group-id-input').value.trim();
             if (!rawGroupInput) return;
@@ -1715,22 +1915,28 @@
             input.value = '';
 
             currentSubscription.trigger('client-message', {
-                senderName: username, senderCode: friendCode, text: messageText, color: savedColor
+                senderName: username, senderCode: friendCode, text: messageText, color: savedColor, pfp: savedPfp
             });
 
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
-                    senderName: username, senderCode: friendCode, text: messageText, color: savedColor, timestamp: serverTimestamp(), secret: DB_SECRET
+                    senderName: username, senderCode: friendCode, text: messageText, color: savedColor, pfp: savedPfp, timestamp: serverTimestamp(), secret: DB_SECRET
                 });
             } catch (err) { console.error(err); }
         });
 
-        function appendMessage(user, text, color, senderIdCode, msgKey = null) {
+        function appendMessage(user, text, color, senderIdCode, msgKey = null, msgPfp = "👤") {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
             if (msgKey) messageDiv.id = `msg-${msgKey}`;
             
-            messageDiv.innerHTML = `<span class="username" style="color:${color}">${user}</span><span class="text"></span>`;
+            messageDiv.innerHTML = `
+                <div class="msg-pfp">${msgPfp}</div>
+                <div class="msg-body">
+                    <span class="username" style="color:${color}">${user}</span>
+                    <span class="text"></span>
+                </div>
+            `;
             messageDiv.querySelector('.text').textContent = text;
             if (senderIdCode && senderIdCode !== friendCode) {
                 messageDiv.querySelector('.username').onclick = () => window.clickUserToFriend(senderIdCode, user);
