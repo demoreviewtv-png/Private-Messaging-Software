@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrivacyChat</title>
+    <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #313338;
+            color: #dbdee1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Authentication Overlay Design System */
+        #auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #1e1f22;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-card {
+            background-color: #313338;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .auth-card h2 {
+            color: #fff;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .auth-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .auth-field label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #b5bac1;
+            text-transform: uppercase;
+        }
+
+        .auth-field input {
+            padding: 10px;
+            background-color: #1e1f22;
+            border: 1px solid #2b2d31;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .auth-btn-primary {
+            background-color: #5865f2;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .auth-btn-primary:hover {
+            background-color: #4752c4;
+        }
+
+        .auth-btn-secondary {
+            background-color: #35373c;
+            color: #dbdee1;
+            border: 1px solid #4e5058;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .auth-btn-secondary:hover {
+            background-color: #4e5058;
+            color: #fff;
+        }
+
+        .auth-error {
+            color: #fa777c;
+            font-size: 13px;
+            text-align: center;
+            display: none;
+        }
+
+        #sidebar {
+            width: 260px;
+            background-color: #2b2d31;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            border-right: 1px solid #1e1f22;
+            overflow-y: auto;
+            transition: transform 0.3s ease, width 0.3s ease, padding 0.3s ease;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        #sidebar.minimized {
+            width: 0;
+            padding: 20px 0;
+            overflow: hidden;
+            border-right: none;
+            transform: translateX(-260px);
+        }
+
+        .channel-title-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .channel-title {
+            font-weight: bold;
+            font-size: 18px;
+            color: #fff;
+        }
+
+        .sidebar-close-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: #dbdee1;
+            font-size: 24px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #949ba4;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 10px;
+            margin: 2px 0;
+            background: none;
+            border: none;
+            color: #949ba4;
+            text-align: left;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background-color: #35373c;
+            color: #fff;
+        }
+
+        .sub-channel {
+            padding-left: 24px;
+            font-size: 13px;
+        }
+
+        .channels-wrapper {
+            display: flex;
+            flex-direction: column;
+            margin-top: 4px;
+        }
+
+        .privacy-badge {
+            font-size: 12px;
+            background-color: #23a55a;
+            color: white;
+            padding: 5px 8px;
+            border-radius: 4px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        #chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #313338;
+            min-width: 0;
+        }
+
+        #chat-header {
+            padding: 15px 20px;
+            background-color: #313338;
+            border-bottom: 1px solid #1e1f22;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-toggle-btn {
+            background: none;
+            border: none;
+            color: #dbdee1;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .menu-toggle-btn:hover {
+            background-color: #35373c;
+            color: #fff;
+        }
+
+        .header-title-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .header-title {
+            font-weight: bold;
+            color: #fff;
+            font-size: 16px;
+        }
+
+        .history-notice {
+            font-size: 12px;
+            color: #23a55a;
+            font-weight: normal;
+        }
+
+        #message-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .msg-pfp {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #383a40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+            border: 1px solid #1e1f22;
+        }
+
+        .msg-body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message .username {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+            cursor: pointer;
+            width: fit-content;
+        }
+
+        .message .username:hover {
+            text-decoration: underline;
+        }
+
+        .message .text {
+            color: #dbdee1;
+            font-size: 15px;
+            word-break: break-word;
+        }
+
+        #input-form {
+            padding: 20px;
+            background-color: #313338;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #message-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            background-color: #383a40;
+            color: #dbdee1;
+            font-size: 15px;
+            outline: none;
+        }
+
+        #db-status {
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #949ba4;
+        }
+
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #name-color {
+            border: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            cursor: pointer;
+            background: none;
+        }
+
+        .pm-input-box {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .pm-input-box input {
+            flex: 1;
+            background: #1e1f22;
+            border: none;
+            padding: 5px;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .pm-input-box button {
+            background: #5865f2;
+            border: none;
+            color: white;
+            padding: 0 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .profile-container {
+            background-color: #1e1f22;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            margin-top: 5px;
+        }
+
+        .username-edit-box {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 3px;
+            margin-bottom: 8px;
+        }
+
+        .username-edit-box input {
+            width: 100%;
+            background: #2b2d31;
+            border: 1px solid #383a40;
+            padding: 6px;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            outline: none;
+        }
+
+        .username-edit-box button {
+            width: 100%;
+            background: #35373c;
+            border: none;
+            color: #dbdee1;
+            padding: 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .username-edit-box button:hover {
+            background: #4e5058;
+            color: #fff;
+        }
+
+        .pfp-selector-wrapper {
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        .pfp-grid {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .pfp-option {
+            width: 28px;
+            height: 28px;
+            background-color: #2b2d31;
+            border: 1px solid #383a40;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .pfp-option:hover, .pfp-option.selected {
+            border-color: #5865f2;
+            background-color: #35373c;
+        }
+
+        .reset-btn {
+            background: none;
+            border: none;
+            color: #da373c;
+            font-size: 11px;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .reset-btn:hover {
+            color: #ff7377;
+        }
+
+        .pm-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 2px 0;
+        }
+
+        .pm-item .nav-btn {
+            margin: 0;
+            flex: 1;
+        }
+
+        .server-container {
+            margin-bottom: 15px;
+        }
+
+        #voice-status-bar {
+            background-color: #232428;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            display: none;
+            border: 1px solid #3f4147;
+        }
+
+        .voice-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .disconnect-voice-btn {
+            background-color: #da373c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .disconnect-voice-btn:hover {
+            background-color: #a92b2f;
+        }
+
+        #video-streams-panel {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background-color: #1e1f22;
+            border-bottom: 1px solid #2b2d31;
+            overflow-x: auto;
+            display: none;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.5);
+            z-index: 90;
+        }
+
+        @media (max-width: 600px) {
+            #sidebar {
+                position: absolute;
+                left: 0;
+                top: 0;
+                height: 100%;
+                width: 280px;
+                transform: translateX(-280px);
+            }
+            #sidebar.minimized {
+                transform: translateX(-280px);
+                width: 0;
+                padding: 20px 0;
+            }
+            #sidebar:not(.minimized) {
+                transform: translateX(0);
+                width: 280px;
+                padding: 20px;
+            }
+            .sidebar-close-btn {
+                display: block;
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="auth-overlay">
+        <div class="auth-card" id="login-box">
+            <h2 id="auth-title">Welcome Back</h2>
+            <div class="auth-error" id="auth-error-msg">Error window prompt</div>
+            
+            <div class="auth-field">
+                <label for="auth-email">Email Address</label>
+                <input type="email" id="auth-email" placeholder="name@example.com">
+            </div>
+            
+            <div class="auth-field">
+                <label for="auth-password">Password</label>
+                <input type="password" id="auth-password" placeholder="••••••••">
+            </div>
+
+            <button class="auth-btn-primary" id="submit-auth-btn" onclick="window.handleAuthAction()">Log In</button>
+            <button class="auth-btn-secondary" id="toggle-auth-mode" onclick="window.switchAuthMode()">Need an account? Register</button>
+        </div>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="window.toggleSidebar()"></div>
+
+    <div id="sidebar" class="minimized">
+        <div>
+            <div class="channel-title-wrapper">
+                <div class="channel-title">PrivacyChat</div>
+                <button class="sidebar-close-btn" onclick="window.toggleSidebar()">&times;</button>
+            </div>
+
+            <div class="profile-container">
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">User Secure ID</div>
+                <div id="friend-code-display" style="font-weight: bold; font-size: 13px; color: #fff; font-family: monospace; word-break: break-all;">Loading...</div>
+                
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
+                <div class="username-edit-box">
+                    <input type="text" id="username-input" maxlength="20" autocomplete="off">
+                    <button id="save-username-btn" onclick="window.saveUsername()">Save Profile Changes</button>
+                </div>
+
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 4px;">Avatar Symbol</div>
+                <div class="pfp-selector-wrapper">
+                    <div class="pfp-grid" id="pfp-grid-container">
+                        <div class="pfp-option" onclick="window.selectPfp('👤', this)">👤</div>
+                        <div class="pfp-option" onclick="window.selectPfp('🐱', this)">🐱</div>
+                        <div class="pfp-option" onclick="window.selectPfp('🦊', this)">🦊</div>
+                        <div class="pfp-option" onclick="window.selectPfp('🐸', this)">🐸</div>
+                        <div class="pfp-option" onclick="window.selectPfp('🤖', this)">🤖</div>
+                        <div class="pfp-option" onclick="window.selectPfp('👻', this)">👻</div>
+                        <div class="pfp-option" onclick="window.selectPfp('🍕', this)">🍕</div>
+                        <div class="pfp-option" onclick="window.selectPfp('👽', this)">👽</div>
+                    </div>
+                </div>
+
+                <button class="reset-btn" id="reset-id-btn" style="color: #fa777c;" onclick="window.logOutUser()">Disconnect / Log Out</button>
+            </div>
+
+            <div class="section-header">
+                <span class="section-title">Themes & Colors</span>
+            </div>
+            <div class="theme-container" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Presets</div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button onclick="window.applyTheme('#313338', '#2b2d31', '#dbdee1')" style="background:#313338; width:22px; height:22px; border:1px solid #fff; border-radius:4px; cursor:pointer;" title="Discord Dark"></button>
+                    <button onclick="window.applyTheme('#ffffff', '#f2f3f5', '#060607')" style="background:#ffffff; width:22px; height:22px; border:1px solid #ccc; border-radius:4px; cursor:pointer;" title="Light Theme"></button>
+                    <button onclick="window.applyTheme('#000000', '#050505', '#e3e5e8')" style="background:#000000; width:22px; height:22px; border:1px solid #444; border-radius:4px; cursor:pointer;" title="AMOLED Black"></button>
+                </div>
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; margin-top: 4px;">Custom Themes</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 10px; color: #949ba4; text-align: center;">
+                    <div>
+                        <input type="color" id="theme-bg-color" value="#313338" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;"> Chat BG
+                    </div>
+                    <div>
+                        <input type="color" id="theme-side-color" value="#2b2d31" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;"> Sidebar
+                    </div>
+                    <div>
+                        <input type="color" id="theme-text-color" value="#dbdee1" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;"> Label Color
+                    </div>
+                </div>
+                <div class="color-picker-wrapper" style="margin-bottom: 0; margin-top: 6px;">
+                    <label for="name-color" style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Name Color:</label>
+                    <input type="color" id="name-color" value="#5865f2">
+                </div>
+            </div>
+
+            <div class="section-header">
+                <span class="section-title">Servers</span>
+            </div>
+            <div id="server-list">
+                <div class="server-container" id="container-server-1">
+                    <button class="nav-btn active" id="btn-server-1" onclick="window.switchChannel('server-1', 'Server 1 🌐', this)">🌐 Server 1</button>
+                    <div class="channels-wrapper" id="channels-server-1"></div>
+                </div>
+                <div class="server-container" id="container-server-2">
+                    <button class="nav-btn" id="btn-server-2" onclick="window.switchChannel('server-2', 'Server 2 🚀', this)">🚀 Server 2</button>
+                    <div class="channels-wrapper" id="channels-server-2"></div>
+                </div>
+            </div>
+            <div class="pm-input-box" style="margin-bottom: 15px;">
+                <input type="text" id="custom-server-input" placeholder="Create or Join Node Server...">
+                <button onclick="window.joinCustomServer()">Join</button>
+            </div>
+
+            <div class="section-header">
+                <span class="section-title">Private Messages</span>
+            </div>
+            <div id="pm-list"></div>
+            <div class="pm-input-box" style="margin-bottom: 15px;">
+                <input type="text" id="friend-code-input" placeholder="User ID Key...">
+                <button onclick="window.connectToFriend()">Link</button>
+            </div>
+        </div>
+
+        <div>
+            <div class="privacy-badge">Zero IP Tracking Active</div>
+            <div id="db-status">🔴 Connecting to Security Nodes...</div>
+        </div>
+    </div>
+
+    <div id="chat-area">
+        <div id="chat-header">
+            <button class="menu-toggle-btn" onclick="window.toggleSidebar()">☰</button>
+            <div class="header-title-container">
+                <div class="header-title" id="room-title">Server 1 🌐</div>
+                <div class="history-notice">🔒 Privacy Validation Handshake Layer Active</div>
+            </div>
+        </div>
+
+        <div id="video-streams-panel"></div>
+        <div id="message-container"></div>
+
+        <form id="input-form">
+            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+        import { getDatabase, ref, push, set, onValue, onChildAdded, update, off } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
+            authDomain: "privatems-vercel-app.firebaseapp.com",
+            databaseURL: "https://privatems-vercel-app-default-rtdb.firebaseio.com",
+            projectId: "privatems-vercel-app",
+            storageBucket: "privatems-vercel-app.firebasestorage.app",
+            messagingSenderId: "259223551478",
+            appId: "1:259223551478:web:960461ed4246235cc31bd7",
+            measurementId: "G-ZSFBLCP1ML"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+        const DB_SECRET = "Bennysprivatems2026andshit";
+
+        let friendCode = "";
+        let username = "";
+        let savedColor = "#5865f2";
+        let savedPfp = "👤";
+        let currentChannelName = "server-1-text";
+        let isLoginMode = true;
+
+        const pusher = new Pusher('9b03947b66df21a08620', { cluster: 'us2', forceTLS: true });
+        let currentSubscription = null;
+
+        const container = document.getElementById('message-container');
+        const input = document.getElementById('message-input');
+        const form = document.getElementById('input-form');
+        const roomTitle = document.getElementById('room-title');
+
+        // Global Export Attachment Protocol
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('minimized');
+            overlay.classList.toggle('active');
+        };
+
+        window.switchAuthMode = function() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').textContent = isLoginMode ? "Welcome Back" : "Create an Account";
+            document.getElementById('submit-auth-btn').textContent = isLoginMode ? "Log In" : "Sign Up";
+            document.getElementById('toggle-auth-mode').textContent = isLoginMode ? "Need an account? Register" : "Have an account? Log In";
+            document.getElementById('auth-error-msg').style.display = 'none';
+        };
+
+        window.handleAuthAction = function() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const errorLabel = document.getElementById('auth-error-msg');
+            
+            if(!email || !password) {
+                errorLabel.textContent = "Please fill in all layout fields.";
+                errorLabel.style.display = "block";
+                return;
+            }
+            errorLabel.style.display = "none";
+
+            if (isLoginMode) {
+                signInWithEmailAndPassword(auth, email, password).catch(err => {
+                    errorLabel.textContent = err.message;
+                    errorLabel.style.display = "block";
+                });
+            } else {
+                createUserWithEmailAndPassword(auth, email, password)
+                    .then((userCredential) => {
+                        const uid = userCredential.user.uid;
+                        const defaultName = "User_" + uid.substring(0, 5);
+                        return set(ref(db, `profiles/${uid}`), {
+                            username: defaultName,
+                            color: "#5865f2",
+                            pfp: "👤"
+                        });
+                    })
+                    .catch(err => {
+                        errorLabel.textContent = err.message;
+                        errorLabel.style.display = "block";
+                    });
+            }
+        };
+
+        window.saveUsername = async function() {
+            const requestedName = document.getElementById('username-input').value.trim();
+            const selectedColor = document.getElementById('name-color').value;
+            if(!requestedName || !friendCode) return;
+            
+            username = requestedName;
+            savedColor = selectedColor;
+            
+            try {
+                await update(ref(db, `profiles/${friendCode}`), {
+                    username: username,
+                    color: savedColor,
+                    pfp: savedPfp
+                });
+                alert("Profile settings synchronized successfully!");
+            } catch(e) { console.error(e); }
+        };
+
+        window.selectPfp = function(emoji, element) {
+            savedPfp = emoji;
+            document.querySelectorAll('.pfp-option').forEach(opt => opt.classList.remove('selected'));
+            if(element) element.classList.add('selected');
+            window.saveUsername();
+        };
+
+        window.applyTheme = function(bg, side, txt) {
+            document.body.style.backgroundColor = bg;
+            document.getElementById('chat-area').style.backgroundColor = bg;
+            document.getElementById('chat-header').style.backgroundColor = bg;
+            document.getElementById('input-form').style.backgroundColor = bg;
+            document.getElementById('sidebar').style.backgroundColor = side;
+            document.body.style.color = txt;
+        };
+
+        window.updateCustomTheme = function() {
+            const bg = document.getElementById('theme-bg-color').value;
+            const side = document.getElementById('theme-side-color').value;
+            const txt = document.getElementById('theme-text-color').value;
+            window.applyTheme(bg, side, txt);
+        };
+
+        window.joinCustomServer = function() {
+            const serverName = document.getElementById('custom-server-input').value.trim();
+            if (!serverName) return;
+            const cleanId = serverName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+            
+            const serverList = document.getElementById('server-list');
+            const newServerBox = document.createElement('div');
+            newServerBox.classList.add('server-container');
+            newServerBox.innerHTML = `<button class="nav-btn" onclick="window.switchChannel('${cleanId}', '${serverName} 🌐', this)">🌐 ${serverName}</button><div class="channels-wrapper"></div>`;
+            serverList.appendChild(newServerBox);
+            document.getElementById('custom-server-input').value = '';
+        };
+
+        window.connectToFriend = function() {
+            const friendUID = document.getElementById('friend-code-input').value.trim();
+            if (!friendUID) return;
+            
+            const pmList = document.getElementById('pm-list');
+            const cleanChannel = [friendCode, friendUID].sort().join("-");
+            
+            const newPm = document.createElement('div');
+            newPm.classList.add('pm-item');
+            newPm.innerHTML = `<button class="nav-btn sub-channel" onclick="window.switchChannel('${cleanChannel}', 'Direct Message 💬', this)">💬 Secure DM Session</button>`;
+            pmList.appendChild(newPm);
+            document.getElementById('friend-code-input').value = '';
+        };
+
+        window.logOutUser = function() {
+            signOut(auth).then(() => {
+                location.reload();
+            });
+        };
+
+        window.switchChannel = function(id, title, btnElement) {
+            currentChannelName = id + '-text';
+            roomTitle.textContent = title;
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            if (btnElement) btnElement.classList.add('active');
+
+            if (currentSubscription) {
+                currentSubscription.unbind_all();
+                pusher.unsubscribe(currentSubscription.name);
+            }
+
+            container.innerHTML = '';
+            const messagesRef = ref(db, `messages/${currentChannelName}`);
+            off(messagesRef);
+
+            onChildAdded(messagesRef, (snapshot) => {
+                const msg = snapshot.val();
+                if (msg && msg.secret === DB_SECRET) {
+                    appendMessage(msg.senderName, msg.text, msg.color, snapshot.key, msg.pfp || "👤");
+                }
+            });
+
+            currentSubscription = pusher.subscribe(`cache-${currentChannelName}`);
+            currentSubscription.bind('client-message', (data) => {
+                appendMessage(data.senderName, data.text, data.color, null, data.pfp || "👤");
+            });
+        };
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const messageText = input.value.trim();
+            if (!messageText || !friendCode) return;
+
+            input.value = '';
+
+            if (currentSubscription) {
+                currentSubscription.trigger('client-message', {
+                    senderName: username,
+                    text: messageText,
+                    color: savedColor,
+                    pfp: savedPfp
+                });
+            }
+
+            try {
+                await set(push(ref(db, `messages/${currentChannelName}`)), {
+                    senderName: username,
+                    text: messageText,
+                    color: savedColor,
+                    pfp: savedPfp,
+                    secret: DB_SECRET
+                });
+            } catch (err) { console.error(err); }
+        });
+
+        function appendMessage(user, text, color, msgKey = null, msgPfp = "👤") {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            if (msgKey) messageDiv.id = `msg-${msgKey}`;
+            
+            messageDiv.innerHTML = `
+                <div class="msg-pfp">${msgPfp}</div>
+                <div class="msg-body">
+                    <span class="username" style="color:${color}">${user}</span>
+                    <span class="text"></span>
+                </div>
+            `;
+            messageDiv.querySelector('.text').textContent = text;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                friendCode = user.uid;
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('friend-code-display').textContent = friendCode;
+                document.getElementById('db-status').textContent = "🟢 Security Handshake Active";
+
+                onValue(ref(db, `profiles/${friendCode}`), (snapshot) => {
+                    const data = snapshot.val();
+                    if(data) {
+                        username = data.username || "User_" + friendCode.substring(0,5);
+                        savedColor = data.color || "#5865f2";
+                        savedPfp = data.pfp || "👤";
+                    } else {
+                        username = "User_" + friendCode.substring(0,5);
+                    }
+                    document.getElementById('username-input').value = username;
+                    document.getElementById('name-color').value = savedColor;
+                });
+
+                window.switchChannel('server-1', 'Server 1 🌐', document.getElementById('btn-server-1'));
+            } else {
+                document.getElementById('auth-overlay').style.display = 'flex';
+                document.getElementById('sidebar').classList.add('minimized');
+            }
+        });
+    </script>
+</body>
+</html>
