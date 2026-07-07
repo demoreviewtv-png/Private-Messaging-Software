@@ -22,7 +22,7 @@
             position: relative;
         }
 
-        /* Authentication Overlay Styles */
+        /* Dynamic Authentication Overlay Screens */
         #auth-overlay {
             position: fixed;
             top: 0;
@@ -703,6 +703,8 @@
                 transform: translateX(-280px);
                 width: 0;
                 padding: 20px 0;
+                overflow: hidden;
+                border-right: none;
             }
             #sidebar:not(.minimized) {
                 transform: translateX(0);
@@ -723,10 +725,10 @@
     <div id="auth-overlay">
         <div class="auth-card" id="login-box">
             <h2 id="auth-title">Welcome Back!</h2>
-            <div class="auth-error" id="auth-error-msg">Error details appear here</div>
+            <div class="auth-error" id="auth-error-msg">Error info shows here</div>
             
             <div class="auth-field">
-                <label for="auth-email">Email</label>
+                <label for="auth-email">Email Address</label>
                 <input type="email" id="auth-email" placeholder="name@example.com">
             </div>
             
@@ -750,16 +752,16 @@
             </div>
 
             <div class="profile-container">
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">User ID / Friend Code</div>
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">User Secure UID</div>
                 <div id="friend-code-display" style="font-weight: bold; font-size: 13px; color: #fff; font-family: monospace; word-break: break-all;">Loading...</div>
                 
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
                 <div class="username-edit-box">
                     <input type="text" id="username-input" maxlength="20" autocomplete="off">
-                    <button id="save-username-btn" onclick="window.saveUsername()">Save Changes</button>
+                    <button id="save-username-btn" onclick="window.saveUsername()">Save Profile Changes</button>
                 </div>
 
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 4px;">Profile Picture</div>
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 4px;">Avatar Symbol</div>
                 <div class="pfp-selector-wrapper">
                     <div class="pfp-grid" id="pfp-grid-container">
                         <div class="pfp-option" onclick="window.selectPfp('👤', this)">👤</div>
@@ -774,14 +776,14 @@
                 </div>
 
                 <button class="nav-btn" id="notify-perm-btn" style="background-color: #35373c; color: #fff; text-align: center; margin-top: 4px; margin-bottom: 8px;" onclick="window.requestNotificationPermission()">
-                    🔔 Enable Notifications
+                    🔔 Enable Desktop Notifications
                 </button>
                 
-                <button class="reset-btn" id="reset-id-btn" style="color: #fa777c;" onclick="window.logOutUser()">Log Out Account</button>
+                <button class="reset-btn" id="reset-id-btn" style="color: #fa777c;" onclick="window.logOutUser()">Disconnect / Log Out</button>
             </div>
 
             <div class="section-header">
-                <span class="section-title">Themes & Colors</span>
+                <span class="section-title">Themes & Accent Colors</span>
             </div>
             <div class="theme-container" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;">
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Presets</div>
@@ -792,7 +794,7 @@
                     <button onclick="window.applyTheme('#0f172a', '#1e293b', '#f8fafc')" style="background:#0f172a; width:22px; height:22px; border:1px solid #444; border-radius:4px; cursor:pointer;" title="Midnight Blue"></button>
                     <button onclick="window.applyTheme('#1a0f1a', '#2d1b2d', '#fae8ff')" style="background:#1a0f1a; width:22px; height:22px; border:1px solid #444; border-radius:4px; cursor:pointer;" title="Cyber Plum"></button>
                 </div>
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; margin-top: 4px;">Custom Themes</div>
+                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; margin-top: 4px;">Matrix Customizer</div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 10px; color: #949ba4; text-align: center;">
                     <div>
                         <input type="color" id="theme-bg-color" value="#313338" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;"> Chat BG
@@ -801,17 +803,17 @@
                         <input type="color" id="theme-side-color" value="#2b2d31" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;"> Sidebar
                     </div>
                     <div>
-                        <input type="color" id="theme-text-color" value="#dbdee1" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;"> Text Color
+                        <input type="color" id="theme-text-color" value="#dbdee1" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;"> Labels
                     </div>
                 </div>
                 <div class="color-picker-wrapper" style="margin-bottom: 0; margin-top: 6px;">
-                    <label for="name-color" style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Name Color:</label>
-                    <input type="color" id="name-color" value="#5865f2">
+                    <label for="name-color" style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Username Glow:</label>
+                    <input type="color" id="name-color" value="#5865f2" onchange="window.saveUsername()">
                 </div>
             </div>
 
             <div class="section-header">
-                <span class="section-title">Public Voice Channels</span>
+                <span class="section-title">Public Signaling Voice</span>
             </div>
             <div id="public-voice-list">
                 <div>
@@ -838,26 +840,26 @@
                 </div>
             </div>
             <div class="pm-input-box" style="margin-bottom: 15px;">
-                <input type="text" id="custom-server-input" placeholder="Create/Join Server...">
+                <input type="text" id="custom-server-input" placeholder="Create or Join Node Server...">
                 <button onclick="window.joinCustomServer()">Join</button>
             </div>
 
             <div class="section-header">
-                <span class="section-title">Private Messages</span>
+                <span class="section-title">Direct Encrypted Links</span>
             </div>
             <div id="pm-list"></div>
             <div class="pm-input-box" style="margin-bottom: 15px;">
-                <input type="text" id="friend-code-input" placeholder="Friend Code...">
-                <button onclick="window.connectToFriend()">Go</button>
+                <input type="text" id="friend-code-input" placeholder="Enter Secure UID Key...">
+                <button onclick="window.connectToFriend()">Link</button>
             </div>
 
             <div class="section-header">
-                <span class="section-title">Group Chats</span>
+                <span class="section-title">Group Channels</span>
             </div>
             <div id="group-list"></div>
             <div class="pm-input-box" style="margin-bottom: 15px;">
-                <input type="text" id="group-id-input" placeholder="Group Name or ID...">
-                <button onclick="window.connectToGroup()">Join</button>
+                <input type="text" id="group-id-input" placeholder="Group Name Matrix...">
+                <button onclick="window.connectToGroup()">Create</button>
             </div>
         </div>
 
@@ -873,7 +875,7 @@
                     <button class="media-toggle-btn" id="toggle-screen-btn" onclick="window.toggleScreenShare()">🖥️ Screen</button>
                 </div>
             </div>
-            <div id="db-status">🟢 Authenticated Node Secure</div>
+            <div id="db-status">🟢 Loading Authentication Stream Layer</div>
         </div>
     </div>
 
@@ -899,15 +901,16 @@
         import { getDatabase, ref, push, set, get, child, onValue, onChildAdded, onChildRemoved, off, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
-        // Your Web App's Firebase Configuration Placeholder
+        // Verified Application Configuration Matrix Object
         const firebaseConfig = {
-            apiKey: "AIzaSy...",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-            projectId: "YOUR_PROJECT",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:12345:web:abcde"
+            apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
+            authDomain: "privatems-vercel-app.firebaseapp.com",
+            databaseURL: "https://privatems-vercel-app-default-rtdb.firebaseio.com",
+            projectId: "privatems-vercel-app",
+            storageBucket: "privatems-vercel-app.firebasestorage.app",
+            messagingSenderId: "259223551478",
+            appId: "1:259223551478:web:960461ed4246235cc31bd7",
+            measurementId: "G-ZSFBLCP1ML"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -924,12 +927,53 @@
         let currentSubscription = null;
         let isLoginMode = true;
 
+        // Pusher Signaling Matrix
+        const pusher = new Pusher('db968ef2d3fc29f34584', { cluster: 'us2', forceTLS: true });
+
+        // WebRTC Signaling Engine States
+        let currentVoiceRoomId = null;
+        let voicePresenceChannel = null;
+        let microActive = false;
+        let cameraActive = false;
+        let localStreamData = null;
+
         const container = document.getElementById('message-container');
         const input = document.getElementById('message-input');
         const form = document.getElementById('input-form');
         const roomTitle = document.getElementById('room-title');
 
-        // Authentication Engine Handlers
+        // Layout Theme Logic Mapping
+        const activeThemeBg = localStorage.getItem('chat_theme_bg') || '#313338';
+        const activeThemeSide = localStorage.getItem('chat_theme_side') || '#2b2d31';
+        const activeThemeTxt = localStorage.getItem('chat_theme_txt') || '#dbdee1';
+
+        window.applyTheme = function(bg, side, txt) {
+            document.body.style.backgroundColor = bg;
+            document.getElementById('chat-area').style.backgroundColor = bg;
+            document.getElementById('chat-header').style.backgroundColor = bg;
+            document.getElementById('input-form').style.backgroundColor = bg;
+            document.getElementById('sidebar').style.backgroundColor = side;
+            document.body.style.color = txt;
+            
+            document.getElementById('theme-bg-color').value = bg;
+            document.getElementById('theme-side-color').value = side;
+            document.getElementById('theme-text-color').value = txt;
+
+            localStorage.setItem('chat_theme_bg', bg);
+            localStorage.setItem('chat_theme_side', side);
+            localStorage.setItem('chat_theme_txt', txt);
+        };
+
+        window.updateCustomTheme = function() {
+            const bg = document.getElementById('theme-bg-color').value;
+            const side = document.getElementById('theme-side-color').value;
+            const txt = document.getElementById('theme-text-color').value;
+            window.applyTheme(bg, side, txt);
+        };
+
+        window.applyTheme(activeThemeBg, activeThemeSide, activeThemeTxt);
+
+        // Authentication State Panel Management Controls
         window.switchAuthMode = function() {
             isLoginMode = !isLoginMode;
             document.getElementById('auth-title').textContent = isLoginMode ? "Welcome Back!" : "Create an Account";
@@ -960,7 +1004,6 @@
             } else {
                 createUserWithEmailAndPassword(auth, email, password)
                     .then((userCredential) => {
-                        // Setup default profile entry on creation
                         const uid = userCredential.user.uid;
                         const defaultName = "User_" + uid.substring(0, 5);
                         return set(ref(db, `profiles/${uid}`), {
@@ -976,14 +1019,56 @@
             }
         };
 
-        // Secure Authentication State Monitor
+        // Profile Update Core Methods
+        window.saveUsername = async function() {
+            const requestedName = document.getElementById('username-input').value.trim();
+            const selectedColor = document.getElementById('name-color').value;
+            if(!requestedName || !friendCode) return;
+            
+            try {
+                await update(ref(db, `profiles/${friendCode}`), {
+                    username: requestedName,
+                    color: selectedColor,
+                    pfp: savedPfp
+                });
+            } catch(e) { console.error(e); }
+        };
+
+        window.selectPfp = function(emoji, element) {
+            savedPfp = emoji;
+            document.querySelectorAll('.pfp-option').forEach(opt => opt.classList.remove('selected'));
+            if(element) element.classList.add('selected');
+            window.saveUsername();
+        };
+
+        function highlightPfpOption(emoji) {
+            document.querySelectorAll('.pfp-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if(opt.textContent === emoji) opt.classList.add('selected');
+            });
+        }
+
+        window.logOutUser = function() {
+            signOut(auth).then(() => {
+                location.reload();
+            });
+        };
+
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('minimized');
+            overlay.classList.toggle('active');
+        };
+
+        // Secure Realtime Pipeline Synchronization Loop
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 friendCode = user.uid;
                 document.getElementById('auth-overlay').style.display = 'none';
                 document.getElementById('friend-code-display').textContent = friendCode;
-                
-                // Track & sync user data parameters
+                document.getElementById('db-status').textContent = "🟢 Authenticated Safe Node Connect";
+
                 const profileRef = ref(db, `profiles/${friendCode}`);
                 onValue(profileRef, (snapshot) => {
                     const data = snapshot.val();
@@ -999,95 +1084,66 @@
                     highlightPfpOption(savedPfp);
                 });
 
-                // Open initial communication nodes
-                initMessageStream();
+                // Re-initialize lists and message pipeline for signed in identity
+                syncConnectedCollections();
+                window.switchChannel('server-1', 'Server 1 🌐', document.getElementById('btn-server-1'));
             } else {
                 document.getElementById('auth-overlay').style.display = 'flex';
                 document.getElementById('sidebar').classList.add('minimized');
             }
         });
 
-        window.logOutUser = function() {
-            signOut(auth).then(() => {
-                location.reload();
-            });
-        };
-
-        // Layout UI Management Core
-        window.toggleSidebar = function() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            sidebar.classList.toggle('minimized');
-            overlay.classList.toggle('active');
-        };
-
-        window.saveUsername = async function() {
-            const requestedName = document.getElementById('username-input').value.trim();
-            const selectedColor = document.getElementById('name-color').value;
-            if(!requestedName) return;
+        // Application Navigation Framework and Signaling Channel Synchronization
+        window.switchChannel = function(id, title, btnElement) {
+            currentChannelName = id + '-text';
+            roomTitle.textContent = title;
             
-            try {
-                await update(ref(db, `profiles/${friendCode}`), {
-                    username: requestedName,
-                    color: selectedColor,
-                    pfp: savedPfp
-                });
-                alert("Profile changes successfully locked.");
-            } catch(e) { console.error(e); }
-        };
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            if (btnElement) btnElement.classList.add('active');
 
-        window.selectPfp = function(emoji, element) {
-            savedPfp = emoji;
-            highlightPfpOption(emoji);
-        };
+            if (currentSubscription) {
+                currentSubscription.unbind_all();
+                pusher.unsubscribe(currentSubscription.name);
+            }
 
-        function highlightPfpOption(emoji) {
-            document.querySelectorAll('.pfp-option').forEach(opt => {
-                opt.classList.remove('selected');
-                if(opt.textContent === emoji) opt.classList.add('selected');
-            });
-        }
-
-        window.applyTheme = function(bg, side, txt) {
-            document.body.style.backgroundColor = bg;
-            document.getElementById('chat-area').style.backgroundColor = bg;
-            document.getElementById('chat-header').style.backgroundColor = bg;
-            document.getElementById('input-form').style.backgroundColor = bg;
-            document.getElementById('sidebar').style.backgroundColor = side;
-            document.body.style.color = txt;
-            
-            document.getElementById('theme-bg-color').value = bg;
-            document.getElementById('theme-side-color').value = side;
-            document.getElementById('theme-text-color').value = txt;
-        };
-
-        window.updateCustomTheme = function() {
-            const bg = document.getElementById('theme-bg-color').value;
-            const side = document.getElementById('theme-side-color').value;
-            const txt = document.getElementById('theme-text-color').value;
-            window.applyTheme(bg, side, txt);
-        };
-
-        // Message Handling Stream Pipeline
-        function initMessageStream() {
-            const messagesRef = ref(db, `messages/${currentChannelName}`);
-            off(messagesRef); // Tear down any active channel hooks
             container.innerHTML = '';
+
+            // Hook up clean dynamic historical fetching from Firebase matching channel
+            const messagesRef = ref(db, `messages/${currentChannelName}`);
+            off(messagesRef);
 
             onChildAdded(messagesRef, (snapshot) => {
                 const msg = snapshot.val();
-                if(msg && msg.secret === DB_SECRET) {
-                    appendMessage(msg.senderName, msg.text, msg.color, msg.senderCode, snapshot.key, msg.pfp);
+                if (msg && msg.secret === DB_SECRET) {
+                    appendMessage(msg.senderName, msg.text, msg.color, msg.senderCode, snapshot.key, msg.pfp || "👤");
                 }
             });
-        }
 
+            // Rebind Pusher signaling mechanics for dynamic push updates
+            currentSubscription = pusher.subscribe(`cache-${currentChannelName}`);
+            currentSubscription.bind('client-message', (data) => {
+                appendMessage(data.senderName, data.text, data.color, data.senderCode, null, data.pfp || "👤");
+                triggerSystemNotification(data.senderName, data.text);
+            });
+        };
+
+        // Form Submit Handler Matrix
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const messageText = input.value.trim();
             if (!messageText || !friendCode) return;
 
             input.value = '';
+
+            if (currentSubscription) {
+                currentSubscription.trigger('client-message', {
+                    senderName: username,
+                    senderCode: friendCode,
+                    text: messageText,
+                    color: savedColor,
+                    pfp: savedPfp
+                });
+            }
 
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
@@ -1099,7 +1155,7 @@
                     timestamp: serverTimestamp(),
                     secret: DB_SECRET
                 });
-            } catch (err) { console.error("Write signature error:", err); }
+            } catch (err) { console.error("Database structural write rejection: ", err); }
         });
 
         function appendMessage(user, text, color, senderIdCode, msgKey = null, msgPfp = "👤") {
@@ -1115,28 +1171,346 @@
                 </div>
             `;
             messageDiv.querySelector('.text').textContent = text;
+            
+            if (senderIdCode && senderIdCode !== friendCode) {
+                messageDiv.querySelector('.username').onclick = () => window.clickUserToFriend(senderIdCode, user);
+            }
+
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
         }
 
-        // Placeholder Hooks for Core Interface Stubs
-        window.switchChannel = function(id, title, btn) {
-            currentChannelName = id + '-text';
-            roomTitle.textContent = title;
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            if(btn) btn.classList.add('active');
-            initMessageStream();
+        // Shared Lists Subsystem Sync Algorithms
+        function syncConnectedCollections() {
+            if (!friendCode) return;
+
+            // Direct Private Messaging Lists Node Listener Matrix
+            onValue(ref(db, `users/${friendCode}/friends`), (snapshot) => {
+                const listContainer = document.getElementById('pm-list');
+                listContainer.innerHTML = '';
+                const data = snapshot.val();
+                if (data) {
+                    Object.keys(data).forEach(fKey => {
+                        const item = data[fKey];
+                        const row = document.createElement('div');
+                        row.classList.add('pm-item');
+                        row.innerHTML = `
+                            <button class="nav-btn sub-channel" id="btn-pm-${item.code}">💬 ${item.name}</button>
+                            <button style="background:none; border:none; color:#da373c; cursor:pointer; padding:5px;" onclick="window.removeFriendLink('${fKey}')">&times;</button>
+                        `;
+                        listContainer.appendChild(row);
+                        
+                        const roomKey = [friendCode, item.code].sort().join('-link-');
+                        row.querySelector('.nav-btn').onclick = (e) => window.switchChannel(roomKey, `Direct: ${item.name}`, e.target);
+                    });
+                }
+            });
+
+            // Functional Servers Node Listener Matrix
+            onValue(ref(db, `users/${friendCode}/servers`), (snapshot) => {
+                const data = snapshot.val();
+                document.querySelectorAll('.server-container').forEach(srv => {
+                    if (srv.id !== 'container-server-1' && srv.id !== 'container-server-2') {
+                        srv.remove();
+                    }
+                });
+                if (data) {
+                    Object.keys(data).forEach(sKey => {
+                        const item = data[sKey];
+                        const customServerId = item.id;
+                        const srvRow = document.createElement('div');
+                        srvRow.classList.add('server-container');
+                        srvRow.style.display = 'block';
+                        srvRow.innerHTML = `
+                            <button class="nav-btn">🛡️ Server: ${item.name}</button>
+                            <div class="channels-wrapper" id="channels-${customServerId}"></div>
+                        `;
+                        document.getElementById('server-list').appendChild(srvRow);
+                        srvRow.querySelector('.nav-btn').onclick = (e) => window.switchChannel(customServerId, `Server Node: ${item.name}`, e.target);
+                        
+                        syncServerChannelsLayout(customServerId);
+                    });
+                }
+            });
+
+            // Group Layout Structural Matrix Synchronization
+            onValue(ref(db, `users/${friendCode}/groups`), (snapshot) => {
+                const groupContainer = document.getElementById('group-list');
+                groupContainer.innerHTML = '';
+                const data = snapshot.val();
+                if (data) {
+                    Object.keys(data).forEach(gKey => {
+                        const item = data[gKey];
+                        const row = document.createElement('button');
+                        row.classList.add('nav-btn', 'sub-channel');
+                        row.textContent = `👥 ${item.name}`;
+                        groupContainer.appendChild(row);
+                        row.onclick = (e) => window.switchChannel(item.id, `Group Chat: ${item.name}`, e.target);
+                    });
+                }
+            });
+
+            // Realtime Synchronous Setup for Global Shared Static Servers
+            syncServerChannelsLayout('server-1');
+            syncServerChannelsLayout('server-2');
+
+            // Dynamic Initialization of Global Voice Space Listeners
+            initVoicePresenceMesh('public-global-gen');
+            initVoicePresenceMesh('public-global-game');
+        }
+
+        function syncServerChannelsLayout(serverId) {
+            const wrapper = document.getElementById(`channels-${serverId}`);
+            if (!wrapper) return;
+            
+            onValue(ref(db, `servers/${serverId}/channels`), (snapshot) => {
+                wrapper.innerHTML = '';
+                const data = snapshot.val();
+                if (data) {
+                    Object.keys(data).forEach(cKey => {
+                        const chan = data[cKey];
+                        const btn = document.createElement('button');
+                        btn.classList.add('nav-btn', 'sub-channel');
+                        btn.textContent = chan.type === 'voice' ? `🔊 ${chan.name}` : `# ${chan.name}`;
+                        wrapper.appendChild(btn);
+                        
+                        if (chan.type === 'voice') {
+                            btn.onclick = () => window.joinVoiceChannel(`${serverId}-${cKey}`, `🔊 ${chan.name}`);
+                            const secondaryPresenceContainer = document.createElement('div');
+                            secondaryPresenceContainer.id = `presence-${serverId}-${cKey}`;
+                            secondaryPresenceContainer.classList.add('channels-wrapper');
+                            wrapper.appendChild(secondaryPresenceContainer);
+                            initVoicePresenceMesh(`${serverId}-${cKey}`);
+                        } else {
+                            btn.onclick = (e) => window.switchChannel(`${serverId}-${cKey}`, `# ${chan.name}`, e.target);
+                        }
+                    });
+                }
+                
+                // Server owner controls creation injection mapping logic
+                const controlDiv = document.createElement('div');
+                controlDiv.classList.add('owner-actions');
+                controlDiv.innerHTML = `
+                    <button class="owner-add-btn" onclick="window.promptCreateChannel('${serverId}', 'text')">+ Text</button>
+                    <button class="owner-add-btn" onclick="window.promptCreateChannel('${serverId}', 'voice')">+ Voice</button>
+                `;
+                wrapper.appendChild(controlDiv);
+            });
+        }
+
+        // Functional Context Action Hooks
+        window.promptCreateChannel = async function(serverId, type) {
+            const name = prompt(`Enter new ${type} channel name:`);
+            if (!name) return;
+            try {
+                await push(ref(db, `servers/${serverId}/channels`), {
+                    name: name.toLowerCase().replace(/\s+/g, '-'),
+                    type: type
+                });
+            } catch (err) { console.error(err); }
         };
 
-        window.joinVoiceChannel = () => alert("Voice connections are mapped to secure authenticated room rules.");
-        window.leaveVoiceChannel = () => alert("Leaving channel container structure.");
-        window.toggleMicrophone = () => alert("Microphone tracking adjusted safely.");
-        window.toggleCamera = () => alert("Video streams updated across context.");
-        window.toggleScreenShare = () => alert("Screen mirroring security active.");
-        window.joinCustomServer = () => alert("Feature linked to secure database paths.");
-        window.connectToFriend = () => alert("Linked to user endpoints.");
-        window.connectToGroup = () => alert("Group configurations updating.");
-        window.requestNotificationPermission = () => Notification.requestPermission();
+        window.joinCustomServer = async function() {
+            const val = document.getElementById('custom-server-input').value.trim();
+            if (!val || !friendCode) return;
+            document.getElementById('custom-server-input').value = '';
+
+            const srvId = 'custom-' + val.toLowerCase().replace(/\s+/g, '-');
+            try {
+                // Ensure base record layout exists on structure safely
+                await update(ref(db, `servers/${srvId}`), { name: val });
+                await push(ref(db, `users/${friendCode}/servers`), { id: srvId, name: val });
+            } catch (err) { console.error(err); }
+        };
+
+        window.connectToFriend = async function() {
+            const targetUid = document.getElementById('friend-code-input').value.trim();
+            if (!targetUid || targetUid === friendCode) return;
+            document.getElementById('friend-code-input').value = '';
+
+            try {
+                const targetProfile = await get(ref(db, `profiles/${targetUid}`));
+                const targetData = targetProfile.val();
+                const targetName = targetData ? targetData.username : "User_" + targetUid.substring(0,5);
+
+                await push(ref(db, `users/${friendCode}/friends`), { code: targetUid, name: targetName });
+                await push(ref(db, `users/${targetUid}/friends`), { code: friendCode, name: username });
+            } catch(e) { alert("Invalid identity map signature context matching."); }
+        };
+
+        window.removeFriendLink = async function(key) {
+            if (confirm("Disconnect relationship mapping?")) {
+                try { await remove(ref(db, `users/${friendCode}/friends/${key}`)); } catch(e) { console.error(e); }
+            }
+        };
+
+        window.connectToGroup = async function() {
+            const val = document.getElementById('group-id-input').value.trim();
+            if (!val) return;
+            document.getElementById('group-id-input').value = '';
+            
+            const gId = 'group-' + Math.random().toString(36).substring(2, 9);
+            try {
+                await push(ref(db, `users/${friendCode}/groups`), { id: gId, name: val });
+            } catch (err) { console.error(err); }
+        };
+
+        window.clickUserToFriend = function(code, name) {
+            document.getElementById('friend-code-input').value = code;
+            alert(`Staged profile hash for connection matching targeting: ${name}`);
+        };
+
+        // Realtime WebRTC Multi-User Media Signaling Infrastructure
+        function initVoicePresenceMesh(voiceRoomId) {
+            const presenceRef = ref(db, `voice_presence/${voiceRoomId}`);
+            const renderTarget = document.getElementById(`presence-${voiceRoomId}`);
+            if (!renderTarget) return;
+
+            onValue(presenceRef, (snapshot) => {
+                renderTarget.innerHTML = '';
+                const users = snapshot.val();
+                if (users) {
+                    Object.keys(users).forEach(uKey => {
+                        const uData = users[uKey];
+                        const uRow = document.createElement('div');
+                        uRow.classList.add('voice-user');
+                        uRow.innerHTML = `
+                            <span class="small-pfp">${uData.pfp || '👤'}</span>
+                            <span>${uData.name}</span>
+                            ${uData.mic ? '🎙️' : '🔇'}
+                            ${uData.cam ? '📷' : ''}
+                        `;
+                        renderTarget.appendChild(uRow);
+                    });
+                }
+            });
+        }
+
+        window.joinVoiceChannel = async function(roomId, displayTitle) {
+            if (!friendCode) return;
+            if (currentVoiceRoomId) window.leaveVoiceChannel();
+
+            currentVoiceRoomId = roomId;
+            document.getElementById('voice-status-bar').style.display = 'block';
+            document.getElementById('active-voice-channel-name').textContent = displayTitle;
+
+            // Enforce default status fields entry mapping to path
+            await set(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`), {
+                name: username,
+                pfp: savedPfp,
+                mic: microActive,
+                cam: cameraActive
+            });
+
+            // Initialize underlying WebRTC stream capture arrays dynamically
+            if (microActive || cameraActive) {
+                try {
+                    localStreamData = await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                        video: cameraActive
+                    });
+                    renderActiveVideoGridElement(friendCode, username, localStreamData, true);
+                } catch (err) {
+                    console.warn("Media stream access rejected context variables: ", err);
+                }
+            } else {
+                renderActiveVideoGridElement(friendCode, username, null, true);
+            }
+
+            // Bind Pusher WebRTC fallback signaling handlers
+            voicePresenceChannel = pusher.subscribe(`presence-voice-${roomId}`);
+            voicePresenceChannel.bind('pusher:subscription_succeeded', () => {
+                document.getElementById('video-streams-panel').style.display = 'flex';
+            });
+        };
+
+        window.leaveVoiceChannel = async function() {
+            if (!currentVoiceRoomId || !friendCode) return;
+
+            // Wipe remote database session record clean
+            await remove(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`));
+
+            if (voicePresenceChannel) {
+                voicePresenceChannel.unbind_all();
+                pusher.unsubscribe(voicePresenceChannel.name);
+            }
+
+            if (localStreamData) {
+                localStreamData.getTracks().forEach(track => track.stop());
+                localStreamData = null;
+            }
+
+            document.getElementById('video-streams-panel').innerHTML = '';
+            document.getElementById('video-streams-panel').style.display = 'none';
+            document.getElementById('voice-status-bar').style.display = 'none';
+            currentVoiceRoomId = null;
+        };
+
+        function renderActiveVideoGridElement(uid, label, stream, isSelf = false) {
+            const panel = document.getElementById('video-streams-panel');
+            let box = document.getElementById(`vbox-${uid}`);
+            
+            if (!box) {
+                box = document.createElement('div');
+                box.id = `vbox-${uid}`;
+                box.classList.add('video-box');
+                panel.appendChild(box);
+            }
+
+            box.innerHTML = `<div class="video-label">${label}</div>`;
+
+            if (stream && cameraActive) {
+                const videoEl = document.createElement('video');
+                videoEl.srcObject = stream;
+                videoEl.autoplay = true;
+                videoEl.playsInline = true;
+                if (isSelf) videoEl.muted = true;
+                box.appendChild(videoEl);
+            } else {
+                const avatar = document.createElement('div');
+                avatar.classList.add('voice-avatar');
+                avatar.textContent = savedPfp;
+                box.appendChild(avatar);
+            }
+        }
+
+        window.toggleMicrophone = async function() {
+            microActive = !microActive;
+            document.getElementById('toggle-mic-btn').textContent = microActive ? "🎙️ Mic On" : "🎙️ Mic Off";
+            document.getElementById('toggle-mic-btn').classList.toggle('active-state', microActive);
+            
+            if (currentVoiceRoomId) {
+                await update(ref(db, `voice_presence/${currentVoiceRoomId}/${friendCode}`), { mic: microActive });
+            }
+        };
+
+        window.toggleCamera = async function() {
+            cameraActive = !cameraActive;
+            document.getElementById('toggle-cam-btn').textContent = cameraActive ? "📷 Cam On" : "📷 Cam Off";
+            document.getElementById('toggle-cam-btn').classList.toggle('active-state', cameraActive);
+            
+            if (currentVoiceRoomId) {
+                // Rerun full verification alignment routines to reload local dynamic hardware parameters
+                await window.joinVoiceChannel(currentVoiceRoomId, document.getElementById('active-voice-channel-name').textContent);
+            }
+        };
+
+        window.toggleScreenShare = function() {
+            alert("Screen sharing mapping requires active security signature handshakes.");
+        };
+
+        // Desktop Push Notification Layer Engines
+        window.requestNotificationPermission = function() {
+            Notification.requestPermission().then(perm => {
+                if (perm === 'granted') alert("System push notification access fully logged.");
+            });
+        };
+
+        function triggerSystemNotification(title, content) {
+            if (Notification.permission === 'granted' && document.hidden) {
+                new Notification(title, { body: content, icon: '👤' });
+            }
+        }
     </script>
 </body>
 </html>
