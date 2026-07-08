@@ -774,7 +774,6 @@
         const auth = getAuth(app);
         const DB_SECRET = "Bennysprivatems2026andshit";
         
-        // Free Anonymous ImgBB upload key
         const IMGBB_API_KEY = "80f13511eb9f06df1cb6fa5eb5e1ccfc";
 
         let friendCode = "";
@@ -814,7 +813,7 @@
             const errorLabel = document.getElementById('auth-error-msg');
             
             if(!email || !password) {
-                errorLabel.textContent = "Please fill in all layout fields.";
+                errorLabel.textContent = "Please fill in all fields.";
                 errorLabel.style.display = "block";
                 return;
             }
@@ -857,11 +856,10 @@
                     color: savedColor,
                     pfp: savedPfp
                 });
-                alert("Profile settings synchronized successfully!");
+                alert("Profile synchronized successfully!");
             } catch(e) { console.error(e); }
         };
 
-        // Custom image uploader script mapped to ImgBB
         window.uploadCustomPfp = async function(fileInput) {
             const file = fileInput.files[0];
             if (!file) return;
@@ -882,7 +880,12 @@
                 if (result.success) {
                     savedPfp = result.data.url;
                     updateAvatarPreview(previewContainer, savedPfp);
-                    window.saveUsername();
+                    // Force the immediate sync to DB right here after receiving link
+                    await update(ref(db, `profiles/${friendCode}`), {
+                        username: document.getElementById('username-input').value.trim() || username,
+                        color: document.getElementById('name-color').value || savedColor,
+                        pfp: savedPfp
+                    });
                 } else {
                     alert("Upload node rejected image file.");
                     previewContainer.textContent = "👤";
@@ -895,7 +898,7 @@
         };
 
         function updateAvatarPreview(element, source) {
-            if (source.startsWith("http://") || source.startsWith("https://")) {
+            if (source && (source.startsWith("http://") || source.startsWith("https://"))) {
                 element.innerHTML = `<img src="${source}" alt="Avatar">`;
             } else {
                 element.textContent = source || "👤";
