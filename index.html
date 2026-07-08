@@ -774,7 +774,6 @@
         const auth = getAuth(app);
         const DB_SECRET = "Bennysprivatems2026andshit";
         
-        // Multi-Key Fallback Pipeline for ImgBB Node uploads
         const IMGBB_API_KEYS = [
             "c9fb7cc2ccb2b9f36f6d63cb2b7bc783",
             "80f13511eb9f06df1cb6fa5eb5e1ccfc"
@@ -864,49 +863,55 @@
             } catch(e) { console.error(e); }
         };
 
-        window.uploadCustomPfp = async function(fileInput) {
+        window.uploadCustomPfp = function(fileInput) {
             const file = fileInput.files[0];
             if (!file) return;
 
             const previewContainer = document.getElementById('sidebar-pfp-preview');
             previewContainer.textContent = "⏳";
 
-            let uploadSuccessful = false;
+            // Convert image binary file directly into base64 clean data string
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64String = e.target.result.split(',')[1];
+                let uploadSuccessful = false;
 
-            // Loop through our API key vault array sequentially if one returns failure
-            for (let i = 0; i < IMGBB_API_KEYS.length; i++) {
-                const currentKey = IMGBB_API_KEYS[i];
-                const formData = new FormData();
-                formData.append("image", file);
+                for (let i = 0; i < IMGBB_API_KEYS.length; i++) {
+                    const currentKey = IMGBB_API_KEYS[i];
+                    const formData = new FormData();
+                    formData.append("image", base64String);
 
-                try {
-                    const response = await fetch(`https://api.imgbb.com/1/upload?key=${currentKey}`, {
-                        method: "POST",
-                        body: formData
-                    });
-                    const result = await response.json();
-                    
-                    if (result && result.success) {
-                        savedPfp = result.data.url;
-                        updateAvatarPreview(previewContainer, savedPfp);
-                        
-                        await update(ref(db, `profiles/${friendCode}`), {
-                            username: document.getElementById('username-input').value.trim() || username,
-                            color: document.getElementById('name-color').value || savedColor,
-                            pfp: savedPfp
+                    try {
+                        const response = await fetch(`https://api.imgbb.com/1/upload?key=${currentKey}`, {
+                            method: "POST",
+                            body: formData
                         });
-                        uploadSuccessful = true;
-                        break; 
+                        const result = await response.json();
+                        
+                        if (result && result.success) {
+                            savedPfp = result.data.url;
+                            updateAvatarPreview(previewContainer, savedPfp);
+                            
+                            await update(ref(db, `profiles/${friendCode}`), {
+                                username: document.getElementById('username-input').value.trim() || username,
+                                color: document.getElementById('name-color').value || savedColor,
+                                pfp: savedPfp
+                            });
+                            uploadSuccessful = true;
+                            break; 
+                        }
+                    } catch (err) {
+                        console.warn("Key channel failed, falling back...");
                     }
-                } catch (err) {
-                    console.warn(`Key channel ${i} reported runtime failure, trying backup pool...`);
                 }
-            }
 
-            if (!uploadSuccessful) {
-                alert("All secondary upload keys were rejected. Please confirm your image file is a valid .PNG or .JPG asset.");
-                previewContainer.textContent = "👤";
-            }
+                if (!uploadSuccessful) {
+                    alert("Handshake rejected. Please try another small profile image asset.");
+                    previewContainer.textContent = "👤";
+                }
+            };
+            
+            reader.readAsDataURL(file);
         };
 
         function updateAvatarPreview(element, source) {
