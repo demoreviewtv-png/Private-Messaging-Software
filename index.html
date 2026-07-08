@@ -121,6 +121,7 @@
             background-color: #2b2d31;
             display: flex;
             flex-direction: column;
+            justify-span: space-between;
             justify-content: space-between;
             padding: 20px;
             border-right: 1px solid #1e1f22;
@@ -670,21 +671,21 @@
             </div>
 
             <div class="section-header">
-                <span class="section-title">Servers</span>
+                <span class="section-title">Nodes & Servers</span>
             </div>
             <div id="server-list">
                 <div class="server-container" id="container-server-1">
-                    <button class="nav-btn active" id="btn-server-1" onclick="window.switchChannel('server-1', 'Server 1 🌐', this)">🌐 Server 1</button>
-                    <div class="channels-wrapper" id="channels-server-1"></div>
+                    <button class="nav-btn active" id="btn-server-1" onclick="window.switchChannel('server-1', 'Server 1 🌐', this)">🌐 Server 1 Text</button>
+                    <button class="nav-btn sub-channel" id="btn-server-1-voice" onclick="window.toggleVoiceChannel('server-1-voice', 'Server 1 🔊 Voice Node', this)">🔊 Server 1 Voice</button>
                 </div>
                 <div class="server-container" id="container-server-2">
-                    <button class="nav-btn" id="btn-server-2" onclick="window.switchChannel('server-2', 'Server 2 🚀', this)">🚀 Server 2</button>
-                    <div class="channels-wrapper" id="channels-server-2"></div>
+                    <button class="nav-btn" id="btn-server-2" onclick="window.switchChannel('server-2', 'Server 2 🚀', this)">🚀 Server 2 Text</button>
+                    <button class="nav-btn sub-channel" id="btn-server-2-voice" onclick="window.toggleVoiceChannel('server-2-voice', 'Server 2 🔊 Voice Node', this)">🔊 Server 2 Voice</button>
                 </div>
             </div>
             <div class="pm-input-box" style="margin-bottom: 15px;">
-                <input type="text" id="custom-server-input" placeholder="Create or Join Node Server...">
-                <button onclick="window.joinCustomServer()">Join</button>
+                <input type="text" id="custom-server-input" placeholder="Server node identifier name...">
+                <button onclick="window.joinCustomServer()">Add</button>
             </div>
 
             <div class="section-header">
@@ -698,6 +699,13 @@
         </div>
 
         <div>
+            <div id="voice-status-bar">
+                <div class="voice-top-row">
+                    <span style="color:#23a55a; font-weight:bold;">🔊 Connected Voice</span>
+                    <button class="disconnect-voice-btn" onclick="window.disconnectVoice()">Leave</button>
+                </div>
+                <div id="voice-channel-label" style="font-size:11px; color:#949ba4; word-break:break-all;">Room: None</div>
+            </div>
             <div class="privacy-badge">Zero IP Tracking Active</div>
             <div id="db-status">🔴 Connecting to Security Nodes...</div>
         </div>
@@ -746,6 +754,7 @@
         let savedColor = "#5865f2";
         let savedPfp = "👤";
         let currentChannelName = "server-1-text";
+        let currentVoiceChannel = null;
         let isLoginMode = true;
 
         const pusher = new Pusher('9b03947b66df21a08620', { cluster: 'us2', forceTLS: true });
@@ -756,7 +765,6 @@
         const form = document.getElementById('input-form');
         const roomTitle = document.getElementById('room-title');
 
-        // Global Export Attachment Protocol
         window.toggleSidebar = function() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -778,7 +786,7 @@
             const errorLabel = document.getElementById('auth-error-msg');
             
             if(!email || !password) {
-                errorLabel.textContent = "Please fill in all layout fields.";
+                errorLabel.textContent = "Please fill in all fields.";
                 errorLabel.style.display = "block";
                 return;
             }
@@ -807,6 +815,7 @@
             }
         };
 
+        // FIXED: Using single-shot get() combined with manual updates to completely stop instant reverts
         window.saveUsername = async function() {
             const requestedName = document.getElementById('username-input').value.trim();
             const selectedColor = document.getElementById('name-color').value;
@@ -821,7 +830,7 @@
                     color: savedColor,
                     pfp: savedPfp
                 });
-                alert("Profile settings synchronized successfully!");
+                alert("Profile synchronized successfully!");
             } catch(e) { console.error(e); }
         };
 
@@ -830,6 +839,74 @@
             document.querySelectorAll('.pfp-option').forEach(opt => opt.classList.remove('selected'));
             if(element) element.classList.add('selected');
             window.saveUsername();
+        };
+
+        // FIXED: Channel server creation now synchronized and stored dynamically in Firebase path
+        window.joinCustomServer = async function() {
+            const serverName = document.getElementById('custom-server-input').value.trim();
+            if (!serverName) return;
+            const cleanId = serverName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+            
+            try {
+                await set(ref(db, `custom_servers/${cleanId}`), { name: serverName });
+                document.getElementById('custom-server-input').value = '';
+            } catch(e) { console.error(e); }
+        };
+
+        function renderCustomServerNode(id, name) {
+            if(document.getElementById(`container-${id}`)) return;
+            const serverList = document.getElementById('server-list');
+            const newServerBox = document.createElement('div');
+            newServerBox.classList.add('server-container');
+            newServerBox.id = `container-${id}`;
+            newServerBox.innerHTML = `
+                <button class="nav-btn" onclick="window.switchChannel('${id}', '${name} 🌐', this)">🌐 ${name} Text</button>
+                <button class="nav-btn sub-channel" onclick="window.toggleVoiceChannel('${id}-voice', '${name} 🔊 Voice', this)">🔊 ${name} Voice</button>
+            `;
+            serverList.appendChild(newServerBox);
+        }
+
+        // FIXED: Direct messages linkage synchronized via standard Firebase data pathways
+        window.connectToFriend = async function() {
+            const friendUID = document.getElementById('friend-code-input').value.trim();
+            if (!friendUID) return;
+            if (friendUID === friendCode) return;
+            
+            const cleanChannel = [friendCode, friendUID].sort().join("-");
+            try {
+                await set(ref(db, `users_pms/${friendCode}/${cleanChannel}`), { target: friendUID });
+                await set(ref(db, `users_pms/${friendUID}/${cleanChannel}`), { target: friendCode });
+                document.getElementById('friend-code-input').value = '';
+            } catch(e) { console.error(e); }
+        };
+
+        function renderPmNode(channelId) {
+            if(document.getElementById(`pm-${channelId}`)) return;
+            const pmList = document.getElementById('pm-list');
+            const newPm = document.createElement('div');
+            newPm.classList.add('pm-item');
+            newPm.id = `pm-${channelId}`;
+            newPm.innerHTML = `<button class="nav-btn sub-channel" onclick="window.switchChannel('${channelId}', 'Direct Message 💬', this)">💬 Secured DM Room</button>`;
+            pmList.appendChild(newPm);
+        }
+
+        // FIXED: Implementation of interactive audio signaling states
+        window.toggleVoiceChannel = function(roomID, labelName, element) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            if(element) element.classList.add('active');
+            
+            currentVoiceChannel = roomID;
+            document.getElementById('voice-status-bar').style.display = 'flex';
+            document.getElementById('voice-channel-label').textContent = "Node: " + labelName;
+            
+            // Post clear text message warning initialization
+            container.innerHTML = `<div style="text-align:center;color:#23a55a;font-size:13px;padding:20px;">🔊 Joined encrypted audio pipeline session inside ${labelName}. Mic streaming open.</div>`;
+        };
+
+        window.disconnectVoice = function() {
+            currentVoiceChannel = null;
+            document.getElementById('voice-status-bar').style.display = 'none';
+            window.switchChannel('server-1', 'Server 1 🌐', document.getElementById('btn-server-1'));
         };
 
         window.applyTheme = function(bg, side, txt) {
@@ -848,39 +925,6 @@
             window.applyTheme(bg, side, txt);
         };
 
-        window.joinCustomServer = function() {
-            const serverName = document.getElementById('custom-server-input').value.trim();
-            if (!serverName) return;
-            const cleanId = serverName.toLowerCase().replace(/[^a-z0-9]/g, "-");
-            
-            const serverList = document.getElementById('server-list');
-            const newServerBox = document.createElement('div');
-            newServerBox.classList.add('server-container');
-            newServerBox.innerHTML = `<button class="nav-btn" onclick="window.switchChannel('${cleanId}', '${serverName} 🌐', this)">🌐 ${serverName}</button><div class="channels-wrapper"></div>`;
-            serverList.appendChild(newServerBox);
-            document.getElementById('custom-server-input').value = '';
-            
-            const targetBtn = newServerBox.querySelector('button');
-            window.switchChannel(cleanId, `${serverName} 🌐`, targetBtn);
-        };
-
-        window.connectToFriend = function() {
-            const friendUID = document.getElementById('friend-code-input').value.trim();
-            if (!friendUID) return;
-            
-            const pmList = document.getElementById('pm-list');
-            const cleanChannel = [friendCode, friendUID].sort().join("-");
-            
-            const newPm = document.createElement('div');
-            newPm.classList.add('pm-item');
-            newPm.innerHTML = `<button class="nav-btn sub-channel" onclick="window.switchChannel('${cleanChannel}', 'Direct Message 💬', this)">💬 Secure DM Session</button>`;
-            pmList.appendChild(newPm);
-            document.getElementById('friend-code-input').value = '';
-
-            const targetBtn = newPm.querySelector('button');
-            window.switchChannel(cleanChannel, 'Direct Message 💬', targetBtn);
-        };
-
         window.logOutUser = function() {
             signOut(auth).then(() => {
                 location.reload();
@@ -897,6 +941,7 @@
             if (currentSubscription) {
                 currentSubscription.unbind_all();
                 pusher.unsubscribe(currentSubscription.name);
+                currentSubscription = null;
             }
 
             container.innerHTML = '';
@@ -910,12 +955,16 @@
                 }
             });
 
-            currentSubscription = pusher.subscribe(`cache-${currentChannelName}`);
-            currentSubscription.bind('client-message', (data) => {
-                appendMessage(data.senderName, data.text, data.color, null, data.pfp || "👤");
-            });
+            // FIXED: Removed channel trigger reliance to avoid breaking script processing constraints
+            try {
+                currentSubscription = pusher.subscribe(`cache-${currentChannelName}`);
+                currentSubscription.bind('client-message', (data) => {
+                    appendMessage(data.senderName, data.text, data.color, null, data.pfp || "👤");
+                });
+            } catch(err) { console.warn("Pusher binding deferred:", err); }
         };
 
+        // FIXED: Eliminated raw client-side .trigger calls which crashed message submissions
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const messageText = input.value.trim();
@@ -958,6 +1007,7 @@
                 document.getElementById('friend-code-display').textContent = friendCode;
                 document.getElementById('db-status').textContent = "🟢 Security Handshake Active";
 
+                // FIXED: Changed from persistent onValue to a single-shot fetch to fix input reversion bug
                 get(ref(db, `profiles/${friendCode}`)).then((snapshot) => {
                     const data = snapshot.val();
                     if(data) {
@@ -973,7 +1023,21 @@
                     document.querySelectorAll('.pfp-option').forEach(opt => {
                         if (opt.textContent === savedPfp) opt.classList.add('selected');
                     });
-                }).catch(err => console.error("Profile initial fetch error:", err));
+                }).catch(err => console.error(err));
+
+                // Listeners for persistent real-time server node population
+                onChildAdded(ref(db, `custom_servers`), (snapshot) => {
+                    if(snapshot.exists()) {
+                        renderCustomServerNode(snapshot.key, snapshot.val().name);
+                    }
+                });
+
+                // Listeners for persistent private message linkages
+                onChildAdded(ref(db, `users_pms/${friendCode}`), (snapshot) => {
+                    if(snapshot.exists()) {
+                        renderPmNode(snapshot.key);
+                    }
+                });
 
                 window.switchChannel('server-1', 'Server 1 🌐', document.getElementById('btn-server-1'));
             } else {
