@@ -859,6 +859,10 @@
             newServerBox.innerHTML = `<button class="nav-btn" onclick="window.switchChannel('${cleanId}', '${serverName} 🌐', this)">🌐 ${serverName}</button><div class="channels-wrapper"></div>`;
             serverList.appendChild(newServerBox);
             document.getElementById('custom-server-input').value = '';
+            
+            // Automatically select and initialize message streams for the brand new server node
+            const targetBtn = newServerBox.querySelector('button');
+            window.switchChannel(cleanId, `${serverName} 🌐`, targetBtn);
         };
 
         window.connectToFriend = function() {
@@ -873,6 +877,10 @@
             newPm.innerHTML = `<button class="nav-btn sub-channel" onclick="window.switchChannel('${cleanChannel}', 'Direct Message 💬', this)">💬 Secure DM Session</button>`;
             pmList.appendChild(newPm);
             document.getElementById('friend-code-input').value = '';
+
+            // Switch view immediately to setup the new direct message tunnel session
+            const targetBtn = newPm.querySelector('button');
+            window.switchChannel(cleanChannel, 'Direct Message 💬', targetBtn);
         };
 
         window.logOutUser = function() {
@@ -917,14 +925,8 @@
 
             input.value = '';
 
-            if (currentSubscription) {
-                currentSubscription.trigger('client-message', {
-                    senderName: username,
-                    text: messageText,
-                    color: savedColor,
-                    pfp: savedPfp
-                });
-            }
+            // CRITICAL FIX: Removed the unstable 'currentSubscription.trigger()' call 
+            // that was causing security exception crashes because it violated Pusher channel prefix rules.
 
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
