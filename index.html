@@ -722,7 +722,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onValue, onChildAdded, update, off } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue, onChildAdded, update, off, get } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -860,7 +860,6 @@
             serverList.appendChild(newServerBox);
             document.getElementById('custom-server-input').value = '';
             
-            // Automatically select and initialize message streams for the brand new server node
             const targetBtn = newServerBox.querySelector('button');
             window.switchChannel(cleanId, `${serverName} 🌐`, targetBtn);
         };
@@ -878,7 +877,6 @@
             pmList.appendChild(newPm);
             document.getElementById('friend-code-input').value = '';
 
-            // Switch view immediately to setup the new direct message tunnel session
             const targetBtn = newPm.querySelector('button');
             window.switchChannel(cleanChannel, 'Direct Message 💬', targetBtn);
         };
@@ -925,9 +923,6 @@
 
             input.value = '';
 
-            // CRITICAL FIX: Removed the unstable 'currentSubscription.trigger()' call 
-            // that was causing security exception crashes because it violated Pusher channel prefix rules.
-
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
                     senderName: username,
@@ -963,7 +958,7 @@
                 document.getElementById('friend-code-display').textContent = friendCode;
                 document.getElementById('db-status').textContent = "🟢 Security Handshake Active";
 
-                onValue(ref(db, `profiles/${friendCode}`), (snapshot) => {
+                get(ref(db, `profiles/${friendCode}`)).then((snapshot) => {
                     const data = snapshot.val();
                     if(data) {
                         username = data.username || "User_" + friendCode.substring(0,5);
@@ -974,7 +969,11 @@
                     }
                     document.getElementById('username-input').value = username;
                     document.getElementById('name-color').value = savedColor;
-                });
+                    
+                    document.querySelectorAll('.pfp-option').forEach(opt => {
+                        if (opt.textContent === savedPfp) opt.classList.add('selected');
+                    });
+                }).catch(err => console.error("Profile initial fetch error:", err));
 
                 window.switchChannel('server-1', 'Server 1 🌐', document.getElementById('btn-server-1'));
             } else {
