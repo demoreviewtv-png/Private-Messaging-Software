@@ -584,6 +584,108 @@
             z-index: 90;
         }
 
+        /* Interactive Crop Overlay Modal Styles */
+        #crop-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(30, 31, 34, 0.9);
+            z-index: 3000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crop-card {
+            background-color: #313338;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 440px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .crop-card h3 {
+            color: #fff;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .crop-viewport-wrapper {
+            width: 100%;
+            height: 300px;
+            background-color: #1e1f22;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crop-viewport-wrapper:active {
+            cursor: grabbing;
+        }
+
+        .crop-overlay-ring {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border: 2px solid #5865f2;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #crop-canvas-display {
+            position: absolute;
+            transform-origin: center center;
+        }
+
+        .crop-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .crop-slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #b5bac1;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .crop-slider-row input[type="range"] {
+            flex: 1;
+            accent-color: #5865f2;
+            cursor: pointer;
+        }
+
+        .crop-action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .crop-action-buttons button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 13px;
+            border: none;
+        }
+
         @media (max-width: 600px) {
             #sidebar {
                 position: absolute;
@@ -634,6 +736,30 @@
         </div>
     </div>
 
+    <div id="crop-modal">
+        <div class="crop-card">
+            <h3>Scale & Crop Avatar</h3>
+            <div class="crop-viewport-wrapper" id="crop-viewport">
+                <div class="crop-overlay-ring"></div>
+                <canvas id="crop-canvas-display"></canvas>
+            </div>
+            <div class="crop-controls">
+                <div class="crop-slider-row">
+                    <span>ZOOM</span>
+                    <input type="range" id="crop-zoom-slider" min="0.1" max="3" step="0.01" value="1">
+                </div>
+                <div class="crop-slider-row">
+                    <span>ROTATION</span>
+                    <input type="range" id="crop-rotate-slider" min="0" max="360" step="1" value="0">
+                </div>
+            </div>
+            <div class="crop-action-buttons">
+                <button style="background-color: #35373c; color: #dbdee1;" onclick="window.closeCropModal()">Cancel</button>
+                <button style="background-color: #23a55a; color: white;" onclick="window.executeCroppingMatrix()">Crop & Save Profile</button>
+            </div>
+        </div>
+    </div>
+
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="window.toggleSidebar()"></div>
 
     <div id="sidebar" class="minimized">
@@ -659,7 +785,7 @@
                         <div class="current-pfp-box" id="sidebar-pfp-preview">👤</div>
                         <label class="pfp-uploader">
                             Choose Image File
-                            <input type="file" id="pfp-file-input" accept="image/*" style="display: none;" onchange="window.uploadCustomPfp(this)">
+                            <input type="file" id="pfp-file-input" accept="image/*" value="" style="display: none;" onchange="window.uploadCustomPfp(this)">
                         </label>
                     </div>
                 </div>
@@ -782,6 +908,15 @@
         let currentVoiceChannel = null;
         let isLoginMode = true;
 
+        // Global Cache store for mapping profiles dynamic updates across historical posts
+        const knownProfilesCache = {};
+
+        // Interactive Cropping Workspace References
+        let sourceImageInstance = null;
+        let pfpOffsetCoordinates = { x: 0, y: 0 };
+        let isDraggingViewportImage = false;
+        let dragAnchorPoint = { x: 0, y: 0 };
+
         const pusher = new Pusher('9b03947b66df21a08620', { cluster: 'us2', forceTLS: true });
         let currentSubscription = null;
 
@@ -789,6 +924,13 @@
         const input = document.getElementById('message-input');
         const form = document.getElementById('input-form');
         const roomTitle = document.getElementById('room-title');
+
+        const cropModal = document.getElementById('crop-modal');
+        const cropCanvas = document.getElementById('crop-canvas-display');
+        const cropCtx = cropCanvas.getContext('2d');
+        const cropViewport = document.getElementById('crop-viewport');
+        const zoomSlider = document.getElementById('crop-zoom-slider');
+        const rotateSlider = document.getElementById('crop-rotate-slider');
 
         window.toggleSidebar = function() {
             const sidebar = document.getElementById('sidebar');
@@ -862,44 +1004,129 @@
             const file = fileInput.files[0];
             if (!file) return;
 
-            const previewContainer = document.getElementById('sidebar-pfp-preview');
-            previewContainer.textContent = "⏳";
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
-                img.onload = async function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
+                img.onload = function() {
+                    sourceImageInstance = img;
+                    pfpOffsetCoordinates = { x: 0, y: 0 };
+                    zoomSlider.value = 1;
+                    rotateSlider.value = 0;
                     
-                    const targetSize = 96; 
-                    canvas.width = targetSize;
-                    canvas.height = targetSize;
-                    
-                    ctx.drawImage(img, 0, 0, targetSize, targetSize);
-                    
-                    // Directly output the clean, tight base64 URI string representation
-                    const localBase64String = canvas.toDataURL('image/jpeg', 0.6);
-                    savedPfp = localBase64String;
-
-                    try {
-                        // Persists directly into Firebase Realtime Node - skipping ImgBB bottlenecks
-                        await update(ref(db, `profiles/${friendCode}`), {
-                            username: document.getElementById('username-input').value.trim() || username,
-                            color: document.getElementById('name-color').value || savedColor,
-                            pfp: savedPfp
-                        });
-                        
-                        updateAvatarPreview(previewContainer, savedPfp);
-                    } catch (err) {
-                        console.error(err);
-                        alert("Database synchronized pipeline error.");
-                        previewContainer.textContent = "👤";
-                    }
+                    cropModal.style.display = "flex";
+                    renderCropCanvasMatrix();
                 };
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
+            fileInput.value = ""; 
+        };
+
+        function renderCropCanvasMatrix() {
+            if (!sourceImageInstance) return;
+
+            const zoom = parseFloat(zoomSlider.value);
+            const rotationDegrees = parseInt(rotateSlider.value);
+
+            const baseScale = Math.min(300 / sourceImageInstance.width, 300 / sourceImageInstance.height) * 0.8;
+            const w = sourceImageInstance.width * baseScale * zoom;
+            const h = sourceImageInstance.height * baseScale * zoom;
+
+            cropCanvas.width = Math.max(w, h) * 2;
+            cropCanvas.height = Math.max(w, h) * 2;
+
+            cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+            cropCtx.save();
+            
+            cropCtx.translate(cropCanvas.width / 2, cropCanvas.height / 2);
+            cropCtx.rotate((rotationDegrees * Math.PI) / 180);
+            cropCtx.drawImage(sourceImageInstance, -w / 2, -h / 2, w, h);
+            cropCtx.restore();
+
+            cropCanvas.style.left = `${(cropViewport.clientWidth - cropCanvas.width) / 2 + pfpOffsetCoordinates.x}px`;
+            cropCanvas.style.top = `${(cropViewport.clientHeight - cropCanvas.height) / 2 + pfpOffsetCoordinates.y}px`;
+        }
+
+        cropViewport.addEventListener('mousedown', (e) => {
+            isDraggingViewportImage = true;
+            dragAnchorPoint = { x: e.clientX - pfpOffsetCoordinates.x, y: e.clientY - pfpOffsetCoordinates.y };
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDraggingViewportImage) return;
+            pfpOffsetCoordinates.x = e.clientX - dragAnchorPoint.x;
+            pfpOffsetCoordinates.y = e.clientY - dragAnchorPoint.y;
+            renderCropCanvasMatrix();
+        });
+
+        window.addEventListener('mouseup', () => { isDraggingViewportImage = false; });
+
+        cropViewport.addEventListener('touchstart', (e) => {
+            if(e.touches.length !== 1) return;
+            isDraggingViewportImage = true;
+            dragAnchorPoint = { x: e.touches[0].clientX - pfpOffsetCoordinates.x, y: e.touches[0].clientY - pfpOffsetCoordinates.y };
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDraggingViewportImage || e.touches.length !== 1) return;
+            pfpOffsetCoordinates.x = e.touches[0].clientX - dragAnchorPoint.x;
+            pfpOffsetCoordinates.y = e.touches[0].clientY - dragAnchorPoint.y;
+            renderCropCanvasMatrix();
+        });
+
+        window.addEventListener('touchend', () => { isDraggingViewportImage = false; });
+
+        zoomSlider.addEventListener('input', renderCropCanvasMatrix);
+        rotateSlider.addEventListener('input', renderCropCanvasMatrix);
+
+        window.closeCropModal = function() {
+            cropModal.style.display = "none";
+            sourceImageInstance = null;
+        };
+
+        window.executeCroppingMatrix = async function() {
+            if (!sourceImageInstance) return;
+
+            const targetOutputCanvas = document.createElement('canvas');
+            const destCtx = targetOutputCanvas.getContext('2d');
+            
+            const exportSquareDimension = 96; 
+            targetOutputCanvas.width = exportSquareDimension;
+            targetOutputCanvas.height = exportSquareDimension;
+
+            const overlaySize = 200;
+            const viewportCenterX = cropViewport.clientWidth / 2;
+            const viewportCenterY = cropViewport.clientHeight / 2;
+
+            const clipSourceX = (viewportCenterX - (overlaySize / 2)) - ((cropViewport.clientWidth - cropCanvas.width) / 2 + pfpOffsetCoordinates.x);
+            const clipSourceY = (viewportCenterY - (overlaySize / 2)) - ((cropViewport.clientHeight - cropCanvas.height) / 2 + pfpOffsetCoordinates.y);
+
+            destCtx.drawImage(
+                cropCanvas,
+                clipSourceX, clipSourceY, overlaySize, overlaySize, 
+                0, 0, exportSquareDimension, exportSquareDimension 
+            );
+
+            const base64CleanOutput = targetOutputCanvas.toDataURL('image/jpeg', 0.6);
+            savedPfp = base64CleanOutput;
+
+            const previewContainer = document.getElementById('sidebar-pfp-preview');
+            previewContainer.textContent = "⏳";
+
+            try {
+                await update(ref(db, `profiles/${friendCode}`), {
+                    username: document.getElementById('username-input').value.trim() || username,
+                    color: document.getElementById('name-color').value || savedColor,
+                    pfp: savedPfp
+                });
+                
+                updateAvatarPreview(previewContainer, savedPfp);
+                window.closeCropModal();
+            } catch (err) {
+                console.error(err);
+                alert("Database synchronized pipeline processing error occurred.");
+                previewContainer.textContent = "👤";
+            }
         };
 
         function updateAvatarPreview(element, source) {
@@ -995,6 +1222,30 @@
             });
         };
 
+        // Listen dynamically for updates globally to handle layout synchronization safely
+        function attachRealtimeProfileSync(uid) {
+            if (knownProfilesCache[uid]) return;
+            knownProfilesCache[uid] = true;
+
+            onValue(ref(db, `profiles/${uid}`), (snapshot) => {
+                const profile = snapshot.val();
+                if (!profile) return;
+
+                // Sync colors, names and cropped images live across all corresponding messages
+                document.querySelectorAll(`.msg-user-${uid}`).forEach(el => {
+                    const nameNode = el.querySelector('.username');
+                    const pfpNode = el.querySelector('.msg-pfp');
+                    if (nameNode) {
+                        nameNode.textContent = profile.username || "User_" + uid.substring(0,5);
+                        nameNode.style.color = profile.color || "#5865f2";
+                    }
+                    if (pfpNode) {
+                        updateAvatarPreview(pfpNode, profile.pfp || "👤");
+                    }
+                });
+            });
+        }
+
         window.switchChannel = function(id, title, btnElement) {
             currentChannelName = id + '-text';
             roomTitle.textContent = title;
@@ -1015,14 +1266,23 @@
             onChildAdded(messagesRef, (snapshot) => {
                 const msg = snapshot.val();
                 if (msg && msg.secret === DB_SECRET) {
-                    appendMessage(msg.senderName, msg.text, msg.color, snapshot.key, msg.pfp || "👤");
+                    // Extract placeholder uid fallback securely
+                    const senderUid = msg.senderUid || msg.senderName;
+                    appendMessage(senderUid, msg.senderName, msg.text, msg.color, snapshot.key, msg.pfp || "👤");
+                    if (msg.senderUid) {
+                        attachRealtimeProfileSync(msg.senderUid);
+                    }
                 }
             });
 
             try {
                 currentSubscription = pusher.subscribe(`cache-${currentChannelName}`);
                 currentSubscription.bind('client-message', (data) => {
-                    appendMessage(data.senderName, data.text, data.color, null, data.pfp || "👤");
+                    const senderUid = data.senderUid || data.senderName;
+                    appendMessage(senderUid, data.senderName, data.text, data.color, null, data.pfp || "👤");
+                    if (data.senderUid) {
+                        attachRealtimeProfileSync(data.senderUid);
+                    }
                 });
             } catch(err) { console.warn("Pusher subscribe deferred: ", err); }
         };
@@ -1036,6 +1296,7 @@
 
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
+                    senderUid: friendCode, // Anchor securely to UID for profile synchronization routing
                     senderName: username,
                     text: messageText,
                     color: savedColor,
@@ -1045,9 +1306,14 @@
             } catch (err) { console.error(err); }
         });
 
-        function appendMessage(user, text, color, msgKey = null, msgPfp = "👤") {
+        function appendMessage(senderUid, user, text, color, msgKey = null, msgPfp = "👤") {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
+            // Add a dedicated identifier handle class for dynamic styling overrides
+            if (senderUid) {
+                const safeClass = senderUid.replace(/[^a-z0-9]/gi, '-');
+                messageDiv.classList.add(`msg-user-${safeClass}`);
+            }
             if (msgKey) messageDiv.id = `msg-${msgKey}`;
             
             messageDiv.innerHTML = `
@@ -1073,7 +1339,9 @@
                 document.getElementById('friend-code-display').textContent = friendCode;
                 document.getElementById('db-status').textContent = "🟢 Security Handshake Active";
 
-                get(ref(db, `profiles/${friendCode}`)).then((snapshot) => {
+                // Setup universal profile loop tracking updates directly onto our own avatar views
+                const safeClass = friendCode.replace(/[^a-z0-9]/gi, '-');
+                onValue(ref(db, `profiles/${friendCode}`), (snapshot) => {
                     const data = snapshot.val();
                     if(data) {
                         username = data.username || "User_" + friendCode.substring(0,5);
@@ -1088,7 +1356,19 @@
                     const previewContainer = document.getElementById('sidebar-pfp-preview');
                     updateAvatarPreview(previewContainer, savedPfp);
 
-                }).catch(err => console.error(err));
+                    // Re-sync all local user messages instantly
+                    document.querySelectorAll(`.msg-user-${safeClass}`).forEach(el => {
+                        const nameNode = el.querySelector('.username');
+                        const pfpNode = el.querySelector('.msg-pfp');
+                        if (nameNode) {
+                            nameNode.textContent = username;
+                            nameNode.style.color = savedColor;
+                        }
+                        if (pfpNode) {
+                            updateAvatarPreview(pfpNode, savedPfp);
+                        }
+                    });
+                });
 
                 onChildAdded(ref(db, `custom_servers`), (snapshot) => {
                     if (snapshot.exists()) {
