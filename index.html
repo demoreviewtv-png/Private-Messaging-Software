@@ -295,6 +295,7 @@
             overflow: hidden;
             flex-shrink: 0;
             border: 1px solid #1e1f22;
+            cursor: pointer;
         }
 
         .msg-pfp img {
@@ -486,6 +487,7 @@
             font-size: 16px;
             overflow: hidden;
             border: 1px solid #383a40;
+            cursor: pointer;
         }
 
         .current-pfp-box img {
@@ -580,6 +582,73 @@
             z-index: 90;
         }
 
+        /* Image Zoom / Rotate Modal lightbox system */
+        #media-lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.85);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .lightbox-content-box {
+            max-width: 80%;
+            max-height: 70%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #lightbox-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+            transform-origin: center center;
+        }
+
+        .lightbox-controls {
+            display: flex;
+            gap: 10px;
+            background: rgba(30, 31, 34, 0.8);
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .lightbox-btn {
+            background: #35373c;
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .lightbox-btn:hover {
+            background: #4e5058;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            color: #fff;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
         @media (max-width: 600px) {
             #sidebar {
                 position: absolute;
@@ -630,6 +699,20 @@
         </div>
     </div>
 
+    <div id="media-lightbox" onclick="window.closeLightbox(event)">
+        <span class="lightbox-close" onclick="window.closeLightbox(event)">&times;</span>
+        <div class="lightbox-content-box">
+            <img id="lightbox-img" src="" alt="Zoomed view">
+        </div>
+        <div class="lightbox-controls" onclick="event.stopPropagation()">
+            <button class="lightbox-btn" onclick="window.adjustLightboxZoom(0.1)">Zoom In +</button>
+            <button class="lightbox-btn" onclick="window.adjustLightboxZoom(-0.1)">Zoom Out -</button>
+            <button class="lightbox-btn" onclick="window.rotateLightboxImage(-90)">Rotate ↺</button>
+            <button class="lightbox-btn" onclick="window.rotateLightboxImage(90)">Rotate ↻</button>
+            <button class="lightbox-btn" onclick="window.resetLightboxTransforms()">Reset</button>
+        </div>
+    </div>
+
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="window.toggleSidebar()"></div>
     
     <div id="sidebar" class="minimized">
@@ -649,7 +732,7 @@
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 4px;">Custom Profile Avatar</div>
                 <div class="pfp-selector-wrapper">
                     <div class="pfp-preview-container">
-                        <div class="current-pfp-box" id="sidebar-pfp-preview">👤</div>
+                        <div class="current-pfp-box" id="sidebar-pfp-preview" onclick="window.openImageInLightbox(this)">👤</div>
                         <label class="pfp-uploader"> Choose Image File <input type="file" id="pfp-file-input" accept="image/*" style="display: none;" onchange="window.uploadCustomPfp(this)"> </label>
                     </div>
                 </div>
@@ -775,6 +858,10 @@
         let isLoginMode = true;
         const DB_SECRET = "secure-handshake";
 
+        // Lightbox state persistence properties
+        let lightboxZoom = 1.0;
+        let lightboxRotation = 0;
+
         const pusher = new Pusher('80947660ca4a70b02927', {
             cluster: 'us2',
             forceTLS: true
@@ -873,6 +960,44 @@
             } else {
                 element.textContent = source || "👤";
             }
+        }
+
+        /* Lightbox control routines */
+        window.openImageInLightbox = function(avatarElement) {
+            const innerImg = avatarElement.querySelector('img');
+            if(!innerImg) return; 
+            
+            const lbModal = document.getElementById('media-lightbox');
+            const lbImg = document.getElementById('lightbox-img');
+            
+            lbImg.src = innerImg.src;
+            window.resetLightboxTransforms();
+            lbModal.style.display = 'flex';
+        };
+
+        window.closeLightbox = function(event) {
+            document.getElementById('media-lightbox').style.display = 'none';
+        };
+
+        window.adjustLightboxZoom = function(amount) {
+            lightboxZoom = Math.max(0.2, lightboxZoom + amount);
+            applyLightboxStyles();
+        };
+
+        window.rotateLightboxImage = function(degrees) {
+            lightboxRotation = (lightboxRotation + degrees) % 360;
+            applyLightboxStyles();
+        };
+
+        window.resetLightboxTransforms = function() {
+            lightboxZoom = 1.0;
+            lightboxRotation = 0;
+            applyLightboxStyles();
+        };
+
+        function applyLightboxStyles() {
+            const lbImg = document.getElementById('lightbox-img');
+            lbImg.style.transform = `scale(${lightboxZoom}) rotate(${lightboxRotation}deg)`;
         }
 
         window.joinCustomServer = async function() {
@@ -1016,6 +1141,7 @@
             div.classList.add('message');
             const avatarBox = document.createElement('div');
             avatarBox.classList.add('msg-pfp');
+            avatarBox.setAttribute('onclick', 'window.openImageInLightbox(this)');
             updateAvatarPreview(avatarBox, msgPfp);
             const contentBox = document.createElement('div');
             contentBox.classList.add('msg-body');
