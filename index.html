@@ -528,12 +528,13 @@
             margin-bottom: 15px;
         }
 
+        /* Redesigned Voice Control Layout System */
         #voice-status-bar {
             background-color: #232428;
             padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             border-radius: 6px;
             margin-bottom: 15px;
             font-size: 13px;
@@ -546,6 +547,37 @@
             justify-content: space-between;
             align-items: center;
             font-weight: bold;
+        }
+
+        .voice-controls-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 2px;
+        }
+
+        .media-control-btn {
+            flex: 1;
+            background-color: #35373c;
+            color: #dbdee1;
+            border: 1px solid #4e5058;
+            padding: 6px 4px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            text-align: center;
+        }
+
+        .media-control-btn:hover {
+            background-color: #4e5058;
+            color: #fff;
+        }
+
+        .media-control-btn.active-on {
+            background-color: #23a55a;
+            color: white;
+            border-color: #23a55a;
         }
 
         .disconnect-voice-btn {
@@ -699,6 +731,7 @@
                 transform: translateX(-280px);
                 width: 0;
                 padding: 20px 0;
+                overflow: hidden;
             }
             #sidebar:not(.minimized) {
                 transform: translateX(0);
@@ -767,6 +800,19 @@
             <div class="channel-title-wrapper">
                 <div class="channel-title">PrivacyChat</div>
                 <button class="sidebar-close-btn" onclick="window.toggleSidebar()">&times;</button>
+            </div>
+
+            <div id="voice-status-bar">
+                <div class="voice-top-row">
+                    <span style="color:#23a55a; font-weight:bold;">🔊 Connected</span>
+                    <button class="disconnect-voice-btn" onclick="window.disconnectVoice()">Leave</button>
+                </div>
+                <div id="voice-channel-label" style="font-size:11px; color:#949ba4; word-break:break-all;">Room: None</div>
+                <div class="voice-controls-row">
+                    <button id="mic-toggle-btn" class="media-control-btn active-on" onclick="window.toggleMic()">🎤 Mute</button>
+                    <button id="cam-toggle-btn" class="media-control-btn" onclick="window.toggleCamera()">📷 Camera</button>
+                    <button id="screen-share-btn" class="media-control-btn" onclick="window.toggleScreenShare()">🖥️ Share</button>
+                </div>
             </div>
 
             <div class="profile-container">
@@ -850,13 +896,6 @@
         </div>
 
         <div>
-            <div id="voice-status-bar">
-                <div class="voice-top-row">
-                    <span style="color:#23a55a; font-weight:bold;">🔊 Connected Audio</span>
-                    <button class="disconnect-voice-btn" onclick="window.disconnectVoice()">Leave</button>
-                </div>
-                <div id="voice-channel-label" style="font-size:11px; color:#949ba4; word-break:break-all;">Room: None</div>
-            </div>
             <div class="privacy-badge">Zero IP Tracking Active</div>
             <div id="db-status">🔴 Connecting to Security Nodes...</div>
         </div>
@@ -907,6 +946,12 @@
         let currentChannelName = "server-1-text";
         let currentVoiceChannel = null;
         let isLoginMode = true;
+
+        // WebRTC stream management structures
+        let localMediaStreamInstance = null;
+        let localScreenStreamInstance = null;
+        let isAudioTrackMuted = false;
+        let isCameraTrackActive = false;
 
         // Global Cache store for mapping profiles dynamic updates across historical posts
         const knownProfilesCache = {};
@@ -1183,7 +1228,8 @@
             pmList.appendChild(newPm);
         }
 
-        window.toggleVoiceChannel = function(roomID, labelName, element) {
+        // FIXED: Now safely prompts user for hardware mic access when clicking into voice rooms
+        window.toggleVoiceChannel = async function(roomID, labelName, element) {
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             if(element) element.classList.add('active');
             
@@ -1191,13 +1237,112 @@
             document.getElementById('voice-status-bar').style.display = 'flex';
             document.getElementById('voice-channel-label').textContent = "Node: " + labelName;
             
-            container.innerHTML = `<div style="text-align:center;color:#23a55a;font-size:13px;padding:20px;">🔊 Linked into secure audio pipeline at ${labelName}. Streaming active.</div>`;
+            container.innerHTML = `<div style="text-align:center;color:#23a55a;font-size:13px;padding:20px;">⏳ Accessing privacy-protected hardware stream parameters...</div>`;
+
+            try {
+                localMediaStreamInstance = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                console.log("Hardware interface connection achieved successfully.");
+                container.innerHTML = `<div style="text-align:center;color:#23a55a;font-size:13px;padding:20px;">🔊 Linked into secure audio pipeline at ${labelName}. Streaming active.</div>`;
+            } catch (err) {
+                console.error("WebRTC initial secure link layer failure:", err);
+                container.innerHTML = `<div style="text-align:center;color:#da373c;font-size:13px;padding:20px;">❌ Microphone access denied or block error encountered. Call active without stream.</div>`;
+                alert("Could not link audio hardware. Check browser permission blocks.");
+            }
         };
 
         window.disconnectVoice = function() {
+            if (localMediaStreamInstance) {
+                localMediaStreamInstance.getTracks().forEach(track => track.stop());
+                localMediaStreamInstance = null;
+            }
+            if (localScreenStreamInstance) {
+                localScreenStreamInstance.getTracks().forEach(track => track.stop());
+                localScreenStreamInstance = null;
+            }
+            
             currentVoiceChannel = null;
+            isAudioTrackMuted = false;
+            isCameraTrackActive = false;
+
+            // Reset media controller DOM styling safely
+            document.getElementById('mic-toggle-btn').className = "media-control-btn active-on";
+            document.getElementById('mic-toggle-btn').textContent = "🎤 Mute";
+            document.getElementById('cam-toggle-btn').className = "media-control-btn";
+            document.getElementById('cam-toggle-btn').textContent = "📷 Camera";
+            document.getElementById('screen-share-btn').className = "media-control-btn";
+            document.getElementById('screen-share-btn').textContent = "🖥️ Share";
+
             document.getElementById('voice-status-bar').style.display = 'none';
             window.switchChannel('server-1', 'Server 1 🌐', document.getElementById('btn-server-1'));
+        };
+
+        window.toggleMic = function() {
+            if (!localMediaStreamInstance) return;
+            const audioTrack = localMediaStreamInstance.getAudioTracks()[0];
+            if (audioTrack) {
+                isAudioTrackMuted = !isAudioTrackMuted;
+                audioTrack.enabled = !isAudioTrackMuted;
+                
+                const btn = document.getElementById('mic-toggle-btn');
+                if (isAudioTrackMuted) {
+                    btn.textContent = "🔇 Unmute";
+                    btn.classList.remove('active-on');
+                } else {
+                    btn.textContent = "🎤 Mute";
+                    btn.classList.add('active-on');
+                }
+            }
+        };
+
+        window.toggleCamera = async function() {
+            if (!localMediaStreamInstance) return;
+            const btn = document.getElementById('cam-toggle-btn');
+
+            if (!isCameraTrackActive) {
+                try {
+                    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const videoTrack = videoStream.getVideoTracks()[0];
+                    localMediaStreamInstance.addTrack(videoTrack);
+                    
+                    isCameraTrackActive = true;
+                    btn.textContent = "📷 Cam Off";
+                    btn.classList.add('active-on');
+                } catch (err) {
+                    console.error("Camera channel attachment failure:", err);
+                    alert("Could not start camera interface stream node.");
+                }
+            } else {
+                const videoTrack = localMediaStreamInstance.getVideoTracks()[0];
+                if (videoTrack) {
+                    videoTrack.stop();
+                    localMediaStreamInstance.removeTrack(videoTrack);
+                }
+                isCameraTrackActive = false;
+                btn.textContent = "📷 Camera";
+                btn.classList.remove('active-on');
+            }
+        };
+
+        window.toggleScreenShare = async function() {
+            const btn = document.getElementById('screen-share-btn');
+            if (!localScreenStreamInstance) {
+                try {
+                    localScreenStreamInstance = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    btn.textContent = "🖥️ Stop Share";
+                    btn.classList.add('active-on');
+                    
+                    localScreenStreamInstance.getVideoTracks()[0].onended = () => {
+                        window.toggleScreenShare();
+                    };
+                } catch (err) {
+                    console.error("Display capture allocation error:", err);
+                }
+            } else {
+                localScreenStreamInstance.getTracks().forEach(track => track.stop());
+                localScreenStreamInstance = null;
+                btn.textContent = "🖥️ Share";
+                btn.classList.remove('active-on');
+            }
         };
 
         window.applyTheme = function(bg, side, txt) {
@@ -1266,7 +1411,6 @@
             onChildAdded(messagesRef, (snapshot) => {
                 const msg = snapshot.val();
                 if (msg && msg.secret === DB_SECRET) {
-                    // Extract placeholder uid fallback securely
                     const senderUid = msg.senderUid || msg.senderName;
                     appendMessage(senderUid, msg.senderName, msg.text, msg.color, snapshot.key, msg.pfp || "👤");
                     if (msg.senderUid) {
@@ -1296,7 +1440,7 @@
 
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
-                    senderUid: friendCode, // Anchor securely to UID for profile synchronization routing
+                    senderUid: friendCode, 
                     senderName: username,
                     text: messageText,
                     color: savedColor,
@@ -1309,7 +1453,6 @@
         function appendMessage(senderUid, user, text, color, msgKey = null, msgPfp = "👤") {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
-            // Add a dedicated identifier handle class for dynamic styling overrides
             if (senderUid) {
                 const safeClass = senderUid.replace(/[^a-z0-9]/gi, '-');
                 messageDiv.classList.add(`msg-user-${safeClass}`);
@@ -1339,7 +1482,6 @@
                 document.getElementById('friend-code-display').textContent = friendCode;
                 document.getElementById('db-status').textContent = "🟢 Security Handshake Active";
 
-                // Setup universal profile loop tracking updates directly onto our own avatar views
                 const safeClass = friendCode.replace(/[^a-z0-9]/gi, '-');
                 onValue(ref(db, `profiles/${friendCode}`), (snapshot) => {
                     const data = snapshot.val();
@@ -1356,7 +1498,6 @@
                     const previewContainer = document.getElementById('sidebar-pfp-preview');
                     updateAvatarPreview(previewContainer, savedPfp);
 
-                    // Re-sync all local user messages instantly
                     document.querySelectorAll(`.msg-user-${safeClass}`).forEach(el => {
                         const nameNode = el.querySelector('.username');
                         const pfpNode = el.querySelector('.msg-pfp');
