@@ -45,13 +45,14 @@
             max-width: 400px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
         }
 
         .auth-card h2 {
             color: #fff;
             text-align: center;
             font-size: 24px;
+            margin-bottom: 4px;
         }
 
         .auth-field {
@@ -133,9 +134,6 @@
         #sidebar.minimized {
             width: 0;
             padding: 20px 0;
-            overflow: hidden;
-            border-right: none;
-            transform: translateX(-260px);
         }
 
         .channel-title-wrapper {
@@ -528,18 +526,16 @@
             margin-bottom: 15px;
         }
 
-        /* Redesigned Voice Control Layout System */
+        /* FIXED: Styled as a header banner block rather than a floating sidebar component */
         #voice-status-bar {
-            background-color: #232428;
-            padding: 12px;
+            background-color: #2b2d31;
+            padding: 12px 20px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            border-radius: 6px;
-            margin-bottom: 15px;
+            gap: 10px;
+            border-bottom: 1px solid #1e1f22;
             font-size: 13px;
             display: none;
-            border: 1px solid #3f4147;
         }
 
         .voice-top-row {
@@ -547,37 +543,6 @@
             justify-content: space-between;
             align-items: center;
             font-weight: bold;
-        }
-
-        .voice-controls-row {
-            display: flex;
-            gap: 6px;
-            margin-top: 2px;
-        }
-
-        .media-control-btn {
-            flex: 1;
-            background-color: #35373c;
-            color: #dbdee1;
-            border: 1px solid #4e5058;
-            padding: 6px 4px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s;
-            text-align: center;
-        }
-
-        .media-control-btn:hover {
-            background-color: #4e5058;
-            color: #fff;
-        }
-
-        .media-control-btn.active-on {
-            background-color: #23a55a;
-            color: white;
-            border-color: #23a55a;
         }
 
         .disconnect-voice-btn {
@@ -595,10 +560,11 @@
             background-color: #a92b2f;
         }
 
+        /* FIXED: Tailored for wide view banner area beneath header */
         #video-streams-panel {
             display: flex;
             gap: 10px;
-            padding: 10px;
+            padding: 12px 20px;
             background-color: #1e1f22;
             border-bottom: 1px solid #2b2d31;
             overflow-x: auto;
@@ -616,108 +582,6 @@
             z-index: 90;
         }
 
-        /* Interactive Crop Overlay Modal Styles */
-        #crop-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(30, 31, 34, 0.9);
-            z-index: 3000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .crop-card {
-            background-color: #313338;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            width: 90%;
-            max-width: 440px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .crop-card h3 {
-            color: #fff;
-            text-align: center;
-            font-size: 18px;
-        }
-
-        .crop-viewport-wrapper {
-            width: 100%;
-            height: 300px;
-            background-color: #1e1f22;
-            border-radius: 4px;
-            position: relative;
-            overflow: hidden;
-            cursor: grab;
-            user-select: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .crop-viewport-wrapper:active {
-            cursor: grabbing;
-        }
-
-        .crop-overlay-ring {
-            position: absolute;
-            width: 200px;
-            height: 200px;
-            border: 2px solid #5865f2;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-            border-radius: 4px;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        #crop-canvas-display {
-            position: absolute;
-            transform-origin: center center;
-        }
-
-        .crop-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .crop-slider-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #b5bac1;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .crop-slider-row input[type="range"] {
-            flex: 1;
-            accent-color: #5865f2;
-            cursor: pointer;
-        }
-
-        .crop-action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .crop-action-buttons button {
-            flex: 1;
-            padding: 10px;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 13px;
-            border: none;
-        }
-
         @media (max-width: 600px) {
             #sidebar {
                 position: absolute;
@@ -731,7 +595,6 @@
                 transform: translateX(-280px);
                 width: 0;
                 padding: 20px 0;
-                overflow: hidden;
             }
             #sidebar:not(.minimized) {
                 transform: translateX(0);
@@ -766,91 +629,46 @@
 
             <button class="auth-btn-primary" id="submit-auth-btn" onclick="window.handleAuthAction()">Log In</button>
             <button class="auth-btn-secondary" id="toggle-auth-mode" onclick="window.switchAuthMode()">Need an account? Register</button>
-        </div>
-    </div>
-
-    <div id="crop-modal">
-        <div class="crop-card">
-            <h3>Scale & Crop Avatar</h3>
-            <div class="crop-viewport-wrapper" id="crop-viewport">
-                <div class="crop-overlay-ring"></div>
-                <canvas id="crop-canvas-display"></canvas>
-            </div>
-            <div class="crop-controls">
-                <div class="crop-slider-row">
-                    <span>ZOOM</span>
-                    <input type="range" id="crop-zoom-slider" min="0.1" max="3" step="0.01" value="1">
-                </div>
-                <div class="crop-slider-row">
-                    <span>ROTATION</span>
-                    <input type="range" id="crop-rotate-slider" min="0" max="360" step="1" value="0">
-                </div>
-            </div>
-            <div class="crop-action-buttons">
-                <button style="background-color: #35373c; color: #dbdee1;" onclick="window.closeCropModal()">Cancel</button>
-                <button style="background-color: #23a55a; color: white;" onclick="window.executeCroppingMatrix()">Crop & Save Profile</button>
-            </div>
+            
+            <div style="display: flex; align-items: center; justify-content: center; margin: 4px 0; font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">OR</div>
+            
+            <button class="auth-btn-secondary" id="google-auth-btn" onclick="window.handleGoogleSignIn()" style="background-color: #ffffff; color: #111214; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: bold; border: none; padding: 10px;">
+                <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84c-.21 1.12-.84 2.07-1.8 2.72v2.26h2.91c1.7-1.57 2.69-3.88 2.69-6.61z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.19l-2.91-2.26c-.8.54-1.83.86-3.05.86-2.34 0-4.32-1.58-5.03-3.71H.95v2.3A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.7a5.4 5.4 0 0 1 0-3.4V5H.95a9 9 0 0 0 0 8l3.02-2.3z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35L15 2.1A9 9 0 0 0 .95 5l3.02 2.3c.71-2.13 2.69-3.71 5.03-3.71z"/></svg> Sign In with Google
+            </button>
         </div>
     </div>
 
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="window.toggleSidebar()"></div>
-
+    
     <div id="sidebar" class="minimized">
         <div>
             <div class="channel-title-wrapper">
                 <div class="channel-title">PrivacyChat</div>
                 <button class="sidebar-close-btn" onclick="window.toggleSidebar()">&times;</button>
             </div>
-
-            <div id="voice-status-bar">
-                <div class="voice-top-row">
-                    <span style="color:#23a55a; font-weight:bold;">🔊 Connected</span>
-                    <button class="disconnect-voice-btn" onclick="window.disconnectVoice()">Leave</button>
-                </div>
-                <div id="voice-channel-label" style="font-size:11px; color:#949ba4; word-break:break-all;">Room: None</div>
-                <div class="voice-controls-row">
-                    <button id="mic-toggle-btn" class="media-control-btn active-on" onclick="window.toggleMic()">🎤 Mute</button>
-                    <button id="cam-toggle-btn" class="media-control-btn" onclick="window.toggleCamera()">📷 Camera</button>
-                    <button id="screen-share-btn" class="media-control-btn" onclick="window.toggleScreenShare()">🖥️ Share</button>
-                </div>
-            </div>
-
             <div class="profile-container">
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">User Secure ID</div>
                 <div id="friend-code-display" style="font-weight: bold; font-size: 13px; color: #fff; font-family: monospace; word-break: break-all;">Loading...</div>
-                
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 8px;">Username</div>
                 <div class="username-edit-box">
                     <input type="text" id="username-input" maxlength="20" autocomplete="off">
                     <button id="save-username-btn" onclick="window.saveUsername()">Save Profile Changes</button>
                 </div>
-
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 4px;">Custom Profile Avatar</div>
                 <div class="pfp-selector-wrapper">
                     <div class="pfp-preview-container">
                         <div class="current-pfp-box" id="sidebar-pfp-preview">👤</div>
-                        <label class="pfp-uploader">
-                            Choose Image File
-                            <input type="file" id="pfp-file-input" accept="image/*" value="" style="display: none;" onchange="window.uploadCustomPfp(this)">
-                        </label>
+                        <label class="pfp-uploader"> Choose Image File <input type="file" id="pfp-file-input" accept="image/*" style="display: none;" onchange="window.uploadCustomPfp(this)"> </label>
                     </div>
                 </div>
-
                 <button class="reset-btn" id="reset-id-btn" style="color: #fa777c;" onclick="window.logOutUser()">Disconnect / Log Out</button>
             </div>
-
+            
             <div class="section-header">
                 <span class="section-title">Themes & Colors</span>
             </div>
-            <div class="theme-container" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;">
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold;">Presets</div>
-                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                    <button onclick="window.applyTheme('#313338', '#2b2d31', '#dbdee1')" style="background:#313338; width:22px; height:22px; border:1px solid #fff; border-radius:4px; cursor:pointer;" title="Discord Dark"></button>
-                    <button onclick="window.applyTheme('#ffffff', '#f2f3f5', '#060607')" style="background:#ffffff; width:22px; height:22px; border:1px solid #ccc; border-radius:4px; cursor:pointer;" title="Light Theme"></button>
-                    <button onclick="window.applyTheme('#000000', '#050505', '#e3e5e8')" style="background:#000000; width:22px; height:22px; border:1px solid #444; border-radius:4px; cursor:pointer;" title="AMOLED Black"></button>
-                </div>
-                <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; margin-top: 4px;">Custom Themes</div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 10px; color: #949ba4; text-align: center;">
+            <div class="theme-container" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                <div style="grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 10px; color: #949ba4; text-align: center; display: grid;">
                     <div>
                         <input type="color" id="theme-bg-color" value="#313338" oninput="window.updateCustomTheme()" style="width:100%; height:22px; border:none; cursor:pointer; background:none;"> Chat BG
                     </div>
@@ -880,24 +698,27 @@
                     <button class="nav-btn sub-channel" id="btn-server-2-voice" onclick="window.toggleVoiceChannel('server-2-voice', 'Server 2 🔊 Voice Node', this)">🔊 Server 2 Voice</button>
                 </div>
             </div>
+
+            <div class="section-header">
+                <span class="section-title">Create Server Node</span>
+            </div>
             <div class="pm-input-box" style="margin-bottom: 15px;">
-                <input type="text" id="custom-server-input" placeholder="Create or Join Node Server...">
-                <button onclick="window.joinCustomServer()">Join</button>
+                <input type="text" id="custom-server-input" placeholder="Server Name..." autocomplete="off">
+                <button onclick="window.joinCustomServer()">+</button>
             </div>
 
             <div class="section-header">
-                <span class="section-title">Private Messages</span>
+                <span class="section-title">Direct Encrypted PMs</span>
             </div>
             <div id="pm-list"></div>
-            <div class="pm-input-box" style="margin-bottom: 15px;">
-                <input type="text" id="friend-code-input" placeholder="User ID Key...">
-                <button onclick="window.connectToFriend()">Link</button>
-            </div>
-        </div>
 
-        <div>
-            <div class="privacy-badge">Zero IP Tracking Active</div>
-            <div id="db-status">🔴 Connecting to Security Nodes...</div>
+            <div class="section-header">
+                <span class="section-title">Connect with Friend</span>
+            </div>
+            <div class="pm-input-box" style="margin-bottom: 10px;">
+                <input type="text" id="friend-code-input" placeholder="Paste user code..." autocomplete="off">
+                <button onclick="window.connectToFriend()">Add</button>
+            </div>
         </div>
     </div>
 
@@ -905,78 +726,61 @@
         <div id="chat-header">
             <button class="menu-toggle-btn" onclick="window.toggleSidebar()">☰</button>
             <div class="header-title-container">
-                <div class="header-title" id="room-title">Server 1 🌐</div>
-                <div class="history-notice">🔒 Privacy Validation Handshake Layer Active</div>
+                <div class="header-title" id="chat-title">Server 1 🌐</div>
+                <div class="history-notice" id="history-badge">Ephemeral Room</div>
             </div>
         </div>
 
-        <div id="video-streams-panel"></div>
-        <div id="message-container"></div>
+        <div id="voice-status-bar">
+            <div class="voice-top-row">
+                <span id="voice-channel-label" style="color: #23a55a; font-weight: bold;">🔊 Connected to Voice</span>
+                <button class="disconnect-voice-btn" onclick="window.disconnectVoice()">Disconnect</button>
+            </div>
+            <div id="voice-members-list" style="display: flex; flex-direction: column; gap: 4px; color: #b5bac1;"></div>
+        </div>
 
+        <div id="video-streams-panel"></div>
+
+        <div id="message-container"></div>
+        
         <form id="input-form">
-            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+            <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off">
+            <div id="db-status">🟢 System Ready</div>
         </form>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onValue, onChildAdded, update, off, get } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, set, push, onValue, onChildAdded, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
-            authDomain: "privatems-vercel-app.firebaseapp.com",
-            databaseURL: "https://privatems-vercel-app-default-rtdb.firebaseio.com",
-            projectId: "privatems-vercel-app",
-            storageBucket: "privatems-vercel-app.firebasestorage.app",
-            messagingSenderId: "259223551478",
-            appId: "1:259223551478:web:960461ed4246235cc31bd7",
-            measurementId: "G-ZSFBLCP1ML"
+            databaseURL: "https://privacychat-b7886-default-rtdb.firebaseio.com"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const auth = getAuth(app);
-        const DB_SECRET = "Bennysprivatems2026andshit";
 
-        let friendCode = "";
-        let username = "";
+        let friendCode = null;
+        let username = "Anonymous";
         let savedColor = "#5865f2";
         let savedPfp = "👤";
-        let currentChannelName = "server-1-text";
-        let currentVoiceChannel = null;
+        let currentChannelName = "server-1";
+        let activeChannelRef = null;
         let isLoginMode = true;
+        const DB_SECRET = "secure-handshake";
 
-        // WebRTC stream management structures
-        let localMediaStreamInstance = null;
-        let localScreenStreamInstance = null;
-        let isAudioTrackMuted = false;
-        let isCameraTrackActive = false;
-
-        // Global Cache store for mapping profiles dynamic updates across historical posts
-        const knownProfilesCache = {};
-
-        // Interactive Cropping Workspace References
-        let sourceImageInstance = null;
-        let pfpOffsetCoordinates = { x: 0, y: 0 };
-        let isDraggingViewportImage = false;
-        let dragAnchorPoint = { x: 0, y: 0 };
-
-        const pusher = new Pusher('9b03947b66df21a08620', { cluster: 'us2', forceTLS: true });
+        const pusher = new Pusher('80947660ca4a70b02927', {
+            cluster: 'us2',
+            forceTLS: true
+        });
         let currentSubscription = null;
 
         const container = document.getElementById('message-container');
         const input = document.getElementById('message-input');
         const form = document.getElementById('input-form');
-        const roomTitle = document.getElementById('room-title');
-
-        const cropModal = document.getElementById('crop-modal');
-        const cropCanvas = document.getElementById('crop-canvas-display');
-        const cropCtx = cropCanvas.getContext('2d');
-        const cropViewport = document.getElementById('crop-viewport');
-        const zoomSlider = document.getElementById('crop-zoom-slider');
-        const rotateSlider = document.getElementById('crop-rotate-slider');
-
+        
         window.toggleSidebar = function() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -996,14 +800,12 @@
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
             const errorLabel = document.getElementById('auth-error-msg');
-            
             if(!email || !password) {
                 errorLabel.textContent = "Please fill in all fields.";
                 errorLabel.style.display = "block";
                 return;
             }
             errorLabel.style.display = "none";
-
             if (isLoginMode) {
                 signInWithEmailAndPassword(auth, email, password).catch(err => {
                     errorLabel.textContent = err.message;
@@ -1011,167 +813,64 @@
                 });
             } else {
                 createUserWithEmailAndPassword(auth, email, password)
-                    .then((userCredential) => {
-                        const uid = userCredential.user.uid;
-                        const defaultName = "User_" + uid.substring(0, 5);
-                        return set(ref(db, `profiles/${uid}`), {
-                            username: defaultName,
-                            color: "#5865f2",
-                            pfp: "👤"
-                        });
-                    })
-                    .catch(err => {
-                        errorLabel.textContent = err.message;
-                        errorLabel.style.display = "block";
+                .then((userCredential) => {
+                    const uid = userCredential.user.uid;
+                    const defaultName = "User_" + uid.substring(0, 5);
+                    return set(ref(db, `profiles/${uid}`), {
+                        username: defaultName,
+                        color: "#5865f2",
+                        pfp: "👤"
                     });
+                })
+                .catch(err => {
+                    errorLabel.textContent = err.message;
+                    errorLabel.style.display = "block";
+                });
             }
+        };
+
+        window.handleGoogleSignIn = function() {
+            const provider = new GoogleAuthProvider();
+            const errorLabel = document.getElementById('auth-error-msg');
+            errorLabel.style.display = "none";
+            signInWithPopup(auth, provider).catch(err => {
+                errorLabel.textContent = err.message;
+                errorLabel.style.display = "block";
+            });
         };
 
         window.saveUsername = async function() {
             const requestedName = document.getElementById('username-input').value.trim();
             const selectedColor = document.getElementById('name-color').value;
             if(!requestedName || !friendCode) return;
-            
             username = requestedName;
             savedColor = selectedColor;
-            
             try {
                 await update(ref(db, `profiles/${friendCode}`), {
                     username: username,
-                    color: savedColor,
-                    pfp: savedPfp
+                    color: savedColor
                 });
-                alert("Profile synchronized successfully!");
-            } catch(e) { console.error(e); }
+                alert("Profile changes saved successfully!");
+            } catch(e) {
+                console.error(e);
+            }
         };
 
-        window.uploadCustomPfp = function(fileInput) {
-            const file = fileInput.files[0];
-            if (!file) return;
-
+        window.uploadCustomPfp = function(inputEl) {
+            const file = inputEl.files[0];
+            if (!file || !friendCode) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    sourceImageInstance = img;
-                    pfpOffsetCoordinates = { x: 0, y: 0 };
-                    zoomSlider.value = 1;
-                    rotateSlider.value = 0;
-                    
-                    cropModal.style.display = "flex";
-                    renderCropCanvasMatrix();
-                };
-                img.src = e.target.result;
+            reader.onload = async function(e) {
+                const dataUrl = e.target.result;
+                savedPfp = dataUrl;
+                updateAvatarPreview(document.getElementById('sidebar-pfp-preview'), savedPfp);
+                try {
+                    await update(ref(db, `profiles/${friendCode}`), { pfp: savedPfp });
+                } catch(err) {
+                    console.error(err);
+                }
             };
             reader.readAsDataURL(file);
-            fileInput.value = ""; 
-        };
-
-        function renderCropCanvasMatrix() {
-            if (!sourceImageInstance) return;
-
-            const zoom = parseFloat(zoomSlider.value);
-            const rotationDegrees = parseInt(rotateSlider.value);
-
-            const baseScale = Math.min(300 / sourceImageInstance.width, 300 / sourceImageInstance.height) * 0.8;
-            const w = sourceImageInstance.width * baseScale * zoom;
-            const h = sourceImageInstance.height * baseScale * zoom;
-
-            cropCanvas.width = Math.max(w, h) * 2;
-            cropCanvas.height = Math.max(w, h) * 2;
-
-            cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
-            cropCtx.save();
-            
-            cropCtx.translate(cropCanvas.width / 2, cropCanvas.height / 2);
-            cropCtx.rotate((rotationDegrees * Math.PI) / 180);
-            cropCtx.drawImage(sourceImageInstance, -w / 2, -h / 2, w, h);
-            cropCtx.restore();
-
-            cropCanvas.style.left = `${(cropViewport.clientWidth - cropCanvas.width) / 2 + pfpOffsetCoordinates.x}px`;
-            cropCanvas.style.top = `${(cropViewport.clientHeight - cropCanvas.height) / 2 + pfpOffsetCoordinates.y}px`;
-        }
-
-        cropViewport.addEventListener('mousedown', (e) => {
-            isDraggingViewportImage = true;
-            dragAnchorPoint = { x: e.clientX - pfpOffsetCoordinates.x, y: e.clientY - pfpOffsetCoordinates.y };
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isDraggingViewportImage) return;
-            pfpOffsetCoordinates.x = e.clientX - dragAnchorPoint.x;
-            pfpOffsetCoordinates.y = e.clientY - dragAnchorPoint.y;
-            renderCropCanvasMatrix();
-        });
-
-        window.addEventListener('mouseup', () => { isDraggingViewportImage = false; });
-
-        cropViewport.addEventListener('touchstart', (e) => {
-            if(e.touches.length !== 1) return;
-            isDraggingViewportImage = true;
-            dragAnchorPoint = { x: e.touches[0].clientX - pfpOffsetCoordinates.x, y: e.touches[0].clientY - pfpOffsetCoordinates.y };
-        });
-
-        window.addEventListener('touchmove', (e) => {
-            if (!isDraggingViewportImage || e.touches.length !== 1) return;
-            pfpOffsetCoordinates.x = e.touches[0].clientX - dragAnchorPoint.x;
-            pfpOffsetCoordinates.y = e.touches[0].clientY - dragAnchorPoint.y;
-            renderCropCanvasMatrix();
-        });
-
-        window.addEventListener('touchend', () => { isDraggingViewportImage = false; });
-
-        zoomSlider.addEventListener('input', renderCropCanvasMatrix);
-        rotateSlider.addEventListener('input', renderCropCanvasMatrix);
-
-        window.closeCropModal = function() {
-            cropModal.style.display = "none";
-            sourceImageInstance = null;
-        };
-
-        window.executeCroppingMatrix = async function() {
-            if (!sourceImageInstance) return;
-
-            const targetOutputCanvas = document.createElement('canvas');
-            const destCtx = targetOutputCanvas.getContext('2d');
-            
-            const exportSquareDimension = 96; 
-            targetOutputCanvas.width = exportSquareDimension;
-            targetOutputCanvas.height = exportSquareDimension;
-
-            const overlaySize = 200;
-            const viewportCenterX = cropViewport.clientWidth / 2;
-            const viewportCenterY = cropViewport.clientHeight / 2;
-
-            const clipSourceX = (viewportCenterX - (overlaySize / 2)) - ((cropViewport.clientWidth - cropCanvas.width) / 2 + pfpOffsetCoordinates.x);
-            const clipSourceY = (viewportCenterY - (overlaySize / 2)) - ((cropViewport.clientHeight - cropCanvas.height) / 2 + pfpOffsetCoordinates.y);
-
-            destCtx.drawImage(
-                cropCanvas,
-                clipSourceX, clipSourceY, overlaySize, overlaySize, 
-                0, 0, exportSquareDimension, exportSquareDimension 
-            );
-
-            const base64CleanOutput = targetOutputCanvas.toDataURL('image/jpeg', 0.6);
-            savedPfp = base64CleanOutput;
-
-            const previewContainer = document.getElementById('sidebar-pfp-preview');
-            previewContainer.textContent = "⏳";
-
-            try {
-                await update(ref(db, `profiles/${friendCode}`), {
-                    username: document.getElementById('username-input').value.trim() || username,
-                    color: document.getElementById('name-color').value || savedColor,
-                    pfp: savedPfp
-                });
-                
-                updateAvatarPreview(previewContainer, savedPfp);
-                window.closeCropModal();
-            } catch (err) {
-                console.error(err);
-                alert("Database synchronized pipeline processing error occurred.");
-                previewContainer.textContent = "👤";
-            }
         };
 
         function updateAvatarPreview(element, source) {
@@ -1186,11 +885,12 @@
             const serverName = document.getElementById('custom-server-input').value.trim();
             if (!serverName) return;
             const cleanId = serverName.toLowerCase().replace(/[^a-z0-9]/g, "-");
-            
             try {
                 await set(ref(db, `custom_servers/${cleanId}`), { name: serverName });
                 document.getElementById('custom-server-input').value = '';
-            } catch(e) { console.error(e); }
+            } catch(e) {
+                console.error(e);
+            }
         };
 
         function renderServerNodeOnUI(id, name) {
@@ -1209,140 +909,35 @@
         window.connectToFriend = async function() {
             const friendUID = document.getElementById('friend-code-input').value.trim();
             if (!friendUID || friendUID === friendCode) return;
-            
             const cleanChannel = [friendCode, friendUID].sort().join("-");
             try {
                 await set(ref(db, `users_pms/${friendCode}/${cleanChannel}`), { targetUid: friendUID });
                 await set(ref(db, `users_pms/${friendUID}/${cleanChannel}`), { targetUid: friendCode });
                 document.getElementById('friend-code-input').value = '';
-            } catch(e) { console.error(e); }
+            } catch(e) {
+                console.error(e);
+            }
         };
 
         function renderPmNodeOnUI(channelId) {
-            if (document.getElementById(`pm-${channelId}`)) return;
-            const pmList = document.getElementById('pm-list');
-            const newPm = document.createElement('div');
-            newPm.id = `pm-${channelId}`;
-            newPm.classList.add('pm-item');
-            newPm.innerHTML = `<button class="nav-btn sub-channel" onclick="window.switchChannel('${channelId}', 'Direct Message Room 💬', this)">💬 Secured DM Room</button>`;
-            pmList.appendChild(newPm);
+            if (document.getElementById(`btn-${channelId}`)) return;
+            const targetUid = channelId.replace(friendCode, "").replace("-", "");
+            get(ref(db, `profiles/${targetUid}`)).then(snap => {
+                let displayFriendName = "Encrypted Peer (" + targetUid.substring(0,4) + ")";
+                if (snap.exists() && snap.val().username) displayFriendName = snap.val().username;
+                const pmList = document.getElementById('pm-list');
+                const row = document.createElement('div');
+                row.classList.add('pm-item');
+                row.innerHTML = `<button class="nav-btn" id="btn-${channelId}" onclick="window.switchChannel('${channelId}', '🔒 ${displayFriendName}', this)">💬 ${displayFriendName}</button>`;
+                pmList.appendChild(row);
+            });
         }
 
-        // FIXED: Now safely prompts user for hardware mic access when clicking into voice rooms
-        window.toggleVoiceChannel = async function(roomID, labelName, element) {
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            if(element) element.classList.add('active');
-            
-            currentVoiceChannel = roomID;
-            document.getElementById('voice-status-bar').style.display = 'flex';
-            document.getElementById('voice-channel-label').textContent = "Node: " + labelName;
-            
-            container.innerHTML = `<div style="text-align:center;color:#23a55a;font-size:13px;padding:20px;">⏳ Accessing privacy-protected hardware stream parameters...</div>`;
-
-            try {
-                localMediaStreamInstance = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                console.log("Hardware interface connection achieved successfully.");
-                container.innerHTML = `<div style="text-align:center;color:#23a55a;font-size:13px;padding:20px;">🔊 Linked into secure audio pipeline at ${labelName}. Streaming active.</div>`;
-            } catch (err) {
-                console.error("WebRTC initial secure link layer failure:", err);
-                container.innerHTML = `<div style="text-align:center;color:#da373c;font-size:13px;padding:20px;">❌ Microphone access denied or block error encountered. Call active without stream.</div>`;
-                alert("Could not link audio hardware. Check browser permission blocks.");
-            }
-        };
-
-        window.disconnectVoice = function() {
-            if (localMediaStreamInstance) {
-                localMediaStreamInstance.getTracks().forEach(track => track.stop());
-                localMediaStreamInstance = null;
-            }
-            if (localScreenStreamInstance) {
-                localScreenStreamInstance.getTracks().forEach(track => track.stop());
-                localScreenStreamInstance = null;
-            }
-            
-            currentVoiceChannel = null;
-            isAudioTrackMuted = false;
-            isCameraTrackActive = false;
-
-            // Reset media controller DOM styling safely
-            document.getElementById('mic-toggle-btn').className = "media-control-btn active-on";
-            document.getElementById('mic-toggle-btn').textContent = "🎤 Mute";
-            document.getElementById('cam-toggle-btn').className = "media-control-btn";
-            document.getElementById('cam-toggle-btn').textContent = "📷 Camera";
-            document.getElementById('screen-share-btn').className = "media-control-btn";
-            document.getElementById('screen-share-btn').textContent = "🖥️ Share";
-
-            document.getElementById('voice-status-bar').style.display = 'none';
-            window.switchChannel('server-1', 'Server 1 🌐', document.getElementById('btn-server-1'));
-        };
-
-        window.toggleMic = function() {
-            if (!localMediaStreamInstance) return;
-            const audioTrack = localMediaStreamInstance.getAudioTracks()[0];
-            if (audioTrack) {
-                isAudioTrackMuted = !isAudioTrackMuted;
-                audioTrack.enabled = !isAudioTrackMuted;
-                
-                const btn = document.getElementById('mic-toggle-btn');
-                if (isAudioTrackMuted) {
-                    btn.textContent = "🔇 Unmute";
-                    btn.classList.remove('active-on');
-                } else {
-                    btn.textContent = "🎤 Mute";
-                    btn.classList.add('active-on');
-                }
-            }
-        };
-
-        window.toggleCamera = async function() {
-            if (!localMediaStreamInstance) return;
-            const btn = document.getElementById('cam-toggle-btn');
-
-            if (!isCameraTrackActive) {
-                try {
-                    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    const videoTrack = videoStream.getVideoTracks()[0];
-                    localMediaStreamInstance.addTrack(videoTrack);
-                    
-                    isCameraTrackActive = true;
-                    btn.textContent = "📷 Cam Off";
-                    btn.classList.add('active-on');
-                } catch (err) {
-                    console.error("Camera channel attachment failure:", err);
-                    alert("Could not start camera interface stream node.");
-                }
-            } else {
-                const videoTrack = localMediaStreamInstance.getVideoTracks()[0];
-                if (videoTrack) {
-                    videoTrack.stop();
-                    localMediaStreamInstance.removeTrack(videoTrack);
-                }
-                isCameraTrackActive = false;
-                btn.textContent = "📷 Camera";
-                btn.classList.remove('active-on');
-            }
-        };
-
-        window.toggleScreenShare = async function() {
-            const btn = document.getElementById('screen-share-btn');
-            if (!localScreenStreamInstance) {
-                try {
-                    localScreenStreamInstance = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                    btn.textContent = "🖥️ Stop Share";
-                    btn.classList.add('active-on');
-                    
-                    localScreenStreamInstance.getVideoTracks()[0].onended = () => {
-                        window.toggleScreenShare();
-                    };
-                } catch (err) {
-                    console.error("Display capture allocation error:", err);
-                }
-            } else {
-                localScreenStreamInstance.getTracks().forEach(track => track.stop());
-                localScreenStreamInstance = null;
-                btn.textContent = "🖥️ Share";
-                btn.classList.remove('active-on');
-            }
+        window.updateCustomTheme = function() {
+            const bg = document.getElementById('theme-bg-color').value;
+            const side = document.getElementById('theme-side-color').value;
+            const txt = document.getElementById('theme-text-color').value;
+            window.applyTheme(bg, side, txt);
         };
 
         window.applyTheme = function(bg, side, txt) {
@@ -1352,164 +947,302 @@
             document.getElementById('input-form').style.backgroundColor = bg;
             document.getElementById('sidebar').style.backgroundColor = side;
             document.body.style.color = txt;
+            document.querySelectorAll('.header-title, .channel-title').forEach(el => el.style.color = txt === '#060607' ? '#000' : '#fff');
         };
 
-        window.updateCustomTheme = function() {
-            const bg = document.getElementById('theme-bg-color').value;
-            const side = document.getElementById('theme-side-color').value;
-            const txt = document.getElementById('theme-text-color').value;
-            window.applyTheme(bg, side, txt);
-        };
-
-        window.logOutUser = function() {
-            signOut(auth).then(() => {
-                location.reload();
-            });
-        };
-
-        // Listen dynamically for updates globally to handle layout synchronization safely
-        function attachRealtimeProfileSync(uid) {
-            if (knownProfilesCache[uid]) return;
-            knownProfilesCache[uid] = true;
-
-            onValue(ref(db, `profiles/${uid}`), (snapshot) => {
-                const profile = snapshot.val();
-                if (!profile) return;
-
-                // Sync colors, names and cropped images live across all corresponding messages
-                document.querySelectorAll(`.msg-user-${uid}`).forEach(el => {
-                    const nameNode = el.querySelector('.username');
-                    const pfpNode = el.querySelector('.msg-pfp');
-                    if (nameNode) {
-                        nameNode.textContent = profile.username || "User_" + uid.substring(0,5);
-                        nameNode.style.color = profile.color || "#5865f2";
-                    }
-                    if (pfpNode) {
-                        updateAvatarPreview(pfpNode, profile.pfp || "👤");
-                    }
-                });
-            });
-        }
-
-        window.switchChannel = function(id, title, btnElement) {
-            currentChannelName = id + '-text';
-            roomTitle.textContent = title;
+        window.switchChannel = function(channelId, channelDisplayName, buttonElement) {
+            currentChannelName = channelId;
+            document.getElementById('chat-title').textContent = channelDisplayName;
+            document.getElementById('history-badge').textContent = channelId.startsWith("server-") ? "Ephemeral Room" : "End-to-End Handshake";
             
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            if (btnElement) btnElement.classList.add('active');
+            if(buttonElement) buttonElement.classList.add('active');
+
+            if(activeChannelRef) activeChannelRef();
+            container.innerHTML = '';
 
             if (currentSubscription) {
                 currentSubscription.unbind_all();
-                pusher.unsubscribe(currentSubscription.name);
+                pusher.unsubscribe(currentChannelName);
                 currentSubscription = null;
             }
 
-            container.innerHTML = '';
-            const messagesRef = ref(db, `messages/${currentChannelName}`);
-            off(messagesRef);
-
-            onChildAdded(messagesRef, (snapshot) => {
-                const msg = snapshot.val();
-                if (msg && msg.secret === DB_SECRET) {
-                    const senderUid = msg.senderUid || msg.senderName;
-                    appendMessage(senderUid, msg.senderName, msg.text, msg.color, snapshot.key, msg.pfp || "👤");
-                    if (msg.senderUid) {
-                        attachRealtimeProfileSync(msg.senderUid);
-                    }
+            activeChannelRef = onValue(ref(db, `messages/${currentChannelName}`), (snapshot) => {
+                container.innerHTML = '';
+                if(snapshot.exists()) {
+                    snapshot.forEach((child) => {
+                        const data = child.val();
+                        if(data.secret === DB_SECRET) {
+                            appendMessage(data.senderName, data.text, data.color, child.key, data.pfp || "👤");
+                        }
+                    });
+                    container.scrollTop = container.scrollHeight;
                 }
             });
 
             try {
-                currentSubscription = pusher.subscribe(`cache-${currentChannelName}`);
+                currentSubscription = pusher.subscribe(currentChannelName);
                 currentSubscription.bind('client-message', (data) => {
-                    const senderUid = data.senderUid || data.senderName;
-                    appendMessage(senderUid, data.senderName, data.text, data.color, null, data.pfp || "👤");
-                    if (data.senderUid) {
-                        attachRealtimeProfileSync(data.senderUid);
-                    }
+                    appendMessage(data.senderName, data.text, data.color, null, data.pfp || "👤");
                 });
-            } catch(err) { console.warn("Pusher subscribe deferred: ", err); }
+            } catch(err) {
+                console.warn("Pusher subscribe deferred: ", err);
+            }
         };
 
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const messageText = input.value.trim();
             if (!messageText || !friendCode) return;
-
             input.value = '';
-
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
-                    senderUid: friendCode, 
                     senderName: username,
                     text: messageText,
                     color: savedColor,
                     pfp: savedPfp,
                     secret: DB_SECRET
                 });
-            } catch (err) { console.error(err); }
+            } catch (err) {
+                console.error(err);
+            }
         });
 
-        function appendMessage(senderUid, user, text, color, msgKey = null, msgPfp = "👤") {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message');
-            if (senderUid) {
-                const safeClass = senderUid.replace(/[^a-z0-9]/gi, '-');
-                messageDiv.classList.add(`msg-user-${safeClass}`);
-            }
-            if (msgKey) messageDiv.id = `msg-${msgKey}`;
-            
-            messageDiv.innerHTML = `
-                <div class="msg-pfp"></div>
-                <div class="msg-body">
-                    <span class="username" style="color:${color}">${user}</span>
-                    <span class="text"></span>
-                </div>
-            `;
-            
-            const pfpContainer = messageDiv.querySelector('.msg-pfp');
-            updateAvatarPreview(pfpContainer, msgPfp);
-            
-            messageDiv.querySelector('.text').textContent = text;
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
+        function appendMessage(user, text, color, msgKey = null, msgPfp = "👤") {
+            const div = document.createElement('div');
+            div.classList.add('message');
+            const avatarBox = document.createElement('div');
+            avatarBox.classList.add('msg-pfp');
+            updateAvatarPreview(avatarBox, msgPfp);
+            const contentBox = document.createElement('div');
+            contentBox.classList.add('msg-body');
+            contentBox.innerHTML = `<span class="username" style="color: ${color || '#5865f2'};">${user}</span><span class="text"></span>`;
+            contentBox.querySelector('.text').textContent = text;
+            div.appendChild(avatarBox);
+            div.appendChild(contentBox);
+            container.appendChild(div);
         }
+
+        /* VOICE & RTC CHANNELS NODE LOGIC */
+        let localStream = null;
+        let activeVoiceRoomId = null;
+        let peerConnections = {};
+
+        window.toggleVoiceChannel = async function(voiceRoomId, displayName, btnEl) {
+            if (activeVoiceRoomId === voiceRoomId) return;
+            if (activeVoiceRoomId) {
+                window.disconnectVoice();
+            }
+            activeVoiceRoomId = voiceRoomId;
+            document.getElementById('voice-channel-label').textContent = `🔊 ${displayName}`;
+            document.getElementById('voice-status-bar').style.display = 'flex';
+            document.getElementById('video-streams-panel').style.display = 'flex';
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            if(btnEl) btnEl.classList.add('active');
+
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                renderLocalVideoFrame();
+                await set(ref(db, `voice_rooms/${activeVoiceRoomId}/${friendCode}`), {
+                    username: username,
+                    color: savedColor,
+                    pfp: savedPfp
+                });
+                listenForVoiceMembers();
+                listenForWebRtcSignals();
+            } catch(err) {
+                console.error("Media permission denied: ", err);
+                alert("Voice/Video connection error: Permissions required.");
+                window.disconnectVoice();
+            }
+        };
+
+        window.disconnectVoice = async function() {
+            if (activeVoiceRoomId && friendCode) {
+                await set(ref(db, `voice_rooms/${activeVoiceRoomId}/${friendCode}`), null);
+            }
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            Object.keys(peerConnections).forEach(uid => {
+                if(peerConnections[uid]) peerConnections[uid].close();
+            });
+            peerConnections = {};
+            activeVoiceRoomId = null;
+            document.getElementById('voice-status-bar').style.display = 'none';
+            document.getElementById('video-streams-panel').style.display = 'none';
+            document.getElementById('video-streams-panel').innerHTML = '';
+            document.getElementById('voice-members-list').innerHTML = '';
+        };
+
+        function renderLocalVideoFrame() {
+            let panel = document.getElementById('video-streams-panel');
+            let container = document.createElement('div');
+            container.style.position = 'relative';
+            container.style.width = '160px';
+            container.style.height = '120px';
+            container.style.borderRadius = '4px';
+            container.style.overflow = 'hidden';
+            container.id = `video-box-${friendCode}`;
+            let video = document.createElement('video');
+            video.srcObject = localStream;
+            video.autoplay = true;
+            video.muted = true;
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'cover';
+            let label = document.createElement('span');
+            label.textContent = "You";
+            label.style.position = 'absolute';
+            label.style.bottom = '4px';
+            label.style.left = '4px';
+            label.style.fontSize = '10px';
+            label.style.background = 'rgba(0,0,0,0.6)';
+            label.style.padding = '2px 4px';
+            container.appendChild(video);
+            container.appendChild(label);
+            panel.appendChild(container);
+        }
+
+        function listenForVoiceMembers() {
+            onValue(ref(db, `voice_rooms/${activeVoiceRoomId}`), (snap) => {
+                const list = document.getElementById('voice-members-list');
+                list.innerHTML = '';
+                if(!snap.exists() || !activeVoiceRoomId) return;
+                snap.forEach(child => {
+                    const member = child.val();
+                    const row = document.createElement('div');
+                    row.style.display = 'flex';
+                    row.style.alignItems = 'center';
+                    row.style.gap = '8px';
+                    row.innerHTML = `<span style="color:${member.color}">${member.username}</span>`;
+                    list.appendChild(row);
+                    if(child.key !== friendCode && !peerConnections[child.key]) {
+                        initiatePeerConnection(child.key, true);
+                    }
+                });
+            });
+        }
+
+        function initiatePeerConnection(peerUid, isOffer) {
+            const pc = new RTCPeerConnection({
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            });
+            peerConnections[peerUid] = pc;
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            pc.onicecandidate = (e) => {
+                if (e.candidate) {
+                    set(push(ref(db, `voice_signals/${activeVoiceRoomId}/${peerUid}/${friendCode}/candidates`)), JSON.stringify(e.candidate));
+                }
+            };
+            pc.ontrack = (e) => {
+                renderRemoteVideoFrame(peerUid, e.streams[0]);
+            };
+            if (isOffer) {
+                pc.createOffer().then(offer => {
+                    return pc.setLocalDescription(offer);
+                }).then(() => {
+                    set(ref(db, `voice_signals/${activeVoiceRoomId}/${peerUid}/${friendCode}/desc`), JSON.stringify(pc.localDescription));
+                });
+            }
+        }
+
+        function listenForWebRtcSignals() {
+            onChildAdded(ref(db, `voice_signals/${activeVoiceRoomId}/${friendCode}`), (snap) => {
+                const senderUid = snap.key;
+                onValue(ref(db, `voice_signals/${activeVoiceRoomId}/${friendCode}/${senderUid}/desc`), (dSnap) => {
+                    if(!dSnap.exists()) return;
+                    const desc = JSON.parse(dSnap.val());
+                    if(!peerConnections[senderUid]) initiatePeerConnection(senderUid, false);
+                    const pc = peerConnections[senderUid];
+                    if(desc.type === 'offer') {
+                        pc.setRemoteDescription(new RTCSessionDescription(desc)).then(() => {
+                            return pc.createAnswer();
+                        }).then(answer => {
+                            return pc.setLocalDescription(answer);
+                        }).then(() => {
+                            set(ref(db, `voice_signals/${activeVoiceRoomId}/${senderUid}/${friendCode}/desc`), JSON.stringify(pc.localDescription));
+                        });
+                    } else if(desc.type === 'answer') {
+                        pc.setRemoteDescription(new RTCSessionDescription(desc));
+                    }
+                });
+                onChildAdded(ref(db, `voice_signals/${activeVoiceRoomId}/${friendCode}/${senderUid}/candidates`), (cSnap) => {
+                    if(!cSnap.exists()) return;
+                    const cand = JSON.parse(cSnap.val());
+                    if(peerConnections[senderUid]) {
+                        peerConnections[senderUid].addIceCandidate(new RTCIceCandidate(cand));
+                    }
+                });
+            });
+        }
+
+        function renderRemoteVideoFrame(uid, stream) {
+            if(document.getElementById(`video-box-${uid}`)) return;
+            let panel = document.getElementById('video-streams-panel');
+            let container = document.createElement('div');
+            container.style.position = 'relative';
+            container.style.width = '160px';
+            container.style.height = '120px';
+            container.style.borderRadius = '4px';
+            container.style.overflow = 'hidden';
+            container.id = `video-box-${uid}`;
+            let video = document.createElement('video');
+            video.srcObject = stream;
+            video.autoplay = true;
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'cover';
+            let label = document.createElement('span');
+            get(ref(db, `profiles/${uid}`)).then(s => {
+                label.textContent = s.exists() ? s.val().username : "Peer";
+            });
+            label.style.position = 'absolute';
+            label.style.bottom = '4px';
+            label.style.left = '4px';
+            label.style.fontSize = '10px';
+            label.style.background = 'rgba(0,0,0,0.6)';
+            label.style.padding = '2px 4px';
+            container.appendChild(video);
+            container.appendChild(label);
+            panel.appendChild(container);
+        }
+
+        window.logOutUser = function() {
+            signOut(auth);
+        };
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 friendCode = user.uid;
-                document.getElementById('auth-overlay').style.display = 'none';
                 document.getElementById('friend-code-display').textContent = friendCode;
-                document.getElementById('db-status').textContent = "🟢 Security Handshake Active";
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('sidebar').classList.remove('minimized');
 
-                const safeClass = friendCode.replace(/[^a-z0-9]/gi, '-');
-                onValue(ref(db, `profiles/${friendCode}`), (snapshot) => {
-                    const data = snapshot.val();
-                    if(data) {
+                get(ref(db, `profiles/${friendCode}`)).then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
                         username = data.username || "User_" + friendCode.substring(0,5);
                         savedColor = data.color || "#5865f2";
                         savedPfp = data.pfp || "👤";
                     } else {
-                        username = "User_" + friendCode.substring(0,5);
+                        username = user.displayName || "User_" + friendCode.substring(0,5);
+                        savedColor = "#5865f2";
+                        savedPfp = user.photoURL || "👤";
+                        set(ref(db, `profiles/${friendCode}`), {
+                            username: username,
+                            color: savedColor,
+                            pfp: savedPfp
+                        });
                     }
                     document.getElementById('username-input').value = username;
                     document.getElementById('name-color').value = savedColor;
                     
                     const previewContainer = document.getElementById('sidebar-pfp-preview');
                     updateAvatarPreview(previewContainer, savedPfp);
-
-                    document.querySelectorAll(`.msg-user-${safeClass}`).forEach(el => {
-                        const nameNode = el.querySelector('.username');
-                        const pfpNode = el.querySelector('.msg-pfp');
-                        if (nameNode) {
-                            nameNode.textContent = username;
-                            nameNode.style.color = savedColor;
-                        }
-                        if (pfpNode) {
-                            updateAvatarPreview(pfpNode, savedPfp);
-                        }
-                    });
-                });
+                }).catch(err => console.error(err));
 
                 onChildAdded(ref(db, `custom_servers`), (snapshot) => {
                     if (snapshot.exists()) {
