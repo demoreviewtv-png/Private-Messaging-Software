@@ -526,7 +526,6 @@
             margin-bottom: 15px;
         }
 
-        /* FIXED: Styled as a header banner block rather than a floating sidebar component */
         #voice-status-bar {
             background-color: #2b2d31;
             padding: 12px 20px;
@@ -560,7 +559,6 @@
             background-color: #a92b2f;
         }
 
-        /* FIXED: Tailored for wide view banner area beneath header */
         #video-streams-panel {
             display: flex;
             gap: 10px;
@@ -829,14 +827,21 @@
             }
         };
 
+        /* FIXED: Google Authentication function attached to window loop scope */
         window.handleGoogleSignIn = function() {
             const provider = new GoogleAuthProvider();
             const errorLabel = document.getElementById('auth-error-msg');
             errorLabel.style.display = "none";
-            signInWithPopup(auth, provider).catch(err => {
-                errorLabel.textContent = err.message;
-                errorLabel.style.display = "block";
-            });
+            
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    document.getElementById('auth-overlay').style.display = 'none';
+                    document.getElementById('sidebar').classList.remove('minimized');
+                })
+                .catch(err => {
+                    errorLabel.textContent = err.message;
+                    errorLabel.style.display = "block";
+                });
         };
 
         window.saveUsername = async function() {
@@ -1023,7 +1028,6 @@
             container.appendChild(div);
         }
 
-        /* VOICE & RTC CHANNELS NODE LOGIC */
         let localStream = null;
         let activeVoiceRoomId = null;
         let peerConnections = {};
