@@ -307,6 +307,7 @@
         .msg-body {
             display: flex;
             flex-direction: column;
+            max-width: 85%;
         }
 
         .message .username {
@@ -327,6 +328,23 @@
             word-break: break-word;
         }
 
+        .message-attachment-img {
+            max-width: 320px;
+            max-height: 240px;
+            border-radius: 6px;
+            margin-top: 6px;
+            cursor: pointer;
+            border: 1px solid #1e1f22;
+        }
+
+        .message-attachment-video {
+            max-width: 400px;
+            border-radius: 6px;
+            margin-top: 6px;
+            outline: none;
+            background: #1e1f22;
+        }
+
         #input-form {
             padding: 20px;
             background-color: #313338;
@@ -335,8 +353,15 @@
             gap: 8px;
         }
 
-        #message-input {
+        .input-wrapper-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
             width: 100%;
+        }
+
+        #message-input {
+            flex: 1;
             padding: 12px 15px;
             border: none;
             border-radius: 8px;
@@ -344,6 +369,26 @@
             color: #dbdee1;
             font-size: 15px;
             outline: none;
+        }
+
+        .media-attach-btn {
+            background-color: #4e5058;
+            color: #fff;
+            border: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .media-attach-btn:hover {
+            background-color: #6d6f78;
         }
 
         #db-status {
@@ -561,6 +606,26 @@
             background-color: #a92b2f;
         }
 
+        .voice-controls-wrapper {
+            display: flex;
+            gap: 8px;
+        }
+
+        .voice-action-btn {
+            background-color: #35373c;
+            color: #fff;
+            border: 1px solid #4e5058;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .voice-action-btn:hover {
+            background-color: #4e5058;
+        }
+
         #video-streams-panel {
             display: flex;
             gap: 10px;
@@ -649,6 +714,26 @@
             cursor: pointer;
         }
 
+        /* Preview tray for pending file uploads */
+        #media-preview-tray {
+            display: none;
+            background: #2b2d31;
+            padding: 8px 12px;
+            border-radius: 6px;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            border: 1px solid #383a40;
+        }
+
+        .preview-cancel-btn {
+            background: none;
+            border: none;
+            color: #fa777c;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
         @media (max-width: 600px) {
             #sidebar {
                 position: absolute;
@@ -732,7 +817,7 @@
                 <div style="font-size: 11px; color: #949ba4; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-top: 4px;">Custom Profile Avatar</div>
                 <div class="pfp-selector-wrapper">
                     <div class="pfp-preview-container">
-                        <div class="current-pfp-box" id="sidebar-pfp-preview" onclick="window.openImageInLightbox(this)">👤</div>
+                        <div class="current-pfp-box" id="sidebar-pfp-preview" onclick="window.openDirectImgInLightbox(this.querySelector('img'))">👤</div>
                         <label class="pfp-uploader"> Choose Image File <input type="file" id="pfp-file-input" accept="image/*" style="display: none;" onchange="window.uploadCustomPfp(this)"> </label>
                     </div>
                 </div>
@@ -809,7 +894,10 @@
         <div id="voice-status-bar">
             <div class="voice-top-row">
                 <span id="voice-channel-label" style="color: #23a55a; font-weight: bold;">🔊 Connected to Voice</span>
-                <button class="disconnect-voice-btn" onclick="window.disconnectVoice()">Disconnect</button>
+                <div class="voice-controls-wrapper">
+                    <button class="voice-action-btn" id="screen-share-toggle-btn" onclick="window.toggleScreenShare()">Share Screen</button>
+                    <button class="disconnect-voice-btn" onclick="window.disconnectVoice()">Disconnect</button>
+                </div>
             </div>
             <div id="voice-members-list" style="display: flex; flex-direction: column; gap: 4px; color: #b5bac1;"></div>
         </div>
@@ -819,7 +907,17 @@
         <div id="message-container"></div>
         
         <form id="input-form">
-            <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off">
+            <div id="media-preview-tray">
+                <span id="media-preview-filename">Pending attachment: file.jpg</span>
+                <button type="button" class="preview-cancel-btn" onclick="window.clearPendingMedia()">Remove ✕</button>
+            </div>
+            <div class="input-wrapper-row">
+                <label class="media-attach-btn">
+                    +
+                    <input type="file" id="chat-media-input" accept="image/*,video/*" style="display: none;" onchange="window.handleChatMediaSelection(this)">
+                </label>
+                <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off">
+            </div>
             <div id="db-status">🟢 System Ready</div>
         </form>
     </div>
@@ -861,6 +959,10 @@
         // Lightbox state persistence properties
         let lightboxZoom = 1.0;
         let lightboxRotation = 0;
+
+        // Pending media attachment state
+        let pendingMediaBase64 = null;
+        let pendingMediaType = null; // 'image' or 'video'
 
         const pusher = new Pusher('80947660ca4a70b02927', {
             cluster: 'us2',
@@ -966,11 +1068,15 @@
         window.openImageInLightbox = function(avatarElement) {
             const innerImg = avatarElement.querySelector('img');
             if(!innerImg) return; 
-            
+            window.openDirectImgInLightbox(innerImg);
+        };
+
+        window.openDirectImgInLightbox = function(imgElement) {
+            if(!imgElement || !imgElement.src) return;
             const lbModal = document.getElementById('media-lightbox');
             const lbImg = document.getElementById('lightbox-img');
             
-            lbImg.src = innerImg.src;
+            lbImg.src = imgElement.src;
             window.resetLightboxTransforms();
             lbModal.style.display = 'flex';
         };
@@ -999,6 +1105,36 @@
             const lbImg = document.getElementById('lightbox-img');
             lbImg.style.transform = `scale(${lightboxZoom}) rotate(${lightboxRotation}deg)`;
         }
+
+        /* Handle chat area media attachment pipeline */
+        window.handleChatMediaSelection = function(inputEl) {
+            const file = inputEl.files[0];
+            if (!file) return;
+
+            // Simple guard to protect database payloads
+            if (file.size > 2.5 * 1024 * 1024) {
+                alert("File size is too large for memory synchronization. Limit attachments to 2.5MB.");
+                inputEl.value = "";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                pendingMediaBase64 = e.target.result;
+                pendingMediaType = file.type.startsWith("video/") ? "video" : "image";
+                
+                document.getElementById('media-preview-filename').textContent = `Attachment Ready: ${file.name} (${pendingMediaType})`;
+                document.getElementById('media-preview-tray').style.display = "flex";
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.clearPendingMedia = function() {
+            pendingMediaBase64 = null;
+            pendingMediaType = null;
+            document.getElementById('chat-media-input').value = "";
+            document.getElementById('media-preview-tray').style.display = "none";
+        };
 
         window.joinCustomServer = async function() {
             const serverName = document.getElementById('custom-server-input').value.trim();
@@ -1029,7 +1165,6 @@
             const friendUID = document.getElementById('friend-code-input').value.trim();
             if (!friendUID || friendUID === friendCode) return;
 
-            // Check if user profile actually exists in the DB before adding
             try {
                 const userCheckSnap = await get(ref(db, `profiles/${friendUID}`));
                 if (!userCheckSnap.exists()) {
@@ -1101,7 +1236,7 @@
                     snapshot.forEach((child) => {
                         const data = child.val();
                         if(data.secret === DB_SECRET) {
-                            appendMessage(data.senderName, data.text, data.color, child.key, data.pfp || "👤");
+                            appendMessage(data.senderName, data.text, data.color, child.key, data.pfp || "👤", data.mediaPayload, data.mediaType);
                         }
                     });
                     container.scrollTop = container.scrollHeight;
@@ -1111,7 +1246,7 @@
             try {
                 currentSubscription = pusher.subscribe(currentChannelName);
                 currentSubscription.bind('client-message', (data) => {
-                    appendMessage(data.senderName, data.text, data.color, null, data.pfp || "👤");
+                    appendMessage(data.senderName, data.text, data.color, null, data.pfp || "👤", data.mediaPayload, data.mediaType);
                 });
             } catch(err) {
                 console.warn("Pusher subscribe deferred: ", err);
@@ -1121,38 +1256,70 @@
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const messageText = input.value.trim();
-            if (!messageText || !friendCode) return;
+            if (!messageText && !pendingMediaBase64) return;
+            if (!friendCode) return;
+            
+            const payloadText = messageText;
+            const payloadMedia = pendingMediaBase64;
+            const payloadMediaType = pendingMediaType;
+
+            // Flush UI form input fields state early for seamless perception
             input.value = '';
+            window.clearPendingMedia();
+
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
                     senderName: username,
-                    text: messageText,
+                    text: payloadText,
                     color: savedColor,
                     pfp: savedPfp,
-                    secret: DB_SECRET
+                    secret: DB_SECRET,
+                    mediaPayload: payloadMedia || null,
+                    mediaType: payloadMediaType || null
                 });
             } catch (err) {
                 console.error(err);
             }
         });
 
-        function appendMessage(user, text, color, msgKey = null, msgPfp = "👤") {
+        function appendMessage(user, text, color, msgKey = null, msgPfp = "👤", mediaPayload = null, mediaType = null) {
             const div = document.createElement('div');
             div.classList.add('message');
             const avatarBox = document.createElement('div');
             avatarBox.classList.add('msg-pfp');
             avatarBox.setAttribute('onclick', 'window.openImageInLightbox(this)');
             updateAvatarPreview(avatarBox, msgPfp);
+            
             const contentBox = document.createElement('div');
             contentBox.classList.add('msg-body');
             contentBox.innerHTML = `<span class="username" style="color: ${color || '#5865f2'};">${user}</span><span class="text"></span>`;
             contentBox.querySelector('.text').textContent = text;
+            
+            // Inject inline multimedia blocks if present in memory payload
+            if (mediaPayload) {
+                if (mediaType === "image") {
+                    const img = document.createElement("img");
+                    img.src = mediaPayload;
+                    img.classList.add("message-attachment-img");
+                    img.setAttribute("onclick", "window.openDirectImgInLightbox(this)");
+                    contentBox.appendChild(img);
+                } else if (mediaType === "video") {
+                    const video = document.createElement("video");
+                    video.src = mediaPayload;
+                    video.classList.add("message-attachment-video");
+                    video.controls = true;
+                    contentBox.appendChild(video);
+                }
+            }
+
             div.appendChild(avatarBox);
             div.appendChild(contentBox);
             container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
         }
 
         let localStream = null;
+        let screenStream = null;
         let activeVoiceRoomId = null;
         let peerConnections = {};
 
@@ -1171,7 +1338,7 @@
 
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-                renderLocalVideoFrame();
+                renderLocalVideoFrame(friendCode, localStream, "You");
                 await set(ref(db, `voice_rooms/${activeVoiceRoomId}/${friendCode}`), {
                     username: username,
                     color: savedColor,
@@ -1186,9 +1353,59 @@
             }
         };
 
+        window.toggleScreenShare = async function() {
+            const btn = document.getElementById("screen-share-toggle-btn");
+            if (screenStream) {
+                // Stop screen sharing tracks
+                screenStream.getTracks().forEach(t => t.stop());
+                screenStream = null;
+                btn.textContent = "Share Screen";
+                
+                // Remove UI box
+                const existingBox = document.getElementById(`video-box-${friendCode}-screen`);
+                if(existingBox) existingBox.remove();
+                
+                // Renegotiate connections back to local camera tracks
+                Object.keys(peerConnections).forEach(uid => {
+                    const pc = peerConnections[uid];
+                    const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (videoSender && localStream) {
+                        const localVideoTrack = localStream.getVideoTracks()[0];
+                        if(localVideoTrack) videoSender.replaceTrack(localVideoTrack);
+                    }
+                });
+            } else {
+                try {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    btn.textContent = "Stop Sharing";
+                    renderLocalVideoFrame(`${friendCode}-screen`, screenStream, "Your Screen");
+
+                    // Hot-swap screen tracks across WebRTC connections instantly without tearing calls down
+                    const screenVideoTrack = screenStream.getVideoTracks()[0];
+                    Object.keys(peerConnections).forEach(uid => {
+                        const pc = peerConnections[uid];
+                        const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (videoSender) {
+                            videoSender.replaceTrack(screenVideoTrack);
+                        }
+                    });
+
+                    screenVideoTrack.onended = () => {
+                        if (screenStream) window.toggleScreenShare();
+                    };
+                } catch(e) {
+                    console.error("Screen choice aborted", e);
+                }
+            }
+        };
+
         window.disconnectVoice = async function() {
             if (activeVoiceRoomId && friendCode) {
                 await set(ref(db, `voice_rooms/${activeVoiceRoomId}/${friendCode}`), null);
+            }
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
             }
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
@@ -1199,39 +1416,43 @@
             });
             peerConnections = {};
             activeVoiceRoomId = null;
+            document.getElementById('screen-share-toggle-btn').textContent = "Share Screen";
             document.getElementById('voice-status-bar').style.display = 'none';
             document.getElementById('video-streams-panel').style.display = 'none';
             document.getElementById('video-streams-panel').innerHTML = '';
             document.getElementById('voice-members-list').innerHTML = '';
         };
 
-        function renderLocalVideoFrame() {
+        function renderLocalVideoFrame(idSuffix, streamInstance, labelText) {
             let panel = document.getElementById('video-streams-panel');
-            let container = document.createElement('div');
-            container.style.position = 'relative';
-            container.style.width = '160px';
-            container.style.height = '120px';
-            container.style.borderRadius = '4px';
-            container.style.overflow = 'hidden';
-            container.id = `video-box-${friendCode}`;
+            let videoBox = document.createElement('div');
+            videoBox.style.position = 'relative';
+            videoBox.style.width = '160px';
+            videoBox.style.height = '120px';
+            videoBox.style.borderRadius = '4px';
+            videoBox.style.overflow = 'hidden';
+            videoBox.id = `video-box-${idSuffix}`;
+            
             let video = document.createElement('video');
-            video.srcObject = localStream;
+            video.srcObject = streamInstance;
             video.autoplay = true;
             video.muted = true;
             video.style.width = '100%';
             video.style.height = '100%';
             video.style.objectFit = 'cover';
+            
             let label = document.createElement('span');
-            label.textContent = "You";
+            label.textContent = labelText;
             label.style.position = 'absolute';
             label.style.bottom = '4px';
             label.style.left = '4px';
             label.style.fontSize = '10px';
             label.style.background = 'rgba(0,0,0,0.6)';
             label.style.padding = '2px 4px';
-            container.appendChild(video);
-            container.appendChild(label);
-            panel.appendChild(container);
+            
+            videoBox.appendChild(video);
+            videoBox.appendChild(label);
+            panel.appendChild(videoBox);
         }
 
         function listenForVoiceMembers() {
@@ -1259,7 +1480,12 @@
                 iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             });
             peerConnections[peerUid] = pc;
-            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            
+            const activeOutgoingStream = screenStream || localStream;
+            if (activeOutgoingStream) {
+                activeOutgoingStream.getTracks().forEach(track => pc.addTrack(track, activeOutgoingStream));
+            }
+            
             pc.onicecandidate = (e) => {
                 if (e.candidate) {
                     set(push(ref(db, `voice_signals/${activeVoiceRoomId}/${peerUid}/${friendCode}/candidates`)), JSON.stringify(e.candidate));
@@ -1310,22 +1536,25 @@
         function renderRemoteVideoFrame(uid, stream) {
             if(document.getElementById(`video-box-${uid}`)) return;
             let panel = document.getElementById('video-streams-panel');
-            let container = document.createElement('div');
-            container.style.position = 'relative';
-            container.style.width = '160px';
-            container.style.height = '120px';
-            container.style.borderRadius = '4px';
-            container.style.overflow = 'hidden';
-            container.id = `video-box-${uid}`;
+            let videoBox = document.createElement('div');
+            videoBox.style.position = 'relative';
+            videoBox.style.width = '160px';
+            videoBox.style.height = '120px';
+            videoBox.style.borderRadius = '4px';
+            videoBox.style.overflow = 'hidden';
+            videoBox.id = `video-box-${uid}`;
+            
             let video = document.createElement('video');
             video.srcObject = stream;
             video.autoplay = true;
             video.style.width = '100%';
             video.style.height = '100%';
             video.style.objectFit = 'cover';
+            
             let label = document.createElement('span');
-            get(ref(db, `profiles/${uid}`)).then(s => {
+            get(ref(db, `profiles/${uid.split('-')[0]}`)).then(s => {
                 label.textContent = s.exists() ? s.val().username : "Peer";
+                if(uid.includes('-screen')) label.textContent += " (Screen)";
             });
             label.style.position = 'absolute';
             label.style.bottom = '4px';
@@ -1333,9 +1562,10 @@
             label.style.fontSize = '10px';
             label.style.background = 'rgba(0,0,0,0.6)';
             label.style.padding = '2px 4px';
-            container.appendChild(video);
-            container.appendChild(label);
-            panel.appendChild(container);
+            
+            videoBox.appendChild(video);
+            videoBox.appendChild(label);
+            panel.appendChild(videoBox);
         }
 
         window.logOutUser = function() {
