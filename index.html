@@ -734,6 +734,42 @@
             font-weight: bold;
         }
 
+        /* Friend requests item node system style */
+        .freq-item {
+            background: rgba(0,0,0,0.15);
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 4px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .freq-actions {
+            display: flex;
+            gap: 4px;
+        }
+        .freq-btn-accept {
+            background: #23a55a;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .freq-btn-decline {
+            background: #da373c;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
         @media (max-width: 600px) {
             #sidebar {
                 position: absolute;
@@ -868,16 +904,30 @@
             </div>
 
             <div class="section-header">
+                <span class="section-title">Group Chats</span>
+            </div>
+            <div id="group-list"></div>
+            <div class="pm-input-box" style="margin-bottom: 15px;">
+                <input type="text" id="group-chat-input" placeholder="Join/Create Room Code..." autocomplete="off">
+                <button onclick="window.joinGroupChatNode()">+</button>
+            </div>
+
+            <div class="section-header">
                 <span class="section-title">Direct Encrypted PMs</span>
             </div>
             <div id="pm-list"></div>
+
+            <div class="section-header">
+                <span class="section-title">Pending Requests</span>
+            </div>
+            <div id="friend-requests-list" style="margin-bottom: 15px;"></div>
 
             <div class="section-header">
                 <span class="section-title">Connect with Friend</span>
             </div>
             <div class="pm-input-box" style="margin-bottom: 10px;">
                 <input type="text" id="friend-code-input" placeholder="Paste user code..." autocomplete="off">
-                <button onclick="window.connectToFriend()">Add</button>
+                <button onclick="window.sendFriendRequest()">Add</button>
             </div>
         </div>
     </div>
@@ -925,7 +975,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getDatabase, ref, set, push, onValue, onChildAdded, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, push, onValue, onChildAdded, onChildRemoved, update, get, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         // Show Disclaimer on open
         window.addEventListener('DOMContentLoaded', () => {
@@ -1012,7 +1062,8 @@
                     return set(ref(db, `profiles/${uid}`), {
                         username: defaultName,
                         color: "#5865f2",
-                        pfp: "👤"
+                        pfp: "👤",
+                        uid: uid
                     });
                 })
                 .catch(err => {
@@ -1161,24 +1212,99 @@
             serverList.appendChild(newServerBox);
         }
 
-        window.connectToFriend = async function() {
-            const friendUID = document.getElementById('friend-code-input').value.trim();
-            if (!friendUID || friendUID === friendCode) return;
+        /* Group Chats Feature Additions */
+        window.joinGroupChatNode = async function() {
+            const code = document.getElementById('group-chat-input').value.trim();
+            if (!code) return;
+            const cleanId = "group-" + code.toLowerCase().replace(/[^a-z0-9]/g, "-");
+            try {
+                await set(ref(db, `users_groups/${friendCode}/${cleanId}`), { roomId: cleanId, name: "Group Room: " + code });
+                document.getElementById('group-chat-input').value = '';
+            } catch(e) {
+                console.error(e);
+            }
+        };
+
+        function renderGroupNodeOnUI(id, name) {
+            if (document.getElementById(`btn-${id}`)) return;
+            const groupList = document.getElementById('group-list');
+            const row = document.createElement('div');
+            row.innerHTML = `<button class="nav-btn" id="btn-${id}" onclick="window.switchChannel('${id}', '👥 ${name}', this)">👥 ${name}</button>`;
+            groupList.appendChild(row);
+        }
+
+        /* Click Username Action Handling */
+        window.promptAddFriendFromChat = function(senderUid) {
+            if (!senderUid || senderUid === friendCode) return;
+            document.getElementById('friend-code-input').value = senderUid;
+            alert("User Security ID copied to form field. Review and click 'Add' button to submit an outbound request.");
+        };
+
+        /* Inbound / Outbound Friend Requests Feature Architecture */
+        window.sendFriendRequest = async function() {
+            const targetUid = document.getElementById('friend-code-input').value.trim();
+            if (!targetUid || targetUid === friendCode) return;
 
             try {
-                const userCheckSnap = await get(ref(db, `profiles/${friendUID}`));
+                const userCheckSnap = await get(ref(db, `profiles/${targetUid}`));
                 if (!userCheckSnap.exists()) {
                     alert("Error: That User Secure ID does not exist.");
                     return;
                 }
                 
-                const cleanChannel = [friendCode, friendUID].sort().join("-");
-                await set(ref(db, `users_pms/${friendCode}/${cleanChannel}`), { targetUid: friendUID });
-                await set(ref(db, `users_pms/${friendUID}/${cleanChannel}`), { targetUid: friendCode });
+                await set(ref(db, `friend_requests/${targetUid}/${friendCode}`), {
+                    fromUid: friendCode,
+                    fromName: username
+                });
                 document.getElementById('friend-code-input').value = '';
+                alert("Friend request sent successfully!");
             } catch(e) {
                 console.error(e);
                 alert("An error occurred checking the user ID.");
+            }
+        };
+
+        function listenForFriendRequests() {
+            const requestsList = document.getElementById('friend-requests-list');
+            onChildAdded(ref(db, `friend_requests/${friendCode}`), (snapshot) => {
+                if (!snapshot.exists()) return;
+                const data = snapshot.val();
+                const reqNode = document.createElement('div');
+                reqNode.id = `req-${snapshot.key}`;
+                reqNode.classList.add('freq-item');
+                reqNode.innerHTML = `
+                    <span><strong>${data.fromName}</strong> wants to connect.</span>
+                    <div class="freq-actions">
+                        <button class="freq-btn-accept" onclick="window.acceptFriendRequest('${snapshot.key}')">Accept</button>
+                        <button class="freq-btn-decline" onclick="window.declineFriendRequest('${snapshot.key}')">Decline</button>
+                    </div>
+                `;
+                requestsList.appendChild(reqNode);
+            });
+
+            onChildRemoved(ref(db, `friend_requests/${friendCode}`), (snapshot) => {
+                const existing = document.getElementById(`req-${snapshot.key}`);
+                if (existing) existing.remove();
+            });
+        }
+
+        window.acceptFriendRequest = async function(senderUid) {
+            try {
+                const cleanChannel = [friendCode, senderUid].sort().join("-");
+                await set(ref(db, `users_pms/${friendCode}/${cleanChannel}`), { targetUid: senderUid });
+                await set(ref(db, `users_pms/${senderUid}/${cleanChannel}`), { targetUid: friendCode });
+                await set(ref(db, `friend_requests/${friendCode}/${senderUid}`), null);
+                alert("Request accepted! Direct connection established.");
+            } catch(e) {
+                console.error(e);
+            }
+        };
+
+        window.declineFriendRequest = async function(senderUid) {
+            try {
+                await set(ref(db, `friend_requests/${friendCode}/${senderUid}`), null);
+            } catch(e) {
+                console.error(e);
             }
         };
 
@@ -1216,7 +1342,7 @@
         window.switchChannel = function(channelId, channelDisplayName, buttonElement) {
             currentChannelName = channelId;
             document.getElementById('chat-title').textContent = channelDisplayName;
-            document.getElementById('history-badge').textContent = channelId.startsWith("server-") ? "Ephemeral Room" : "End-to-End Handshake";
+            document.getElementById('history-badge').textContent = channelId.startsWith("server-") ? "Ephemeral Room" : (channelId.startsWith("group-") ? "Shared Group Chat" : "End-to-End Handshake");
             
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             if(buttonElement) buttonElement.classList.add('active');
@@ -1236,7 +1362,7 @@
                     snapshot.forEach((child) => {
                         const data = child.val();
                         if(data.secret === DB_SECRET) {
-                            appendMessage(data.senderName, data.text, data.color, child.key, data.pfp || "👤", data.mediaPayload, data.mediaType);
+                            appendMessage(data.senderName, data.text, data.color, child.key, data.pfp || "👤", data.mediaPayload, data.mediaType, data.senderUid);
                         }
                     });
                     container.scrollTop = container.scrollHeight;
@@ -1246,7 +1372,7 @@
             try {
                 currentSubscription = pusher.subscribe(currentChannelName);
                 currentSubscription.bind('client-message', (data) => {
-                    appendMessage(data.senderName, data.text, data.color, null, data.pfp || "👤", data.mediaPayload, data.mediaType);
+                    appendMessage(data.senderName, data.text, data.color, null, data.pfp || "👤", data.mediaPayload, data.mediaType, data.senderUid);
                 });
             } catch(err) {
                 console.warn("Pusher subscribe deferred: ", err);
@@ -1270,6 +1396,7 @@
             try {
                 await set(push(ref(db, `messages/${currentChannelName}`)), {
                     senderName: username,
+                    senderUid: friendCode,
                     text: payloadText,
                     color: savedColor,
                     pfp: savedPfp,
@@ -1282,7 +1409,7 @@
             }
         });
 
-        function appendMessage(user, text, color, msgKey = null, msgPfp = "👤", mediaPayload = null, mediaType = null) {
+        function appendMessage(user, text, color, msgKey = null, msgPfp = "👤", mediaPayload = null, mediaType = null, senderUid = "") {
             const div = document.createElement('div');
             div.classList.add('message');
             const avatarBox = document.createElement('div');
@@ -1293,6 +1420,7 @@
             const contentBox = document.createElement('div');
             contentBox.classList.add('msg-body');
             contentBox.innerHTML = `<span class="username" style="color: ${color || '#5865f2'};">${user}</span><span class="text"></span>`;
+            contentBox.querySelector('.username').setAttribute('onclick', `window.promptAddFriendFromChat('${senderUid}')`);
             contentBox.querySelector('.text').textContent = text;
             
             // Inject inline multimedia blocks if present in memory payload
@@ -1326,7 +1454,7 @@
         window.toggleVoiceChannel = async function(voiceRoomId, displayName, btnEl) {
             if (activeVoiceRoomId === voiceRoomId) return;
             if (activeVoiceRoomId) {
-                window.disconnectVoice();
+                await window.disconnectVoice();
             }
             activeVoiceRoomId = voiceRoomId;
             document.getElementById('voice-channel-label').textContent = `🔊 ${displayName}`;
@@ -1339,11 +1467,17 @@
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
                 renderLocalVideoFrame(friendCode, localStream, "You");
-                await set(ref(db, `voice_rooms/${activeVoiceRoomId}/${friendCode}`), {
+                
+                // Set active VC member entry and queue auto-cleanup on disconnect
+                const memberRef = ref(db, `voice_rooms/${activeVoiceRoomId}/${friendCode}`);
+                await set(memberRef, {
                     username: username,
                     color: savedColor,
                     pfp: savedPfp
                 });
+                onDisconnect(memberRef).remove();
+                onDisconnect(ref(db, `voice_signals/${activeVoiceRoomId}/${friendCode}`)).remove();
+
                 listenForVoiceMembers();
                 listenForWebRtcSignals();
             } catch(err) {
@@ -1402,6 +1536,7 @@
         window.disconnectVoice = async function() {
             if (activeVoiceRoomId && friendCode) {
                 await set(ref(db, `voice_rooms/${activeVoiceRoomId}/${friendCode}`), null);
+                await set(ref(db, `voice_signals/${activeVoiceRoomId}/${friendCode}`), null);
             }
             if (screenStream) {
                 screenStream.getTracks().forEach(track => track.stop());
@@ -1422,6 +1557,31 @@
             document.getElementById('video-streams-panel').innerHTML = '';
             document.getElementById('voice-members-list').innerHTML = '';
         };
+
+        function addFullscreenButton(box, video) {
+            let fsBtn = document.createElement('button');
+            fsBtn.textContent = "⛶";
+            fsBtn.style.position = 'absolute';
+            fsBtn.style.top = '4px';
+            fsBtn.style.right = '4px';
+            fsBtn.style.background = 'rgba(0,0,0,0.6)';
+            fsBtn.style.color = '#fff';
+            fsBtn.style.border = 'none';
+            fsBtn.style.borderRadius = '4px';
+            fsBtn.style.padding = '2px 6px';
+            fsBtn.style.cursor = 'pointer';
+            fsBtn.style.fontSize = '12px';
+            fsBtn.style.zIndex = '10';
+            fsBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (video.requestFullscreen) {
+                    video.requestFullscreen();
+                } else if (video.webkitRequestFullscreen) {
+                    video.webkitRequestFullscreen();
+                }
+            };
+            box.appendChild(fsBtn);
+        }
 
         function renderLocalVideoFrame(idSuffix, streamInstance, labelText) {
             let panel = document.getElementById('video-streams-panel');
@@ -1452,24 +1612,61 @@
             
             videoBox.appendChild(video);
             videoBox.appendChild(label);
+            
+            if (idSuffix.toString().includes('-screen')) {
+                addFullscreenButton(videoBox, video);
+            }
+            
             panel.appendChild(videoBox);
         }
 
         function listenForVoiceMembers() {
             onValue(ref(db, `voice_rooms/${activeVoiceRoomId}`), (snap) => {
                 const list = document.getElementById('voice-members-list');
+                
+                // Clear UI components gracefully but preserve active call feeds
                 list.innerHTML = '';
-                if(!snap.exists() || !activeVoiceRoomId) return;
+                if(!snap.exists() || !activeVoiceRoomId) {
+                    // If room vanished completely, remove stale connections
+                    Object.keys(peerConnections).forEach(uid => {
+                        const box = document.getElementById(`video-box-${uid}`);
+                        if(box) box.remove();
+                        const sBox = document.getElementById(`video-box-${uid}-screen`);
+                        if(sBox) sBox.remove();
+                        if(peerConnections[uid]) peerConnections[uid].close();
+                        delete peerConnections[uid];
+                    });
+                    return;
+                }
+
+                const activeUidsInDb = [];
                 snap.forEach(child => {
                     const member = child.val();
+                    activeUidsInDb.push(child.key);
+
                     const row = document.createElement('div');
                     row.style.display = 'flex';
                     row.style.alignItems = 'center';
                     row.style.gap = '8px';
                     row.innerHTML = `<span style="color:${member.color}">${member.username}</span>`;
                     list.appendChild(row);
+
+                    // Glare protection protocol tie-breaker rule to establish polite calling roles
                     if(child.key !== friendCode && !peerConnections[child.key]) {
-                        initiatePeerConnection(child.key, true);
+                        const isOfferInitiator = friendCode > child.key;
+                        initiatePeerConnection(child.key, isOfferInitiator);
+                    }
+                });
+
+                // Instantly remove stale video nodes when users leave/disconnect from room database snapshot
+                Object.keys(peerConnections).forEach(uid => {
+                    if (!activeUidsInDb.includes(uid)) {
+                        const box = document.getElementById(`video-box-${uid}`);
+                        if(box) box.remove();
+                        const sBox = document.getElementById(`video-box-${uid}-screen`);
+                        if(sBox) sBox.remove();
+                        if(peerConnections[uid]) peerConnections[uid].close();
+                        delete peerConnections[uid];
                     }
                 });
             });
@@ -1492,7 +1689,9 @@
                 }
             };
             pc.ontrack = (e) => {
-                renderRemoteVideoFrame(peerUid, e.streams[0]);
+                // If stream tracks identify screen shares or alternate streams, reflect suffix
+                const suffix = (e.streams[0] && e.streams[0].getVideoTracks()[0]?.label?.toLowerCase().includes("screen")) ? `${peerUid}-screen` : peerUid;
+                renderRemoteVideoFrame(suffix, e.streams[0]);
             };
             if (isOffer) {
                 pc.createOffer().then(offer => {
@@ -1507,11 +1706,11 @@
             onChildAdded(ref(db, `voice_signals/${activeVoiceRoomId}/${friendCode}`), (snap) => {
                 const senderUid = snap.key;
                 onValue(ref(db, `voice_signals/${activeVoiceRoomId}/${friendCode}/${senderUid}/desc`), (dSnap) => {
-                    if(!dSnap.exists()) return;
+                    if(!dSnap.exists() || !peerConnections[senderUid]) return;
                     const desc = JSON.parse(dSnap.val());
-                    if(!peerConnections[senderUid]) initiatePeerConnection(senderUid, false);
                     const pc = peerConnections[senderUid];
-                    if(desc.type === 'offer') {
+                    
+                    if(desc.type === 'offer' && pc.signalingState !== "stable") {
                         pc.setRemoteDescription(new RTCSessionDescription(desc)).then(() => {
                             return pc.createAnswer();
                         }).then(answer => {
@@ -1519,16 +1718,14 @@
                         }).then(() => {
                             set(ref(db, `voice_signals/${activeVoiceRoomId}/${senderUid}/${friendCode}/desc`), JSON.stringify(pc.localDescription));
                         });
-                    } else if(desc.type === 'answer') {
+                    } else if(desc.type === 'answer' && pc.signalingState === "have-local-offer") {
                         pc.setRemoteDescription(new RTCSessionDescription(desc));
                     }
                 });
                 onChildAdded(ref(db, `voice_signals/${activeVoiceRoomId}/${friendCode}/${senderUid}/candidates`), (cSnap) => {
-                    if(!cSnap.exists()) return;
+                    if(!cSnap.exists() || !peerConnections[senderUid]) return;
                     const cand = JSON.parse(cSnap.val());
-                    if(peerConnections[senderUid]) {
-                        peerConnections[senderUid].addIceCandidate(new RTCIceCandidate(cand));
-                    }
+                    peerConnections[senderUid].addIceCandidate(new RTCIceCandidate(cand)).catch(e => console.warn(e));
                 });
             });
         }
@@ -1554,7 +1751,7 @@
             let label = document.createElement('span');
             get(ref(db, `profiles/${uid.split('-')[0]}`)).then(s => {
                 label.textContent = s.exists() ? s.val().username : "Peer";
-                if(uid.includes('-screen')) label.textContent += " (Screen)";
+                if(uid.toString().includes('-screen')) label.textContent += " (Screen)";
             });
             label.style.position = 'absolute';
             label.style.bottom = '4px';
@@ -1565,6 +1762,11 @@
             
             videoBox.appendChild(video);
             videoBox.appendChild(label);
+            
+            if (uid.toString().includes('-screen')) {
+                addFullscreenButton(videoBox, video);
+            }
+            
             panel.appendChild(videoBox);
         }
 
@@ -1585,6 +1787,9 @@
                         username = data.username || "User_" + friendCode.substring(0,5);
                         savedColor = data.color || "#5865f2";
                         savedPfp = data.pfp || "👤";
+                        if (!data.uid) {
+                            update(ref(db, `profiles/${friendCode}`), { uid: friendCode });
+                        }
                     } else {
                         username = user.displayName || "User_" + friendCode.substring(0,5);
                         savedColor = "#5865f2";
@@ -1592,7 +1797,8 @@
                         set(ref(db, `profiles/${friendCode}`), {
                             username: username,
                             color: savedColor,
-                            pfp: savedPfp
+                            pfp: savedPfp,
+                            uid: friendCode
                         });
                     }
                     document.getElementById('username-input').value = username;
@@ -1608,11 +1814,19 @@
                     }
                 });
 
+                onChildAdded(ref(db, `users_groups/${friendCode}`), (snapshot) => {
+                    if (snapshot.exists()) {
+                        renderGroupNodeOnUI(snapshot.key, snapshot.val().name);
+                    }
+                });
+
                 onChildAdded(ref(db, `users_pms/${friendCode}`), (snapshot) => {
                     if (snapshot.exists()) {
                         renderPmNodeOnUI(snapshot.key);
                     }
                 });
+
+                listenForFriendRequests();
 
                 window.switchChannel('server-1', 'Server 1 🌐', document.getElementById('btn-server-1'));
             } else {
