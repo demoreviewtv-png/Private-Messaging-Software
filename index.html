@@ -586,7 +586,7 @@
 
         .voice-top-row {
             display: flex;
-            justify-content: space-between;
+            justify-between: space-between;
             align-items: center;
             font-weight: bold;
         }
@@ -979,8 +979,16 @@
         // Global DB configuration secret
         const DB_SECRET = "0000000000000000000000000000000000000000";
 
+        // Production Firebase configuration parameters
         const firebaseConfig = {
-            databaseURL: "https://privacychat-a6901-default-rtdb.firebaseio.com/"
+            apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
+            authDomain: "privatems-vercel-app.firebaseapp.com",
+            databaseURL: "https://privatems-vercel-app-default-rtdb.firebaseio.com",
+            projectId: "privatems-vercel-app",
+            storageBucket: "privatems-vercel-app.firebasestorage.app",
+            messagingSenderId: "259223551478",
+            appId: "1:259223551478:web:960461ed4246235cc31bd7",
+            measurementId: "G-ZSFBLCP1ML"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -1340,8 +1348,6 @@
             });
         }
 
-        let currentActiveMessageRef = null;
-
         window.switchChannel = function(channelId, displayName, element) {
             currentChannelName = channelId;
             document.getElementById('chat-title').textContent = displayName;
@@ -1356,10 +1362,6 @@
             if(element) element.classList.add('active');
 
             container.innerHTML = '';
-            
-            if (currentActiveMessageRef) {
-                // To achieve dynamic real-time room switching safely
-            }
 
             const messagesRef = ref(db, `messages/${currentChannelName}`);
             onChildAdded(messagesRef, (snapshot) => {
