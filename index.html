@@ -830,7 +830,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -969,7 +969,6 @@
                 }
             });
 
-            // Do not auto-join servers. Start at Home screen dashboard.
             window.selectHome();
         }
 
@@ -995,6 +994,7 @@
         });
 
         window.logOutUser = function() {
+            if (activeVoiceChannelId) window.leaveVoiceChannel();
             signOut(auth).finally(() => location.reload());
         };
 
@@ -1014,6 +1014,7 @@
         };
 
         window.selectServer = function(serverId, serverName) {
+            if (activeVoiceChannelId) window.leaveVoiceChannel();
             activeServerId = serverId;
             document.getElementById('current-server-title').innerText = serverName;
 
@@ -1196,7 +1197,10 @@
             });
         };
 
-        /* --- ROBUST MULTI-USER WEBRTC VOICE & VIDEO SIGNALING --- */
+        /* --- FIXED ROBUST MULTI-USER WEBRTC VOICE & VIDEO SIGNALING --- */
+        let activeRoomUnsub = null;
+        let activeSignalsUnsub = null;
+
         window.joinVoiceChannel = async function(channelId, channelName) {
             if (activeVoiceChannelId === channelId) return;
             if (activeVoiceChannelId) {
@@ -1221,17 +1225,22 @@
                 document.getElementById('local-video-label').innerText = `${currentUsername} (You)`;
 
                 // 1. Listen for incoming signals directed TO us
-                onChildAdded(ref(db, `voice_signals/${channelId}/${friendCode}`), async (snapshot) => {
+                const signalsRef = ref(db, `voice_signals/${channelId}/${friendCode}`);
+                activeSignalsUnsub = onChildAdded(signalsRef, async (snapshot) => {
                     if (!snapshot.exists()) return;
                     const data = snapshot.val();
                     const fromPeer = data.from;
+                    if (!fromPeer || fromPeer === friendCode) return;
+                    
                     const pcKey = `${channelId}_${fromPeer}`;
-
                     let pc = peerConnections[pcKey];
 
                     if (data.type === 'offer') {
                         if (!pc) {
                             pc = createPeerConnection(channelId, fromPeer, false);
+                        }
+                        if (pc.signalingState !== 'stable') {
+                            await pc.setLocalDescription({type: 'rollback'}).catch(()=>{});
                         }
                         await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
                         const answer = await pc.createAnswer();
@@ -1243,7 +1252,7 @@
                             sdp: answer
                         });
                     } else if (data.type === 'answer') {
-                        if (pc) {
+                        if (pc && pc.signalingState === 'have-local-offer') {
                             await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
                         }
                     } else if (data.type === 'candidate') {
@@ -1251,26 +1260,40 @@
                             try {
                                 await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
                             } catch (e) {
-                                console.error("Error adding received ice candidate", e);
+                                console.error("Error adding ice candidate", e);
                             }
                         }
                     }
                     remove(snapshot.ref);
                 });
 
-                // 2. Announce presence and discover peers in the room
-                const roomRef = ref(db, `voice_rooms/${channelId}`);
-                set(ref(db, `voice_rooms/${channelId}/${friendCode}`), {
+                // 2. Announce presence in room
+                const userPresenceRef = ref(db, `voice_rooms/${channelId}/${friendCode}`);
+                set(userPresenceRef, {
                     username: currentUsername,
                     joinedAt: Date.now()
                 });
 
-                onValue(roomRef, (snapshot) => {
+                // 3. Listen to room membership updates and cleanup missing boxes
+                const roomRef = ref(db, `voice_rooms/${channelId}`);
+                activeRoomUnsub = onValue(roomRef, (snapshot) => {
                     const peers = snapshot.val() || {};
+                    
+                    // Remove video boxes for users who left
+                    document.querySelectorAll('.video-box').forEach(box => {
+                        const peerId = box.id.replace('box_', '');
+                        if (peerId !== 'local' && !peers[peerId]) {
+                            if (peerConnections[`${channelId}_${peerId}`]) {
+                                peerConnections[`${channelId}_${peerId}`].close();
+                                delete peerConnections[`${channelId}_${peerId}`];
+                            }
+                            box.remove();
+                        }
+                    });
+
+                    // Initiate offers to new peers
                     Object.keys(peers).forEach(peerId => {
-                        // If a new peer appears and lexicographically we initiate (or to prevent glare, compare user IDs)
                         if (peerId !== friendCode && !peerConnections[`${channelId}_${peerId}`]) {
-                            // Whoever has the "smaller" ID creates the offer
                             if (friendCode < peerId) {
                                 createPeerConnection(channelId, peerId, true);
                             }
@@ -1286,6 +1309,8 @@
 
         function createPeerConnection(channelId, peerId, isInitiator) {
             const pcKey = `${channelId}_${peerId}`;
+            if (peerConnections[pcKey]) return peerConnections[pcKey];
+
             const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[pcKey] = pc;
 
@@ -1330,7 +1355,7 @@
                         type: 'offer',
                         sdp: offer
                     });
-                });
+                }).catch(err => console.error("Error creating offer:", err));
             }
 
             return pc;
