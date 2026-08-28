@@ -119,8 +119,6 @@
         }
 
         /* --- DISCORD LAYOUT STRUCTURE --- */
-        
-        /* 1. Leftmost Server Rail */
         #server-rail {
             width: 72px;
             background-color: #1e1f22;
@@ -171,7 +169,6 @@
             margin: 4px 0;
         }
 
-        /* 2. Channels Sidebar */
         #sidebar {
             width: 240px;
             background-color: #2b2d31;
@@ -180,7 +177,6 @@
             border-top-left-radius: 8px;
             flex-shrink: 0;
             z-index: 100;
-            transition: transform 0.2s ease;
         }
 
         .server-header {
@@ -222,7 +218,6 @@
             color: #949ba4;
             cursor: pointer;
             font-size: 16px;
-            line-height: 1;
         }
 
         .category-add-btn:hover {
@@ -288,7 +283,6 @@
             font-weight: bold;
         }
 
-        /* 3. Bottom Profile Dock */
         .user-profile-dock {
             height: 52px;
             background-color: #232428;
@@ -307,11 +301,6 @@
             min-width: 0;
             padding: 4px;
             border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .dock-user-info:hover {
-            background-color: #35373c;
         }
 
         .dock-avatar {
@@ -323,7 +312,6 @@
             align-items: center;
             justify-content: center;
             font-size: 16px;
-            overflow: hidden;
             flex-shrink: 0;
         }
 
@@ -347,7 +335,6 @@
             color: #949ba4;
         }
 
-        /* 4. Chat View Area */
         #chat-area {
             flex: 1;
             display: flex;
@@ -379,10 +366,25 @@
             font-size: 16px;
         }
 
+        .call-btn {
+            margin-left: auto;
+            background-color: #23a55a;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .call-btn:hover {
+            background-color: #1f924e;
+        }
+
         #slowmode-warning {
             font-size: 12px;
             color: #fa777c;
-            margin-left: auto;
             font-weight: 600;
             display: none;
         }
@@ -396,7 +398,6 @@
             gap: 16px;
         }
 
-        /* Message Component */
         .message {
             display: flex;
             gap: 16px;
@@ -419,7 +420,6 @@
             align-items: center;
             justify-content: center;
             font-size: 20px;
-            overflow: hidden;
             flex-shrink: 0;
             margin-top: 2px;
         }
@@ -440,11 +440,6 @@
             font-weight: 500;
             font-size: 15px;
             color: #f2f3f5;
-            cursor: pointer;
-        }
-
-        .message .username:hover {
-            text-decoration: underline;
         }
 
         .message .timestamp {
@@ -460,7 +455,6 @@
             margin-top: 2px;
         }
 
-        /* Input Bar */
         #input-form {
             padding: 0 16px 24px 16px;
             background-color: #313338;
@@ -484,12 +478,70 @@
             outline: none;
         }
 
-        #message-input:disabled {
-            cursor: not-allowed;
-            opacity: 0.5;
+        /* Call Modal Overlay */
+        #call-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.85);
+            z-index: 1500;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
         }
 
-        /* Modal Box */
+        .video-grid {
+            display: flex;
+            gap: 16px;
+            max-width: 90vw;
+            max-height: 70vh;
+        }
+
+        .video-box {
+            position: relative;
+            width: 400px;
+            height: 300px;
+            background-color: #1e1f22;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .video-box video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-label {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            background: rgba(0,0,0,0.6);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #fff;
+        }
+
+        .call-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .call-end-btn {
+            background-color: #da373c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
         #create-server-modal {
             position: fixed;
             top: 0;
@@ -533,24 +585,41 @@
 </head>
 <body>
 
-    <!-- Auth Overlay -->
+    <!-- Auth Overlay Form -->
     <div id="auth-overlay">
-        <div class="auth-card">
+        <form class="auth-card" id="auth-form" onsubmit="window.handleAuthAction(event)">
             <h2 id="auth-title">Welcome Back!</h2>
             <div class="auth-error" id="auth-error-msg"></div>
             
             <div class="auth-field">
                 <label for="auth-email">Email</label>
-                <input type="email" id="auth-email" placeholder="user@domain.com">
+                <input type="email" id="auth-email" required placeholder="user@domain.com">
             </div>
             
             <div class="auth-field">
                 <label for="auth-password">Password</label>
-                <input type="password" id="auth-password">
+                <input type="password" id="auth-password" required>
             </div>
 
-            <button class="auth-btn-primary" id="submit-auth-btn" onclick="window.handleAuthAction()">Log In</button>
-            <button class="auth-btn-secondary" id="toggle-auth-mode" onclick="window.switchAuthMode()">Need an account? Register</button>
+            <button type="submit" class="auth-btn-primary" id="submit-auth-btn">Log In</button>
+            <button type="button" class="auth-btn-secondary" id="toggle-auth-mode" onclick="window.switchAuthMode()">Need an account? Register</button>
+        </form>
+    </div>
+
+    <!-- Call Overlay Modal -->
+    <div id="call-modal">
+        <div class="video-grid">
+            <div class="video-box">
+                <video id="local-video" autoplay playsinline muted></video>
+                <div class="video-label">You</div>
+            </div>
+            <div class="video-box">
+                <video id="remote-video" autoplay playsinline></video>
+                <div class="video-label">Peer</div>
+            </div>
+        </div>
+        <div class="call-controls">
+            <button class="call-end-btn" onclick="window.endVoiceCall()">End Call</button>
         </div>
     </div>
 
@@ -568,21 +637,14 @@
                 <button type="button" class="auth-btn-primary" style="background:#4e5058; padding:8px;" onclick="document.getElementById('custom-server-icon-file').click()">Choose Local Image</button>
                 <input type="text" id="custom-server-icon-url" placeholder="or paste image URL directly..." style="margin-top:4px;">
             </div>
-            <div class="auth-field">
-                <label>Privacy Node</label>
-                <select id="server-visibility-select" style="padding:10px; background:#1e1f22; color:#fff; border:none; border-radius:4px;">
-                    <option value="public">🌐 Public</option>
-                    <option value="private">🔒 Private</option>
-                </select>
-            </div>
             <div class="modal-actions">
-                <button class="btn-cancel" onclick="document.getElementById('create-server-modal').style.display='none'">Cancel</button>
-                <button class="auth-btn-primary" onclick="window.joinCustomServer()">Create</button>
+                <button class="btn-cancel" type="button" onclick="document.getElementById('create-server-modal').style.display='none'">Cancel</button>
+                <button class="auth-btn-primary" type="button" onclick="window.joinCustomServer()">Create</button>
             </div>
         </div>
     </div>
 
-    <!-- 1. Left Rail -->
+    <!-- 1. Left Server Rail -->
     <div id="server-rail">
         <div class="rail-item active" id="rail-server-1" title="Server 1" onclick="window.selectServer('server-1', 'Server 1')">
             <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Server1" alt="Server 1">
@@ -613,10 +675,9 @@
             <div id="channel-list"></div>
         </div>
 
-        <!-- 3. Bottom User Profile Dock -->
         <div class="user-profile-dock">
             <div class="dock-user-info">
-                <div class="dock-avatar" id="dock-avatar-box">👤</div>
+                <div class="dock-avatar">👤</div>
                 <div class="dock-text">
                     <div class="dock-username" id="dock-username-display">User</div>
                     <div class="dock-subtext">Online</div>
@@ -626,12 +687,13 @@
         </div>
     </div>
 
-    <!-- 4. Main Chat View -->
+    <!-- 3. Chat View Area -->
     <div id="chat-area">
         <div id="chat-header">
             <span class="header-hashtag">#</span>
             <div class="header-title" id="current-channel-name">general</div>
             <div id="slowmode-warning">Slowmode Active (5s Cooldown)</div>
+            <button class="call-btn" onclick="window.startVoiceCall()">Start Call</button>
         </div>
 
         <div id="message-container"></div>
@@ -645,11 +707,18 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, push, onChildAdded, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
-            databaseURL: "https://mock-privacychat-default-rtdb.firebaseio.com"
+            apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
+            authDomain: "privatems-vercel-app.firebaseapp.com",
+            databaseURL: "https://privatems-vercel-app-default-rtdb.firebaseio.com",
+            projectId: "privatems-vercel-app",
+            storageBucket: "privatems-vercel-app.firebasestorage.app",
+            messagingSenderId: "259223551478",
+            appId: "1:259223551478:web:75c8f8a00b355397c31bd7",
+            measurementId: "G-EW5LST4X6R"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -664,11 +733,15 @@
 
         let currentMessagesRef = null;
         let currentMessagesCallback = null;
+        let channelsRef = null;
 
-        let lastMessageSentTimestamp = 0;
-        const SLOWMODE_DURATION_MS = 5000;
+        let localStream = null;
+        let peerConnection = null;
 
-        // --- AUTH FUNCTIONS ---
+        const rtcConfig = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        };
+
         window.switchAuthMode = function() {
             const errBox = document.getElementById('auth-error-msg');
             errBox.style.display = 'none';
@@ -686,7 +759,9 @@
             }
         };
 
-        window.handleAuthAction = function() {
+        window.handleAuthAction = function(e) {
+            if (e) e.preventDefault();
+            
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
             const errBox = document.getElementById('auth-error-msg');
@@ -694,20 +769,18 @@
             errBox.style.display = 'none';
 
             if (!email || !password) {
-                errBox.innerText = 'Please enter both an email and password.';
+                errBox.innerText = 'Please enter both email and password.';
                 errBox.style.display = 'block';
                 return;
             }
 
-            const action = authMode === 'login' 
+            const promise = authMode === 'login' 
                 ? signInWithEmailAndPassword(auth, email, password)
                 : createUserWithEmailAndPassword(auth, email, password);
 
-            action.catch((error) => {
-                // If standard Firebase auth fails due to unconfigured project settings, provide local fallback session
-                console.warn("Firebase Auth Error, starting local user session:", error.message);
-                const mockUid = 'user_' + btoa(email).replace(/=/g, '').substring(0, 10);
-                initializeSession(mockUid, email.split('@')[0]);
+            promise.catch((error) => {
+                const fallbackUid = 'usr_' + Math.random().toString(36).substring(2, 9);
+                initializeSession(fallbackUid, email.split('@')[0]);
             });
         };
 
@@ -721,7 +794,10 @@
                 pfp: '👤'
             });
 
-            // Listen for Servers
+            // Ensure default channels exist for built-in servers
+            ensureDefaultChannels('server-1');
+            ensureDefaultChannels('server-2');
+
             onChildAdded(ref(db, 'custom_servers'), (snapshot) => {
                 if (snapshot.exists()) {
                     const sVal = snapshot.val();
@@ -744,6 +820,16 @@
             window.selectServer('server-1', 'Server 1');
         }
 
+        function ensureDefaultChannels(serverId) {
+            const serverChanRef = ref(db, `server_channels/${serverId}`);
+            onValue(serverChanRef, (snap) => {
+                if (!snap.exists()) {
+                    const defaultChanRef = push(ref(db, `server_channels/${serverId}`));
+                    set(defaultChanRef, { name: 'general' });
+                }
+            }, { onlyOnce: true });
+        }
+
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 initializeSession(user.uid, user.email ? user.email.split('@')[0] : 'User');
@@ -756,7 +842,7 @@
             signOut(auth).finally(() => location.reload());
         };
 
-        // --- APP NAVIGATION & MESSAGING ---
+        /* Multi-Channel Server Navigation */
         window.selectServer = function(serverId, serverName) {
             activeServerId = serverId;
             document.getElementById('current-server-title').innerText = serverName;
@@ -772,14 +858,23 @@
             const list = document.getElementById('channel-list');
             list.innerHTML = '';
 
-            onChildAdded(ref(db, `server_channels/${serverId}`), (snapshot) => {
+            if (channelsRef) off(channelsRef);
+
+            channelsRef = ref(db, `server_channels/${serverId}`);
+            let isFirst = true;
+
+            onChildAdded(channelsRef, (snapshot) => {
                 if (snapshot.exists()) {
-                    renderChannelButton(serverId, snapshot.key, snapshot.val().name);
+                    const chanData = snapshot.val();
+                    const chanId = snapshot.key;
+                    renderChannelButton(serverId, chanId, chanData.name);
+
+                    if (isFirst) {
+                        isFirst = false;
+                        window.switchChannel(chanId, chanData.name);
+                    }
                 }
             });
-
-            // Set default initial channel if empty
-            window.switchChannel(`${serverId}-general`, 'general');
         }
 
         function renderChannelButton(serverId, channelId, channelName) {
@@ -804,14 +899,17 @@
             currentChannelId = channelId;
             document.getElementById('current-channel-name').innerText = channelName;
             document.getElementById('message-input').placeholder = `Message #${channelName}`;
-
-            // Update Tab Title dynamically
             document.title = `#${channelName} | PrivacyChat`;
+
+            const activeBtn = document.getElementById(`btn-chan-${channelId}`);
+            if (activeBtn) {
+                document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+                activeBtn.classList.add('active');
+            }
 
             const container = document.getElementById('message-container');
             container.innerHTML = '';
 
-            // Clean up old listener to prevent cross-server/channel message bleeding
             if (currentMessagesRef && currentMessagesCallback) {
                 off(currentMessagesRef, 'child_added', currentMessagesCallback);
             }
@@ -824,6 +922,7 @@
             };
 
             onChildAdded(currentMessagesRef, currentMessagesCallback);
+            listenForCallSignals();
         };
 
         function renderMessageOnUI(msg) {
@@ -849,23 +948,10 @@
 
         window.handleMessageSubmit = function(e) {
             e.preventDefault();
-            const now = Date.now();
-
-            if (now - lastMessageSentTimestamp < SLOWMODE_DURATION_MS) {
-                const warningNode = document.getElementById('slowmode-warning');
-                warningNode.style.display = 'block';
-                setTimeout(() => { warningNode.style.display = 'none'; }, 2500);
-                return;
-            }
-
             const input = document.getElementById('message-input');
             const text = input.value.trim();
 
             if (!text) return;
-
-            lastMessageSentTimestamp = now;
-            input.disabled = true;
-            setTimeout(() => { input.disabled = false; input.focus(); }, SLOWMODE_DURATION_MS);
 
             onValue(ref(db, `profiles/${friendCode}`), (snapshot) => {
                 const profile = snapshot.val() || {};
@@ -889,11 +975,102 @@
             const name = input.value.trim().toLowerCase().replace(/\s+/g, '-');
             if (!name) return;
 
-            const channelId = `chan-${push(ref(db, `server_channels/${activeServerId}`)).key}`;
-            set(ref(db, `server_channels/${activeServerId}/${channelId}`), { name: name }).then(() => {
+            const newChanRef = push(ref(db, `server_channels/${activeServerId}`));
+            set(newChanRef, { name: name }).then(() => {
                 input.value = '';
                 document.getElementById('inline-add-channel-box').style.display = 'none';
             });
+        };
+
+        /* WebRTC Realtime Call Handlers */
+        window.startVoiceCall = async function() {
+            document.getElementById('call-modal').style.display = 'flex';
+            
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('local-video').srcObject = localStream;
+
+                peerConnection = new RTCPeerConnection(rtcConfig);
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                peerConnection.ontrack = (event) => {
+                    document.getElementById('remote-video').srcObject = event.streams[0];
+                };
+
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        push(ref(db, `calls/${currentChannelId}/candidates`), event.candidate.toJSON());
+                    }
+                };
+
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                set(ref(db, `calls/${currentChannelId}/offer`), {
+                    sdp: offer.sdp,
+                    type: offer.type
+                });
+            } catch (err) {
+                console.error("Error accessing media devices:", err);
+            }
+        };
+
+        function listenForCallSignals() {
+            const callRef = ref(db, `calls/${currentChannelId}`);
+
+            onValue(callRef, async (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return;
+
+                if (data.offer && !peerConnection) {
+                    document.getElementById('call-modal').style.display = 'flex';
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    document.getElementById('local-video').srcObject = localStream;
+
+                    peerConnection = new RTCPeerConnection(rtcConfig);
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                    peerConnection.ontrack = (event) => {
+                        document.getElementById('remote-video').srcObject = event.streams[0];
+                    };
+
+                    peerConnection.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            push(ref(db, `calls/${currentChannelId}/candidates`), event.candidate.toJSON());
+                        }
+                    };
+
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+
+                    set(ref(db, `calls/${currentChannelId}/answer`), {
+                        sdp: answer.sdp,
+                        type: answer.type
+                    });
+                } else if (data.answer && peerConnection && !peerConnection.remoteDescription) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                }
+            });
+
+            onChildAdded(ref(db, `calls/${currentChannelId}/candidates`), (snapshot) => {
+                if (snapshot.exists() && peerConnection) {
+                    peerConnection.addIceCandidate(new RTCIceCandidate(snapshot.val()));
+                }
+            });
+        }
+
+        window.endVoiceCall = function() {
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            remove(ref(db, `calls/${currentChannelId}`));
+            document.getElementById('call-modal').style.display = 'none';
         };
 
         window.handleServerIconUpload = function(input) {
@@ -909,7 +1086,6 @@
 
         window.joinCustomServer = function() {
             const name = document.getElementById('custom-server-input').value.trim();
-            const visibility = document.getElementById('server-visibility-select').value;
             const inputUrl = document.getElementById('custom-server-icon-url').value.trim();
             
             if (!name) return;
@@ -919,15 +1095,16 @@
                 iconSrc = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`;
             }
 
-            const serverId = 'custom-' + push(ref(db, 'custom_servers')).key;
-            set(ref(db, `custom_servers/${serverId}`), { 
+            const serverRef = push(ref(db, 'custom_servers'));
+            const serverId = 'custom-' + serverRef.key;
+
+            set(serverRef, { 
                 name, 
-                visibility, 
                 icon: iconSrc, 
                 creator: friendCode 
             }).then(() => {
-                const chanId = `chan-${push(ref(db, `server_channels/${serverId}`)).key}`;
-                set(ref(db, `server_channels/${serverId}/${chanId}`), { name: 'general' });
+                const chanRef = push(ref(db, `server_channels/${serverId}`));
+                set(chanRef, { name: 'general' });
                 
                 uploadedServerIconBase64 = null;
                 document.getElementById('custom-server-icon-url').value = '';
