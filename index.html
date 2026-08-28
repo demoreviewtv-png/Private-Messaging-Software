@@ -118,7 +118,7 @@
             display: none;
         }
 
-        /* --- DISCORD LAYOUT STRUCTURE --- */
+        /* --- DISCORD LAYOUT STRUCTURE WITH RESIZABLE SIDEBAR --- */
         #server-rail {
             width: 72px;
             background-color: #1e1f22;
@@ -171,12 +171,31 @@
 
         #sidebar {
             width: 240px;
+            min-width: 160px;
+            max-width: 400px;
             background-color: #2b2d31;
             display: flex;
             flex-direction: column;
             border-top-left-radius: 8px;
             flex-shrink: 0;
             z-index: 100;
+            position: relative;
+        }
+
+        /* Resize Handle */
+        .sidebar-resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            cursor: ew-resize;
+            background: transparent;
+            z-index: 102;
+        }
+
+        .sidebar-resize-handle:hover, .sidebar-resize-handle.resizing {
+            background-color: #5865f2;
         }
 
         .server-header {
@@ -251,9 +270,11 @@
             color: #fff;
         }
 
-        .channel-btn .hashtag {
-            font-size: 18px;
+        .channel-btn .icon {
+            font-size: 16px;
             color: #80848e;
+            width: 18px;
+            text-align: center;
         }
 
         .inline-add-channel {
@@ -262,7 +283,7 @@
             padding: 4px 8px;
         }
 
-        .inline-add-channel input {
+        .inline-add-channel input, .inline-add-channel select {
             flex: 1;
             background: #1e1f22;
             border: none;
@@ -366,22 +387,6 @@
             font-size: 16px;
         }
 
-        .call-btn {
-            margin-left: auto;
-            background-color: #23a55a;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        .call-btn:hover {
-            background-color: #1f924e;
-        }
-
         #slowmode-warning {
             font-size: 12px;
             color: #fa777c;
@@ -455,6 +460,43 @@
             margin-top: 2px;
         }
 
+        .msg-image {
+            max-width: 400px;
+            max-height: 300px;
+            border-radius: 8px;
+            margin-top: 6px;
+            display: block;
+            cursor: pointer;
+        }
+
+        .message .text code {
+            background-color: #1e1f22;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 85%;
+        }
+
+        .message .text pre {
+            background-color: #1e1f22;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            overflow-x: auto;
+        }
+
+        .message .text pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+
+        .message .text blockquote {
+            border-left: 4px solid #4e5058;
+            padding-left: 8px;
+            margin: 4px 0;
+            color: #949ba4;
+        }
+
         #input-form {
             padding: 0 16px 24px 16px;
             background-color: #313338;
@@ -478,36 +520,52 @@
             outline: none;
         }
 
-        /* Call Modal Overlay */
-        #call-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0,0,0,0.85);
-            z-index: 1500;
+        /* --- VOICE CHANNEL VIEW AREA --- */
+        #voice-area {
+            flex: 1;
             display: none;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            background-color: #313338;
+            min-width: 0;
+            padding: 16px;
             gap: 16px;
         }
 
-        .video-grid {
+        .voice-top-bar {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #2b2d31;
+            padding: 12px 16px;
+            border-radius: 8px;
+        }
+
+        .voice-channel-title {
+            font-weight: 600;
+            color: #f2f3f5;
+            font-size: 16px;
+        }
+
+        .video-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 16px;
-            max-width: 90vw;
-            max-height: 70vh;
+            align-content: center;
+            justify-content: center;
+            min-height: 0;
         }
 
         .video-box {
             position: relative;
-            width: 400px;
-            height: 300px;
             background-color: #1e1f22;
             border-radius: 8px;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 16/9;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
         .video-box video {
@@ -527,9 +585,37 @@
             color: #fff;
         }
 
-        .call-controls {
+        .voice-controls {
             display: flex;
+            justify-content: center;
             gap: 12px;
+            padding: 12px;
+            background-color: #2b2d31;
+            border-radius: 8px;
+        }
+
+        .control-btn {
+            background-color: #4e5058;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.15s;
+        }
+
+        .control-btn:hover {
+            background-color: #6d6f78;
+        }
+
+        .control-btn.active {
+            background-color: #da373c;
+        }
+
+        .control-btn.active:hover {
+            background-color: #a1282c;
         }
 
         .call-end-btn {
@@ -540,6 +626,29 @@
             border-radius: 4px;
             cursor: pointer;
             font-weight: 600;
+        }
+
+        .call-end-btn:hover {
+            background-color: #a1282c;
+        }
+
+        /* Home Dashboard (No server selected) */
+        #home-dashboard {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #313338;
+            color: #949ba4;
+            gap: 12px;
+            text-align: center;
+            padding: 24px;
+        }
+
+        #home-dashboard h2 {
+            color: #f2f3f5;
+            font-size: 24px;
         }
 
         #create-server-modal {
@@ -606,23 +715,6 @@
         </form>
     </div>
 
-    <!-- Call Overlay Modal -->
-    <div id="call-modal">
-        <div class="video-grid">
-            <div class="video-box">
-                <video id="local-video" autoplay playsinline muted></video>
-                <div class="video-label">You</div>
-            </div>
-            <div class="video-box">
-                <video id="remote-video" autoplay playsinline></video>
-                <div class="video-label">Peer</div>
-            </div>
-        </div>
-        <div class="call-controls">
-            <button class="call-end-btn" onclick="window.endVoiceCall()">End Call</button>
-        </div>
-    </div>
-
     <!-- Create Server Modal -->
     <div id="create-server-modal">
         <div class="modal-box">
@@ -646,7 +738,11 @@
 
     <!-- 1. Left Server Rail -->
     <div id="server-rail">
-        <div class="rail-item active" id="rail-server-1" title="Server 1" onclick="window.selectServer('server-1', 'Server 1')">
+        <div class="rail-item" id="rail-home" title="Direct Messages / Home" onclick="window.selectHome()">
+            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChatHome" alt="Home">
+        </div>
+        <div class="rail-separator"></div>
+        <div class="rail-item" id="rail-server-1" title="Server 1" onclick="window.selectServer('server-1', 'Server 1')">
             <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Server1" alt="Server 1">
         </div>
         <div class="rail-item" id="rail-server-2" title="Server 2" onclick="window.selectServer('server-2', 'Server 2')">
@@ -657,18 +753,23 @@
         <div class="rail-item" style="color: #23a55a;" title="Add a Server" onclick="document.getElementById('create-server-modal').style.display='flex'">+</div>
     </div>
 
-    <!-- 2. Channels Sidebar -->
+    <!-- 2. Channels Sidebar with Resizer -->
     <div id="sidebar">
-        <div class="server-header" id="current-server-title">Server 1</div>
+        <div class="sidebar-resize-handle" id="sidebar-resizer"></div>
+        <div class="server-header" id="current-server-title">Home</div>
         
         <div class="sidebar-scrollable">
             <div class="category-header">
-                <span>Text Channels</span>
+                <span>Channels</span>
                 <button class="category-add-btn" onclick="window.toggleInlineAddChannel()">+</button>
             </div>
 
             <div class="inline-add-channel" id="inline-add-channel-box" style="display: none;">
-                <input type="text" id="new-channel-input" placeholder="new-channel">
+                <input type="text" id="new-channel-input" placeholder="channel-name">
+                <select id="new-channel-type">
+                    <option value="text">Text</option>
+                    <option value="voice">Voice</option>
+                </select>
                 <button onclick="window.submitNewChannel()">+</button>
             </div>
 
@@ -687,13 +788,17 @@
         </div>
     </div>
 
-    <!-- 3. Chat View Area -->
-    <div id="chat-area">
+    <!-- 3. Main View Area (Home Dashboard / Chat View / Voice View) -->
+    <div id="home-dashboard">
+        <h2>Welcome to PrivacyChat</h2>
+        <p>Select a server from the left rail to start chatting or hanging out in voice channels.</p>
+    </div>
+
+    <div id="chat-area" style="display: none;">
         <div id="chat-header">
             <span class="header-hashtag">#</span>
             <div class="header-title" id="current-channel-name">general</div>
             <div id="slowmode-warning">Slowmode Active (5s Cooldown)</div>
-            <button class="call-btn" onclick="window.startVoiceCall()">Start Call</button>
         </div>
 
         <div id="message-container"></div>
@@ -703,6 +808,24 @@
                 <input type="text" id="message-input" placeholder="Message #general" autocomplete="off">
             </div>
         </form>
+    </div>
+
+    <div id="voice-area">
+        <div class="voice-top-bar">
+            <div class="voice-channel-title" id="voice-channel-title-display">🔊 Voice Channel</div>
+            <button class="call-end-btn" onclick="window.leaveVoiceChannel()">Disconnect</button>
+        </div>
+        <div class="video-grid" id="video-grid">
+            <div class="video-box" id="box_local">
+                <video id="local-video" autoplay playsinline muted></video>
+                <div class="video-label" id="local-video-label">You</div>
+            </div>
+        </div>
+        <div class="voice-controls">
+            <button class="control-btn" id="mic-toggle-btn" onclick="window.toggleMicrophone()">Mute Mic</button>
+            <button class="control-btn" id="cam-toggle-btn" onclick="window.toggleCamera()">Stop Camera</button>
+            <button class="control-btn" id="screen-share-btn" onclick="window.toggleScreenShare()">Share Screen</button>
+        </div>
     </div>
 
     <script type="module">
@@ -725,9 +848,10 @@
         const db = getDatabase(app);
         const auth = getAuth(app);
 
-        let activeServerId = 'server-1';
-        let currentChannelId = 'server-1-general';
+        let activeServerId = null;
+        let currentChannelId = null;
         let friendCode = '';
+        let currentUsername = 'User';
         let authMode = 'login';
         let uploadedServerIconBase64 = null;
 
@@ -735,12 +859,40 @@
         let currentMessagesCallback = null;
         let channelsRef = null;
 
+        // WebRTC & Voice State
         let localStream = null;
-        let peerConnection = null;
-
+        let screenStream = null;
+        let activeVoiceChannelId = null;
+        const peerConnections = {}; // channelId_peerId -> RTCPeerConnection
         const rtcConfig = {
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         };
+
+        // Screen Sizing Resizer Logic
+        const resizer = document.getElementById('sidebar-resizer');
+        const sidebar = document.getElementById('sidebar');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizer.classList.add('resizing');
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const newWidth = e.clientX - 72; // Account for 72px server rail width
+            if (newWidth >= 160 && newWidth <= 400) {
+                sidebar.style.width = newWidth + 'px';
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                resizer.classList.remove('resizing');
+            }
+        });
 
         window.switchAuthMode = function() {
             const errBox = document.getElementById('auth-error-msg');
@@ -786,6 +938,7 @@
 
         function initializeSession(uid, username) {
             friendCode = uid;
+            currentUsername = username;
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('dock-username-display').innerText = username;
 
@@ -794,7 +947,6 @@
                 pfp: '👤'
             });
 
-            // Ensure default channels exist for built-in servers
             ensureDefaultChannels('server-1');
             ensureDefaultChannels('server-2');
 
@@ -817,15 +969,19 @@
                 }
             });
 
-            window.selectServer('server-1', 'Server 1');
+            // Do not auto-join servers. Start at Home screen dashboard.
+            window.selectHome();
         }
 
         function ensureDefaultChannels(serverId) {
             const serverChanRef = ref(db, `server_channels/${serverId}`);
             onValue(serverChanRef, (snap) => {
                 if (!snap.exists()) {
-                    const defaultChanRef = push(ref(db, `server_channels/${serverId}`));
-                    set(defaultChanRef, { name: 'general' });
+                    const defaultTextRef = push(ref(db, `server_channels/${serverId}`));
+                    set(defaultTextRef, { name: 'general', type: 'text' });
+
+                    const defaultVoiceRef = push(ref(db, `server_channels/${serverId}`));
+                    set(defaultVoiceRef, { name: 'General Voice', type: 'voice' });
                 }
             }, { onlyOnce: true });
         }
@@ -842,7 +998,21 @@
             signOut(auth).finally(() => location.reload());
         };
 
-        /* Multi-Channel Server Navigation */
+        window.selectHome = function() {
+            if (activeVoiceChannelId) window.leaveVoiceChannel();
+            activeServerId = null;
+            currentChannelId = null;
+            document.getElementById('current-server-title').innerText = 'Home';
+
+            document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('rail-home').classList.add('active');
+
+            document.getElementById('channel-list').innerHTML = '<div style="padding: 8px; color: #949ba4; font-size: 13px;">Select a server on the left to chat or join voice channels.</div>';
+            document.getElementById('home-dashboard').style.display = 'flex';
+            document.getElementById('chat-area').style.display = 'none';
+            document.getElementById('voice-area').style.display = 'none';
+        };
+
         window.selectServer = function(serverId, serverName) {
             activeServerId = serverId;
             document.getElementById('current-server-title').innerText = serverName;
@@ -851,6 +1021,7 @@
             const railEl = document.getElementById(`rail-${serverId}`);
             if (railEl) railEl.classList.add('active');
 
+            document.getElementById('home-dashboard').style.display = 'none';
             loadServerChannels(serverId);
         };
 
@@ -861,42 +1032,57 @@
             if (channelsRef) off(channelsRef);
 
             channelsRef = ref(db, `server_channels/${serverId}`);
-            let isFirst = true;
+            let firstTextChan = null;
 
             onChildAdded(channelsRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const chanData = snapshot.val();
                     const chanId = snapshot.key;
-                    renderChannelButton(serverId, chanId, chanData.name);
+                    renderChannelButton(serverId, chanId, chanData.name, chanData.type || 'text');
 
-                    if (isFirst) {
-                        isFirst = false;
-                        window.switchChannel(chanId, chanData.name);
+                    if (!firstTextChan && chanData.type !== 'voice') {
+                        firstTextChan = { id: chanId, name: chanData.name };
+                        window.switchChannel(chanId, chanData.name, 'text');
                     }
                 }
             });
         }
 
-        function renderChannelButton(serverId, channelId, channelName) {
+        function renderChannelButton(serverId, channelId, channelName, type) {
             const list = document.getElementById('channel-list');
             if (document.getElementById(`btn-chan-${channelId}`)) return;
 
             const btn = document.createElement('button');
             btn.className = 'channel-btn';
             btn.id = `btn-chan-${channelId}`;
-            btn.innerHTML = `<span class="hashtag">#</span> ${channelName}`;
+            
+            const iconSymbol = type === 'voice' ? '🔊' : '#';
+            btn.innerHTML = `<span class="icon">${iconSymbol}</span> ${channelName}`;
             
             btn.onclick = () => {
                 document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                window.switchChannel(channelId, channelName);
+                if (type === 'voice') {
+                    window.joinVoiceChannel(channelId, channelName);
+                } else {
+                    window.switchChannel(channelId, channelName, 'text');
+                }
             };
 
             list.appendChild(btn);
         }
 
-        window.switchChannel = function(channelId, channelName) {
+        window.switchChannel = function(channelId, channelName, type) {
+            if (type === 'voice') {
+                window.joinVoiceChannel(channelId, channelName);
+                return;
+            }
+
             currentChannelId = channelId;
+            document.getElementById('home-dashboard').style.display = 'none';
+            document.getElementById('voice-area').style.display = 'none';
+            document.getElementById('chat-area').style.display = 'flex';
+
             document.getElementById('current-channel-name').innerText = channelName;
             document.getElementById('message-input').placeholder = `Message #${channelName}`;
             document.title = `#${channelName} | PrivacyChat`;
@@ -922,14 +1108,38 @@
             };
 
             onChildAdded(currentMessagesRef, currentMessagesCallback);
-            listenForCallSignals();
         };
+
+        function parseMessageContent(text) {
+            let safeText = text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+            safeText = safeText.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+            safeText = safeText.replace(/`([^`]+)`/g, '<code>$1</code>');
+            safeText = safeText.replace(/^&gt;\s?(.*$)/gm, '<blockquote>$1</blockquote>');
+            safeText = safeText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            safeText = safeText.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+            const imgRegex = /(https?:\/\/[^\s]+?\.(?:png|jpg|jpeg|gif|webp|svg)(?:\?[^\s]*)?)/gi;
+            let imageHtml = '';
+            
+            safeText = safeText.replace(imgRegex, (url) => {
+                imageHtml += `<img src="${url}" class="msg-image" alt="Uploaded image" onclick="window.open('${url}', '_blank')">`;
+                return '';
+            });
+
+            return `<div class="text-content">${safeText}</div>${imageHtml}`;
+        }
 
         function renderMessageOnUI(msg) {
             const container = document.getElementById('message-container');
             const node = document.createElement('div');
             node.className = 'message';
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const parsedBody = parseMessageContent(msg.text || '');
 
             node.innerHTML = `
                 <div class="msg-pfp">${msg.pfp || '👤'}</div>
@@ -938,7 +1148,7 @@
                         <span class="username">${msg.username || 'User'}</span>
                         <span class="timestamp">${timeStr}</span>
                     </div>
-                    <div class="text">${msg.text}</div>
+                    <div class="text">${parsedBody}</div>
                 </div>
             `;
 
@@ -951,126 +1161,280 @@
             const input = document.getElementById('message-input');
             const text = input.value.trim();
 
-            if (!text) return;
+            if (!text || !currentChannelId) return;
 
-            onValue(ref(db, `profiles/${friendCode}`), (snapshot) => {
-                const profile = snapshot.val() || {};
-                push(ref(db, `messages/${currentChannelId}`), {
-                    username: profile.username || 'User',
-                    pfp: profile.pfp || '👤',
-                    text: text,
-                    timestamp: Date.now()
-                });
-                input.value = '';
-            }, { onlyOnce: true });
+            push(ref(db, `messages/${currentChannelId}`), {
+                username: currentUsername,
+                pfp: '👤',
+                text: text,
+                timestamp: Date.now()
+            });
+            input.value = '';
         };
 
         window.toggleInlineAddChannel = function() {
+            if (!activeServerId) {
+                alert('Please select a server first to add a channel.');
+                return;
+            }
             const box = document.getElementById('inline-add-channel-box');
             box.style.display = box.style.display === 'none' ? 'flex' : 'none';
         };
 
         window.submitNewChannel = function() {
             const input = document.getElementById('new-channel-input');
+            const typeSelect = document.getElementById('new-channel-type');
             const name = input.value.trim().toLowerCase().replace(/\s+/g, '-');
-            if (!name) return;
+            const type = typeSelect.value;
+
+            if (!name || !activeServerId) return;
 
             const newChanRef = push(ref(db, `server_channels/${activeServerId}`));
-            set(newChanRef, { name: name }).then(() => {
+            set(newChanRef, { name: name, type: type }).then(() => {
                 input.value = '';
                 document.getElementById('inline-add-channel-box').style.display = 'none';
             });
         };
 
-        /* WebRTC Realtime Call Handlers */
-        window.startVoiceCall = async function() {
-            document.getElementById('call-modal').style.display = 'flex';
-            
+        /* --- ROBUST MULTI-USER WEBRTC VOICE & VIDEO SIGNALING --- */
+        window.joinVoiceChannel = async function(channelId, channelName) {
+            if (activeVoiceChannelId === channelId) return;
+            if (activeVoiceChannelId) {
+                window.leaveVoiceChannel();
+            }
+
+            activeVoiceChannelId = channelId;
+            document.getElementById('home-dashboard').style.display = 'none';
+            document.getElementById('chat-area').style.display = 'none';
+            document.getElementById('voice-area').style.display = 'flex';
+            document.getElementById('voice-channel-title-display').innerText = `🔊 ${channelName}`;
+
+            const activeBtn = document.getElementById(`btn-chan-${channelId}`);
+            if (activeBtn) {
+                document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+                activeBtn.classList.add('active');
+            }
+
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 document.getElementById('local-video').srcObject = localStream;
+                document.getElementById('local-video-label').innerText = `${currentUsername} (You)`;
 
-                peerConnection = new RTCPeerConnection(rtcConfig);
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                // 1. Listen for incoming signals directed TO us
+                onChildAdded(ref(db, `voice_signals/${channelId}/${friendCode}`), async (snapshot) => {
+                    if (!snapshot.exists()) return;
+                    const data = snapshot.val();
+                    const fromPeer = data.from;
+                    const pcKey = `${channelId}_${fromPeer}`;
 
-                peerConnection.ontrack = (event) => {
-                    document.getElementById('remote-video').srcObject = event.streams[0];
-                };
+                    let pc = peerConnections[pcKey];
 
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        push(ref(db, `calls/${currentChannelId}/candidates`), event.candidate.toJSON());
+                    if (data.type === 'offer') {
+                        if (!pc) {
+                            pc = createPeerConnection(channelId, fromPeer, false);
+                        }
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+
+                        set(ref(db, `voice_signals/${channelId}/${fromPeer}`), {
+                            from: friendCode,
+                            type: 'answer',
+                            sdp: answer
+                        });
+                    } else if (data.type === 'answer') {
+                        if (pc) {
+                            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                        }
+                    } else if (data.type === 'candidate') {
+                        if (pc && data.candidate) {
+                            try {
+                                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                            } catch (e) {
+                                console.error("Error adding received ice candidate", e);
+                            }
+                        }
                     }
-                };
-
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-
-                set(ref(db, `calls/${currentChannelId}/offer`), {
-                    sdp: offer.sdp,
-                    type: offer.type
+                    remove(snapshot.ref);
                 });
+
+                // 2. Announce presence and discover peers in the room
+                const roomRef = ref(db, `voice_rooms/${channelId}`);
+                set(ref(db, `voice_rooms/${channelId}/${friendCode}`), {
+                    username: currentUsername,
+                    joinedAt: Date.now()
+                });
+
+                onValue(roomRef, (snapshot) => {
+                    const peers = snapshot.val() || {};
+                    Object.keys(peers).forEach(peerId => {
+                        // If a new peer appears and lexicographically we initiate (or to prevent glare, compare user IDs)
+                        if (peerId !== friendCode && !peerConnections[`${channelId}_${peerId}`]) {
+                            // Whoever has the "smaller" ID creates the offer
+                            if (friendCode < peerId) {
+                                createPeerConnection(channelId, peerId, true);
+                            }
+                        }
+                    });
+                });
+
             } catch (err) {
-                console.error("Error accessing media devices:", err);
+                console.error("Media access error:", err);
+                alert("Could not access microphone/camera. Please check browser permissions.");
             }
         };
 
-        function listenForCallSignals() {
-            const callRef = ref(db, `calls/${currentChannelId}`);
+        function createPeerConnection(channelId, peerId, isInitiator) {
+            const pcKey = `${channelId}_${peerId}`;
+            const pc = new RTCPeerConnection(rtcConfig);
+            peerConnections[pcKey] = pc;
 
-            onValue(callRef, async (snapshot) => {
-                const data = snapshot.val();
-                if (!data) return;
+            if (localStream) {
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            }
 
-                if (data.offer && !peerConnection) {
-                    document.getElementById('call-modal').style.display = 'flex';
-                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                    document.getElementById('local-video').srcObject = localStream;
-
-                    peerConnection = new RTCPeerConnection(rtcConfig);
-                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                    peerConnection.ontrack = (event) => {
-                        document.getElementById('remote-video').srcObject = event.streams[0];
-                    };
-
-                    peerConnection.onicecandidate = (event) => {
-                        if (event.candidate) {
-                            push(ref(db, `calls/${currentChannelId}/candidates`), event.candidate.toJSON());
-                        }
-                    };
-
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-
-                    set(ref(db, `calls/${currentChannelId}/answer`), {
-                        sdp: answer.sdp,
-                        type: answer.type
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    set(ref(db, `voice_signals/${channelId}/${peerId}`), {
+                        from: friendCode,
+                        type: 'candidate',
+                        candidate: event.candidate.toJSON()
                     });
-                } else if (data.answer && peerConnection && !peerConnection.remoteDescription) {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
                 }
-            });
+            };
 
-            onChildAdded(ref(db, `calls/${currentChannelId}/candidates`), (snapshot) => {
-                if (snapshot.exists() && peerConnection) {
-                    peerConnection.addIceCandidate(new RTCIceCandidate(snapshot.val()));
+            pc.ontrack = (event) => {
+                let videoBox = document.getElementById(`box_${peerId}`);
+                if (!videoBox) {
+                    const grid = document.getElementById('video-grid');
+                    videoBox = document.createElement('div');
+                    videoBox.className = 'video-box';
+                    videoBox.id = `box_${peerId}`;
+                    videoBox.innerHTML = `
+                        <video autoplay playsinline></video>
+                        <div class="video-label" id="label_${peerId}">Peer</div>
+                    `;
+                    grid.appendChild(videoBox);
                 }
-            });
+                const remoteVideo = videoBox.querySelector('video');
+                if (remoteVideo.srcObject !== event.streams[0]) {
+                    remoteVideo.srcObject = event.streams[0];
+                }
+            };
+
+            if (isInitiator) {
+                pc.createOffer().then(async (offer) => {
+                    await pc.setLocalDescription(offer);
+                    set(ref(db, `voice_signals/${channelId}/${peerId}`), {
+                        from: friendCode,
+                        type: 'offer',
+                        sdp: offer
+                    });
+                });
+            }
+
+            return pc;
         }
 
-        window.endVoiceCall = function() {
-            if (peerConnection) {
-                peerConnection.close();
-                peerConnection = null;
+        window.toggleMicrophone = function() {
+            if (!localStream) return;
+            const audioTrack = localStream.getAudioTracks()[0];
+            if (audioTrack) {
+                audioTrack.enabled = !audioTrack.enabled;
+                const btn = document.getElementById('mic-toggle-btn');
+                btn.innerText = audioTrack.enabled ? 'Mute Mic' : 'Unmute Mic';
+                btn.classList.toggle('active', !audioTrack.enabled);
+            }
+        };
+
+        window.toggleCamera = function() {
+            if (!localStream) return;
+            const videoTrack = localStream.getVideoTracks()[0];
+            if (videoTrack) {
+                videoTrack.enabled = !videoTrack.enabled;
+                const btn = document.getElementById('cam-toggle-btn');
+                btn.innerText = videoTrack.enabled ? 'Stop Camera' : 'Start Camera';
+                btn.classList.toggle('active', !videoTrack.enabled);
+            }
+        };
+
+        window.toggleScreenShare = async function() {
+            const btn = document.getElementById('screen-share-btn');
+            if (!screenStream) {
+                try {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                    const screenTrack = screenStream.getVideoTracks()[0];
+                    
+                    document.getElementById('local-video').srcObject = screenStream;
+                    document.getElementById('local-video-label').innerText = `${currentUsername} (Screen)`;
+                    btn.innerText = 'Stop Sharing';
+                    btn.classList.add('active');
+
+                    Object.values(peerConnections).forEach(pc => {
+                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (sender) sender.replaceTrack(screenTrack);
+                    });
+
+                    screenTrack.onended = () => {
+                        window.stopScreenShare();
+                    };
+                } catch (err) {
+                    console.error("Error sharing screen:", err);
+                }
+            } else {
+                window.stopScreenShare();
+            }
+        };
+
+        window.stopScreenShare = function() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(t => t.stop());
+                screenStream = null;
+            }
+            if (localStream) {
+                const videoTrack = localStream.getVideoTracks()[0];
+                document.getElementById('local-video').srcObject = localStream;
+                document.getElementById('local-video-label').innerText = `${currentUsername} (You)`;
+
+                Object.values(peerConnections).forEach(pc => {
+                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (sender && videoTrack) sender.replaceTrack(videoTrack);
+                });
+            }
+            const btn = document.getElementById('screen-share-btn');
+            btn.innerText = 'Share Screen';
+            btn.classList.remove('active');
+        };
+
+        window.leaveVoiceChannel = function() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(t => t.stop());
+                screenStream = null;
             }
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
             }
-            remove(ref(db, `calls/${currentChannelId}`));
-            document.getElementById('call-modal').style.display = 'none';
+
+            Object.keys(peerConnections).forEach(key => {
+                peerConnections[key].close();
+                delete peerConnections[key];
+            });
+
+            if (activeVoiceChannelId && friendCode) {
+                remove(ref(db, `voice_rooms/${activeVoiceChannelId}/${friendCode}`));
+                remove(ref(db, `voice_signals/${activeVoiceChannelId}/${friendCode}`));
+            }
+
+            document.querySelectorAll('.video-box').forEach(box => {
+                if (box.id !== 'box_local') {
+                    box.remove();
+                }
+            });
+
+            activeVoiceChannelId = null;
+            document.getElementById('voice-area').style.display = 'none';
+            window.selectHome();
         };
 
         window.handleServerIconUpload = function(input) {
@@ -1103,13 +1467,18 @@
                 icon: iconSrc, 
                 creator: friendCode 
             }).then(() => {
-                const chanRef = push(ref(db, `server_channels/${serverId}`));
-                set(chanRef, { name: 'general' });
+                const chanRef1 = push(ref(db, `server_channels/${serverId}`));
+                set(chanRef1, { name: 'general', type: 'text' });
+
+                const chanRef2 = push(ref(db, `server_channels/${serverId}`));
+                set(chanRef2, { name: 'General Voice', type: 'voice' });
                 
                 uploadedServerIconBase64 = null;
                 document.getElementById('custom-server-icon-url').value = '';
-                document.getElementById('create-server-modal').style.display = 'none';
+                document.getElementById('create-server-modal').style.display='none';
                 document.getElementById('custom-server-input').value = '';
+
+                window.selectServer(serverId, name);
             });
         };
     </script>
