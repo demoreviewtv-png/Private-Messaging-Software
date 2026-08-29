@@ -118,6 +118,106 @@
             display: none;
         }
 
+        /* --- SETTINGS MODAL --- */
+        #settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 2500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-box {
+            background-color: #313338;
+            padding: 24px;
+            border-radius: 8px;
+            width: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        .settings-box h3 {
+            color: #f2f3f5;
+        }
+
+        .avatar-preview-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .preview-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background-color: #5865f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .preview-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* --- AUTOCOMPLETE MENTION DROPDOWN --- */
+        #mention-dropdown {
+            position: absolute;
+            bottom: 80px;
+            left: 16px;
+            background-color: #2b2d31;
+            border-radius: 8px;
+            width: 260px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            display: none;
+            flex-direction: column;
+            z-index: 500;
+            overflow: hidden;
+            border: 1px solid #1f2023;
+        }
+
+        .mention-item {
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #dbdee1;
+            font-size: 14px;
+        }
+
+        .mention-item:hover, .mention-item.selected {
+            background-color: #404249;
+            color: #fff;
+        }
+
+        .mention-item img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .mention-highlight {
+            background-color: rgba(88, 101, 242, 0.3);
+            color: #dee0fc;
+            padding: 0 4px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
         /* --- DISCORD LAYOUT STRUCTURE WITH RESIZABLE SIDEBAR --- */
         #server-rail {
             width: 72px;
@@ -322,6 +422,11 @@
             min-width: 0;
             padding: 4px;
             border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .dock-user-info:hover {
+            background-color: rgba(255,255,255,0.05);
         }
 
         .dock-avatar {
@@ -334,6 +439,13 @@
             justify-content: center;
             font-size: 16px;
             flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .dock-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .dock-text {
@@ -362,6 +474,7 @@
             flex-direction: column;
             background-color: #313338;
             min-width: 0;
+            position: relative;
         }
 
         #chat-header {
@@ -385,13 +498,6 @@
             font-weight: 600;
             color: #f2f3f5;
             font-size: 16px;
-        }
-
-        #slowmode-warning {
-            font-size: 12px;
-            color: #fa777c;
-            font-weight: 600;
-            display: none;
         }
 
         #message-container {
@@ -427,6 +533,13 @@
             font-size: 20px;
             flex-shrink: 0;
             margin-top: 2px;
+            overflow: hidden;
+        }
+
+        .msg-pfp img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .msg-body {
@@ -469,37 +582,10 @@
             cursor: pointer;
         }
 
-        .message .text code {
-            background-color: #1e1f22;
-            padding: 2px 4px;
-            border-radius: 4px;
-            font-family: Consolas, Monaco, monospace;
-            font-size: 85%;
-        }
-
-        .message .text pre {
-            background-color: #1e1f22;
-            padding: 8px;
-            border-radius: 4px;
-            margin-top: 4px;
-            overflow-x: auto;
-        }
-
-        .message .text pre code {
-            background-color: transparent;
-            padding: 0;
-        }
-
-        .message .text blockquote {
-            border-left: 4px solid #4e5058;
-            padding-left: 8px;
-            margin: 4px 0;
-            color: #949ba4;
-        }
-
         #input-form {
             padding: 0 16px 24px 16px;
             background-color: #313338;
+            position: relative;
         }
 
         .input-wrapper-row {
@@ -614,10 +700,6 @@
             background-color: #da373c;
         }
 
-        .control-btn.active:hover {
-            background-color: #a1282c;
-        }
-
         .call-end-btn {
             background-color: #da373c;
             color: white;
@@ -628,11 +710,7 @@
             font-weight: 600;
         }
 
-        .call-end-btn:hover {
-            background-color: #a1282c;
-        }
-
-        /* Home Dashboard (No server selected) */
+        /* Home Dashboard */
         #home-dashboard {
             flex: 1;
             display: flex;
@@ -715,6 +793,37 @@
         </form>
     </div>
 
+    <!-- User Profile Settings Modal -->
+    <div id="settings-modal">
+        <div class="settings-box">
+            <h3>Edit User Profile</h3>
+            
+            <div class="avatar-preview-container">
+                <div class="preview-avatar" id="settings-avatar-preview">👤</div>
+                <div>
+                    <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" onchange="window.handleAvatarUpload(this)">
+                    <button type="button" class="auth-btn-primary" style="background:#4e5058; padding:8px 12px; font-size:13px;" onclick="document.getElementById('avatar-file-input').click()">Upload Base64 PFP</button>
+                    <div style="font-size: 11px; color: #949ba4; margin-top: 6px;">Supports local image files encoded to base64.</div>
+                </div>
+            </div>
+
+            <div class="auth-field">
+                <label>Display Username</label>
+                <input type="text" id="settings-username-input" placeholder="Display Name">
+            </div>
+
+            <div class="auth-field">
+                <label>@Name (Unique Handle)</label>
+                <input type="text" id="settings-atname-input" placeholder="handle">
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" type="button" onclick="document.getElementById('settings-modal').style.display='none'">Cancel</button>
+                <button class="auth-btn-primary" type="button" onclick="window.saveUserSettings()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Create Server Modal -->
     <div id="create-server-modal">
         <div class="modal-box">
@@ -777,18 +886,18 @@
         </div>
 
         <div class="user-profile-dock">
-            <div class="dock-user-info">
-                <div class="dock-avatar">👤</div>
+            <div class="dock-user-info" onclick="window.openSettingsModal()" title="User Settings">
+                <div class="dock-avatar" id="dock-avatar-display">👤</div>
                 <div class="dock-text">
                     <div class="dock-username" id="dock-username-display">User</div>
-                    <div class="dock-subtext">Online</div>
+                    <div class="dock-subtext" id="dock-atname-display">@user</div>
                 </div>
             </div>
-            <button onclick="window.logOutUser()" style="background:none; border:none; color:#da373c; cursor:pointer; font-size:12px; font-weight:bold;">Log Out</button>
+            <button onclick="window.logOutUser()" style="background:none; border:none; color:#da373c; cursor:pointer; font-size:12px; font-weight:bold; padding:4px;">Log Out</button>
         </div>
     </div>
 
-    <!-- 3. Main View Area (Home Dashboard / Chat View / Voice View) -->
+    <!-- 3. Main View Area -->
     <div id="home-dashboard">
         <h2>Welcome to PrivacyChat</h2>
         <p>Select a server from the left rail to start chatting or hanging out in voice channels.</p>
@@ -798,14 +907,16 @@
         <div id="chat-header">
             <span class="header-hashtag">#</span>
             <div class="header-title" id="current-channel-name">general</div>
-            <div id="slowmode-warning">Slowmode Active (5s Cooldown)</div>
         </div>
 
         <div id="message-container"></div>
 
         <form id="input-form" onsubmit="window.handleMessageSubmit(event)">
+            <!-- Autocomplete Mention Box -->
+            <div id="mention-dropdown"></div>
+
             <div class="input-wrapper-row">
-                <input type="text" id="message-input" placeholder="Message #general" autocomplete="off">
+                <input type="text" id="message-input" placeholder="Message #general" autocomplete="off" oninput="window.handleInputTyping(event)" onkeydown="window.handleInputKeyDown(event)">
             </div>
         </form>
     </div>
@@ -813,7 +924,7 @@
     <div id="voice-area">
         <div class="voice-top-bar">
             <div class="voice-channel-title" id="voice-channel-title-display">🔊 Voice Channel</div>
-            <button class="call-end-btn" onclick="window.leaveVoiceChannel()">Disconnect</button>
+            <button class="call-end-btn" onclick="window.leaveVoiceChannel()" style="background:#da373c; border:none; color:white; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:600;">Disconnect</button>
         </div>
         <div class="video-grid" id="video-grid">
             <div class="video-box" id="box_local">
@@ -830,7 +941,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -852,8 +963,13 @@
         let currentChannelId = null;
         let friendCode = '';
         let currentUsername = 'User';
+        let currentAtName = 'user';
+        let currentPfpBase64 = '';
         let authMode = 'login';
         let uploadedServerIconBase64 = null;
+        let tempAvatarBase64 = '';
+        
+        let allProfiles = {}; // uid -> { username, atName, pfp }
 
         let currentMessagesRef = null;
         let currentMessagesCallback = null;
@@ -863,12 +979,10 @@
         let localStream = null;
         let screenStream = null;
         let activeVoiceChannelId = null;
-        const peerConnections = {}; // channelId_peerId -> RTCPeerConnection
-        const rtcConfig = {
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        };
+        const peerConnections = {};
+        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-        // Screen Sizing Resizer Logic
+        // Sidebar Resizer Logic
         const resizer = document.getElementById('sidebar-resizer');
         const sidebar = document.getElementById('sidebar');
         let isResizing = false;
@@ -881,7 +995,7 @@
 
         window.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
-            const newWidth = e.clientX - 72; // Account for 72px server rail width
+            const newWidth = e.clientX - 72;
             if (newWidth >= 160 && newWidth <= 400) {
                 sidebar.style.width = newWidth + 'px';
             }
@@ -897,7 +1011,6 @@
         window.switchAuthMode = function() {
             const errBox = document.getElementById('auth-error-msg');
             errBox.style.display = 'none';
-            
             if (authMode === 'login') {
                 authMode = 'register';
                 document.getElementById('auth-title').innerText = 'Create an account';
@@ -913,11 +1026,9 @@
 
         window.handleAuthAction = function(e) {
             if (e) e.preventDefault();
-            
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
             const errBox = document.getElementById('auth-error-msg');
-            
             errBox.style.display = 'none';
 
             if (!email || !password) {
@@ -930,21 +1041,36 @@
                 ? signInWithEmailAndPassword(auth, email, password)
                 : createUserWithEmailAndPassword(auth, email, password);
 
-            promise.catch((error) => {
+            promise.catch(() => {
                 const fallbackUid = 'usr_' + Math.random().toString(36).substring(2, 9);
                 initializeSession(fallbackUid, email.split('@')[0]);
             });
         };
 
-        function initializeSession(uid, username) {
+        function initializeSession(uid, defaultName) {
             friendCode = uid;
-            currentUsername = username;
             document.getElementById('auth-overlay').style.display = 'none';
-            document.getElementById('dock-username-display').innerText = username;
 
-            set(ref(db, `profiles/${friendCode}`), {
-                username: username,
-                pfp: '👤'
+            // Load global user profiles dictionary for @mentions & pfps
+            onValue(ref(db, 'profiles'), (snapshot) => {
+                if (snapshot.exists()) {
+                    allProfiles = snapshot.val();
+                    if (allProfiles[friendCode]) {
+                        currentUsername = allProfiles[friendCode].username || defaultName;
+                        currentAtName = allProfiles[friendCode].atName || defaultName.toLowerCase();
+                        currentPfpBase64 = allProfiles[friendCode].pfp || '';
+                    } else {
+                        currentUsername = defaultName;
+                        currentAtName = defaultName.toLowerCase();
+                        currentPfpBase64 = '';
+                        set(ref(db, `profiles/${friendCode}`), {
+                            username: currentUsername,
+                            atName: currentAtName,
+                            pfp: currentPfpBase64
+                        });
+                    }
+                    updateProfileUI();
+                }
             });
 
             ensureDefaultChannels('server-1');
@@ -960,10 +1086,8 @@
                     icon.className = 'rail-item';
                     icon.id = `rail-${snapshot.key}`;
                     icon.title = sVal.name;
-                    
                     const iconUrl = sVal.icon || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(sVal.name)}`;
                     icon.innerHTML = `<img src="${iconUrl}" alt="${sVal.name}">`;
-                    
                     icon.onclick = () => window.selectServer(snapshot.key, sVal.name);
                     rail.appendChild(icon);
                 }
@@ -972,13 +1096,72 @@
             window.selectHome();
         }
 
+        function updateProfileUI() {
+            document.getElementById('dock-username-display').innerText = currentUsername;
+            document.getElementById('dock-atname-display').innerText = `@${currentAtName}`;
+            
+            const avatarDock = document.getElementById('dock-avatar-display');
+            if (currentPfpBase64) {
+                avatarDock.innerHTML = `<img src="${currentPfpBase64}" alt="PFP">`;
+            } else {
+                avatarDock.innerHTML = '👤';
+            }
+        }
+
+        window.openSettingsModal = function() {
+            document.getElementById('settings-username-input').value = currentUsername;
+            document.getElementById('settings-atname-input').value = currentAtName;
+            tempAvatarBase64 = currentPfpBase64;
+            
+            const preview = document.getElementById('settings-avatar-preview');
+            if (tempAvatarBase64) {
+                preview.innerHTML = `<img src="${tempAvatarBase64}" alt="Preview">`;
+            } else {
+                preview.innerHTML = '👤';
+            }
+            document.getElementById('settings-modal').style.display = 'flex';
+        };
+
+        window.handleAvatarUpload = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                tempAvatarBase64 = e.target.result;
+                document.getElementById('settings-avatar-preview').innerHTML = `<img src="${tempAvatarBase64}" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.saveUserSettings = function() {
+            const newName = document.getElementById('settings-username-input').value.trim();
+            const newAt = document.getElementById('settings-atname-input').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+            if (!newName || !newAt) {
+                alert('Username and @handle cannot be empty.');
+                return;
+            }
+
+            currentUsername = newName;
+            currentAtName = newAt;
+            currentPfpBase64 = tempAvatarBase64;
+
+            set(ref(db, `profiles/${friendCode}`), {
+                username: currentUsername,
+                atName: currentAtName,
+                pfp: currentPfpBase64
+            }).then(() => {
+                document.getElementById('settings-modal').style.display = 'none';
+                updateProfileUI();
+            });
+        };
+
         function ensureDefaultChannels(serverId) {
             const serverChanRef = ref(db, `server_channels/${serverId}`);
             onValue(serverChanRef, (snap) => {
                 if (!snap.exists()) {
                     const defaultTextRef = push(ref(db, `server_channels/${serverId}`));
                     set(defaultTextRef, { name: 'general', type: 'text' });
-
                     const defaultVoiceRef = push(ref(db, `server_channels/${serverId}`));
                     set(defaultVoiceRef, { name: 'General Voice', type: 'voice' });
                 }
@@ -1029,7 +1212,6 @@
         function loadServerChannels(serverId) {
             const list = document.getElementById('channel-list');
             list.innerHTML = '';
-
             if (channelsRef) off(channelsRef);
 
             channelsRef = ref(db, `server_channels/${serverId}`);
@@ -1056,7 +1238,6 @@
             const btn = document.createElement('button');
             btn.className = 'channel-btn';
             btn.id = `btn-chan-${channelId}`;
-            
             const iconSymbol = type === 'voice' ? '🔊' : '#';
             btn.innerHTML = `<span class="icon">${iconSymbol}</span> ${channelName}`;
             
@@ -1069,7 +1250,6 @@
                     window.switchChannel(channelId, channelName, 'text');
                 }
             };
-
             list.appendChild(btn);
         }
 
@@ -1111,21 +1291,100 @@
             onChildAdded(currentMessagesRef, currentMessagesCallback);
         };
 
+        /* --- @MENTIONS & AUTOCOMPLETE --- */
+        window.handleInputTyping = function(e) {
+            const input = e.target;
+            const val = input.value;
+            const cursorPos = input.selectionStart;
+            const dropdown = document.getElementById('mention-dropdown');
+
+            const textBeforeCursor = val.substring(0, cursorPos);
+            const match = textBeforeCursor.match(/@([a-zA-Z0-9_]*)$/);
+
+            if (match) {
+                const query = match[1].toLowerCase();
+                const matchingUsers = Object.entries(allProfiles).filter(([uid, profile]) => {
+                    const uname = (profile.username || '').toLowerCase();
+                    const handle = (profile.atName || '').toLowerCase();
+                    return uname.includes(query) || handle.includes(query);
+                });
+
+                if (matchingUsers.length > 0) {
+                    dropdown.innerHTML = '';
+                    matchingUsers.forEach(([uid, profile], idx) => {
+                        const item = document.createElement('div');
+                        item.className = `mention-item ${idx === 0 ? 'selected' : ''}`;
+                        const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : `<div style="width:24px;height:24px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;font-size:12px;">👤</div>`;
+                        
+                        item.innerHTML = `${pfpHtml} <span>${profile.username} <small style="color:#949ba4">@${profile.atName}</small></span>`;
+                        item.onmousedown = (ev) => {
+                            ev.preventDefault();
+                            insertMention(profile.atName);
+                        };
+                        dropdown.appendChild(item);
+                    });
+                    dropdown.style.display = 'flex';
+                    return;
+                }
+            }
+            dropdown.style.display = 'none';
+        };
+
+        window.handleInputKeyDown = function(e) {
+            const dropdown = document.getElementById('mention-dropdown');
+            if (dropdown.style.display === 'flex') {
+                const items = dropdown.querySelectorAll('.mention-item');
+                let selectedIdx = Array.from(items).findIndex(i => i.classList.contains('selected'));
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (selectedIdx < items.length - 1) {
+                        items[selectedIdx].classList.remove('selected');
+                        items[selectedIdx + 1].classList.add('selected');
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (selectedIdx > 0) {
+                        items[selectedIdx].classList.remove('selected');
+                        items[selectedIdx - 1].classList.add('selected');
+                    }
+                } else if (e.key === 'Enter' || e.key === 'Tab') {
+                    if (selectedIdx >= 0 && items[selectedIdx]) {
+                        e.preventDefault();
+                        const handleText = items[selectedIdx].querySelector('small').innerText.replace('@', '');
+                        insertMention(handleText);
+                    }
+                } else if (e.key === 'Escape') {
+                    dropdown.style.display = 'none';
+                }
+            }
+        };
+
+        function insertMention(atName) {
+            const input = document.getElementById('message-input');
+            const val = input.value;
+            const cursorPos = input.selectionStart;
+            const textBefore = val.substring(0, cursorPos);
+            const textAfter = val.substring(cursorPos);
+
+            const updatedBefore = textBefore.replace(/@([a-zA-Z0-9_]*)$/, `@${atName} `);
+            input.value = updatedBefore + textAfter;
+            input.focus();
+            input.setSelectionRange(updatedBefore.length, updatedBefore.length);
+            document.getElementById('mention-dropdown').style.display = 'none';
+        }
+
         function parseMessageContent(text) {
             let safeText = text
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;");
 
-            safeText = safeText.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-            safeText = safeText.replace(/`([^`]+)`/g, '<code>$1</code>');
-            safeText = safeText.replace(/^&gt;\s?(.*$)/gm, '<blockquote>$1</blockquote>');
-            safeText = safeText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-            safeText = safeText.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            // Highlight mentions matching @handle format
+            safeText = safeText.replace(/@([a-zA-Z0-9_]+)/g, '<span class="mention-highlight">@$1</span>');
 
             const imgRegex = /(https?:\/\/[^\s]+?\.(?:png|jpg|jpeg|gif|webp|svg)(?:\?[^\s]*)?)/gi;
             let imageHtml = '';
-            
             safeText = safeText.replace(imgRegex, (url) => {
                 imageHtml += `<img src="${url}" class="msg-image" alt="Uploaded image" onclick="window.open('${url}', '_blank')">`;
                 return '';
@@ -1139,11 +1398,12 @@
             const node = document.createElement('div');
             node.className = 'message';
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
             const parsedBody = parseMessageContent(msg.text || '');
 
+            const pfpHtml = msg.pfp ? `<img src="${msg.pfp}" alt="PFP">` : '👤';
+
             node.innerHTML = `
-                <div class="msg-pfp">${msg.pfp || '👤'}</div>
+                <div class="msg-pfp">${pfpHtml}</div>
                 <div class="msg-body">
                     <div class="msg-header">
                         <span class="username">${msg.username || 'User'}</span>
@@ -1161,12 +1421,15 @@
             e.preventDefault();
             const input = document.getElementById('message-input');
             const text = input.value.trim();
+            document.getElementById('mention-dropdown').style.display = 'none';
 
             if (!text || !currentChannelId) return;
 
             push(ref(db, `messages/${currentChannelId}`), {
+                uid: friendCode,
                 username: currentUsername,
-                pfp: '👤',
+                atName: currentAtName,
+                pfp: currentPfpBase64,
                 text: text,
                 timestamp: Date.now()
             });
@@ -1197,15 +1460,13 @@
             });
         };
 
-        /* --- FIXED ROBUST MULTI-USER WEBRTC VOICE & VIDEO SIGNALING --- */
+        /* --- WEBRTC VOICE & VIDEO STREAMING --- */
         let activeRoomUnsub = null;
         let activeSignalsUnsub = null;
 
         window.joinVoiceChannel = async function(channelId, channelName) {
             if (activeVoiceChannelId === channelId) return;
-            if (activeVoiceChannelId) {
-                window.leaveVoiceChannel();
-            }
+            if (activeVoiceChannelId) window.leaveVoiceChannel();
 
             activeVoiceChannelId = channelId;
             document.getElementById('home-dashboard').style.display = 'none';
@@ -1224,9 +1485,7 @@
                 document.getElementById('local-video').srcObject = localStream;
                 document.getElementById('local-video-label').innerText = `${currentUsername} (You)`;
 
-                // 1. Listen for incoming signals directed TO us
-                const signalsRef = ref(db, `voice_signals/${channelId}/${friendCode}`);
-                activeSignalsUnsub = onChildAdded(signalsRef, async (snapshot) => {
+                activeSignalsUnsub = onChildAdded(ref(db, `voice_signals/${channelId}/${friendCode}`), async (snapshot) => {
                     if (!snapshot.exists()) return;
                     const data = snapshot.val();
                     const fromPeer = data.from;
@@ -1236,9 +1495,7 @@
                     let pc = peerConnections[pcKey];
 
                     if (data.type === 'offer') {
-                        if (!pc) {
-                            pc = createPeerConnection(channelId, fromPeer, false);
-                        }
+                        if (!pc) pc = createPeerConnection(channelId, fromPeer, false);
                         if (pc.signalingState !== 'stable') {
                             await pc.setLocalDescription({type: 'rollback'}).catch(()=>{});
                         }
@@ -1259,27 +1516,19 @@
                         if (pc && data.candidate) {
                             try {
                                 await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-                            } catch (e) {
-                                console.error("Error adding ice candidate", e);
-                            }
+                            } catch (e) {}
                         }
                     }
                     remove(snapshot.ref);
                 });
 
-                // 2. Announce presence in room
-                const userPresenceRef = ref(db, `voice_rooms/${channelId}/${friendCode}`);
-                set(userPresenceRef, {
+                set(ref(db, `voice_rooms/${channelId}/${friendCode}`), {
                     username: currentUsername,
                     joinedAt: Date.now()
                 });
 
-                // 3. Listen to room membership updates and cleanup missing boxes
-                const roomRef = ref(db, `voice_rooms/${channelId}`);
-                activeRoomUnsub = onValue(roomRef, (snapshot) => {
+                activeRoomUnsub = onValue(ref(db, `voice_rooms/${channelId}`), (snapshot) => {
                     const peers = snapshot.val() || {};
-                    
-                    // Remove video boxes for users who left
                     document.querySelectorAll('.video-box').forEach(box => {
                         const peerId = box.id.replace('box_', '');
                         if (peerId !== 'local' && !peers[peerId]) {
@@ -1291,7 +1540,6 @@
                         }
                     });
 
-                    // Initiate offers to new peers
                     Object.keys(peers).forEach(peerId => {
                         if (peerId !== friendCode && !peerConnections[`${channelId}_${peerId}`]) {
                             if (friendCode < peerId) {
@@ -1302,7 +1550,6 @@
                 });
 
             } catch (err) {
-                console.error("Media access error:", err);
                 alert("Could not access microphone/camera. Please check browser permissions.");
             }
         };
@@ -1355,7 +1602,7 @@
                         type: 'offer',
                         sdp: offer
                     });
-                }).catch(err => console.error("Error creating offer:", err));
+                }).catch(err => {});
             }
 
             return pc;
@@ -1389,7 +1636,6 @@
                 try {
                     screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                     const screenTrack = screenStream.getVideoTracks()[0];
-                    
                     document.getElementById('local-video').srcObject = screenStream;
                     document.getElementById('local-video-label').innerText = `${currentUsername} (Screen)`;
                     btn.innerText = 'Stop Sharing';
@@ -1399,13 +1645,8 @@
                         const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                         if (sender) sender.replaceTrack(screenTrack);
                     });
-
-                    screenTrack.onended = () => {
-                        window.stopScreenShare();
-                    };
-                } catch (err) {
-                    console.error("Error sharing screen:", err);
-                }
+                    screenTrack.onended = () => window.stopScreenShare();
+                } catch (err) {}
             } else {
                 window.stopScreenShare();
             }
@@ -1452,9 +1693,7 @@
             }
 
             document.querySelectorAll('.video-box').forEach(box => {
-                if (box.id !== 'box_local') {
-                    box.remove();
-                }
+                if (box.id !== 'box_local') box.remove();
             });
 
             activeVoiceChannelId = null;
@@ -1465,36 +1704,25 @@
         window.handleServerIconUpload = function(input) {
             const file = input.files[0];
             if (!file) return;
-
             const reader = new FileReader();
-            reader.onload = function(e) {
-                uploadedServerIconBase64 = e.target.result;
-            };
+            reader.onload = function(e) { uploadedServerIconBase64 = e.target.result; };
             reader.readAsDataURL(file);
         };
 
         window.joinCustomServer = function() {
             const name = document.getElementById('custom-server-input').value.trim();
             const inputUrl = document.getElementById('custom-server-icon-url').value.trim();
-            
             if (!name) return;
 
             let iconSrc = uploadedServerIconBase64 || inputUrl;
-            if (!iconSrc) {
-                iconSrc = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`;
-            }
+            if (!iconSrc) iconSrc = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`;
 
             const serverRef = push(ref(db, 'custom_servers'));
             const serverId = 'custom-' + serverRef.key;
 
-            set(serverRef, { 
-                name, 
-                icon: iconSrc, 
-                creator: friendCode 
-            }).then(() => {
+            set(serverRef, { name, icon: iconSrc, creator: friendCode }).then(() => {
                 const chanRef1 = push(ref(db, `server_channels/${serverId}`));
                 set(chanRef1, { name: 'general', type: 'text' });
-
                 const chanRef2 = push(ref(db, `server_channels/${serverId}`));
                 set(chanRef2, { name: 'General Voice', type: 'voice' });
                 
@@ -1502,7 +1730,6 @@
                 document.getElementById('custom-server-icon-url').value = '';
                 document.getElementById('create-server-modal').style.display='none';
                 document.getElementById('custom-server-input').value = '';
-
                 window.selectServer(serverId, name);
             });
         };
