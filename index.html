@@ -594,6 +594,7 @@
             background-color: #383a40;
             border-radius: 8px;
             padding: 0 12px;
+            gap: 8px;
         }
 
         #message-input {
@@ -604,6 +605,26 @@
             color: #dbdee1;
             font-size: 15px;
             outline: none;
+        }
+
+        .attach-btn {
+            background: #4e5058;
+            color: #dbdee1;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .attach-btn:hover {
+            background: #6d6f78;
+            color: #fff;
         }
 
         /* --- VOICE CHANNEL VIEW AREA --- */
@@ -916,6 +937,8 @@
             <div id="mention-dropdown"></div>
 
             <div class="input-wrapper-row">
+                <input type="file" id="image-file-input" accept="image/*" style="display:none;" onchange="window.handleImageUpload(this)">
+                <button type="button" class="attach-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">+</button>
                 <input type="text" id="message-input" placeholder="Message #general" autocomplete="off" oninput="window.handleInputTyping(event)" onkeydown="window.handleInputKeyDown(event)">
             </div>
         </form>
@@ -941,7 +964,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -1284,12 +1307,56 @@
             currentMessagesRef = ref(db, `messages/${currentChannelId}`);
             currentMessagesCallback = (snapshot) => {
                 if (snapshot.exists()) {
-                    renderMessageOnUI(snapshot.val());
+                    renderMessageOnUI(snapshot.val(), snapshot.key);
                 }
             };
 
             onChildAdded(currentMessagesRef, currentMessagesCallback);
         };
+
+        /* --- IMAGE CHUNKING FOR FIREBASE REALTIME DB (1MB CHUNKS) --- */
+        window.handleImageUpload = async function(input) {
+            const file = input.files[0];
+            if (!file || !currentChannelId) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64Data = e.target.result;
+                const CHUNK_SIZE = 1000000; // ~1MB chunks
+                const totalChunks = Math.ceil(base64Data.length / CHUNK_SIZE);
+                const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+
+                for (let i = 0; i < totalChunks; i++) {
+                    const chunk = base64Data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                    await set(ref(db, `image_chunks/${imageId}/${i}`), chunk);
+                }
+
+                push(ref(db, `messages/${currentChannelId}`), {
+                    uid: friendCode,
+                    username: currentUsername,
+                    atName: currentAtName,
+                    pfp: currentPfpBase64,
+                    imageId: imageId,
+                    totalChunks: totalChunks,
+                    text: '',
+                    timestamp: Date.now()
+                });
+
+                input.value = '';
+            };
+            reader.readAsDataURL(file);
+        };
+
+        async function reassembleImage(imageId, totalChunks, imgElement) {
+            let base64Data = '';
+            for (let i = 0; i < totalChunks; i++) {
+                const snap = await get(ref(db, `image_chunks/${imageId}/${i}`));
+                if (snap.exists()) {
+                    base64Data += snap.val();
+                }
+            }
+            imgElement.src = base64Data;
+        }
 
         /* --- @MENTIONS & AUTOCOMPLETE --- */
         window.handleInputTyping = function(e) {
@@ -1393,7 +1460,7 @@
             return `<div class="text-content">${safeText}</div>${imageHtml}`;
         }
 
-        function renderMessageOnUI(msg) {
+        function renderMessageOnUI(msg, msgId) {
             const container = document.getElementById('message-container');
             const node = document.createElement('div');
             node.className = 'message';
@@ -1410,11 +1477,17 @@
                         <span class="timestamp">${timeStr}</span>
                     </div>
                     <div class="text">${parsedBody}</div>
+                    ${msg.imageId ? `<img id="chunk_img_${msgId}" class="msg-image" alt="Uploaded Image" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><text x='10' y='50' fill='%23888'>Loading...</text></svg>">` : ''}
                 </div>
             `;
 
             container.appendChild(node);
             container.scrollTop = container.scrollHeight;
+
+            if (msg.imageId && msg.totalChunks) {
+                const imgEl = document.getElementById(`chunk_img_${msgId}`);
+                reassembleImage(msg.imageId, msg.totalChunks, imgEl);
+            }
         }
 
         window.handleMessageSubmit = function(e) {
@@ -1460,7 +1533,7 @@
             });
         };
 
-        /* --- WEBRTC VOICE & VIDEO STREAMING --- */
+        /* --- WEBRTC P2P VOICE & VIDEO STREAMING --- */
         let activeRoomUnsub = null;
         let activeSignalsUnsub = null;
 
@@ -1503,7 +1576,7 @@
                         const answer = await pc.createAnswer();
                         await pc.setLocalDescription(answer);
 
-                        set(ref(db, `voice_signals/${channelId}/${fromPeer}`), {
+                        set(ref(db, `voice_signals/${channelId}/${fromPeer}/${friendCode}`), {
                             from: friendCode,
                             type: 'answer',
                             sdp: answer
@@ -1567,7 +1640,7 @@
 
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
-                    set(ref(db, `voice_signals/${channelId}/${peerId}`), {
+                    set(ref(db, `voice_signals/${channelId}/${peerId}/${friendCode}_cand_${Date.now()}`), {
                         from: friendCode,
                         type: 'candidate',
                         candidate: event.candidate.toJSON()
@@ -1584,7 +1657,7 @@
                     videoBox.id = `box_${peerId}`;
                     videoBox.innerHTML = `
                         <video autoplay playsinline></video>
-                        <div class="video-label" id="label_${peerId}">Peer</div>
+                        <div class="video-label" id="label_${peerId}">${allProfiles[peerId]?.username || 'Peer'}</div>
                     `;
                     grid.appendChild(videoBox);
                 }
@@ -1597,7 +1670,7 @@
             if (isInitiator) {
                 pc.createOffer().then(async (offer) => {
                     await pc.setLocalDescription(offer);
-                    set(ref(db, `voice_signals/${channelId}/${peerId}`), {
+                    set(ref(db, `voice_signals/${channelId}/${peerId}/${friendCode}`), {
                         from: friendCode,
                         type: 'offer',
                         sdp: offer
