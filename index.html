@@ -342,7 +342,6 @@
             position: relative;
         }
 
-        /* Resize Handle */
         .sidebar-resize-handle {
             position: absolute;
             top: 0;
@@ -791,7 +790,6 @@
             font-weight: 600;
         }
 
-        /* Home Dashboard */
         #home-dashboard {
             flex: 1;
             display: flex;
@@ -1001,7 +999,6 @@
         <div id="message-container"></div>
 
         <form id="input-form" onsubmit="window.handleMessageSubmit(event)">
-            <!-- Autocomplete Mention Box -->
             <div id="mention-dropdown"></div>
 
             <div class="input-wrapper-row">
@@ -1047,7 +1044,7 @@
             measurementId: "G-EW5LST4X6R"
         };
 
-        const VAPID_KEY = "BEl8_M138X_SAMPLE_KEY_REPLACE_WITH_YOUR_FIREBASE_VAPID_KEY";
+        const VAPID_KEY = "BImc5aS6mtjhCukMMZAwJiAUQH-9BmWc0uRLnGYISRvn-n32EyylRjqXiY1-hlyJWXX9xHbtOq2U5VphPcu-jzs";
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
@@ -1065,7 +1062,7 @@
         let uploadedServerIconBase64 = null;
         let tempAvatarBase64 = '';
         
-        let allProfiles = {}; // uid -> { username, atName, pfp, notificationsEnabled, fcmToken }
+        let allProfiles = {};
 
         let currentMessagesRef = null;
         let currentMessagesCallback = null;
@@ -1196,7 +1193,6 @@
             friendCode = uid;
             document.getElementById('auth-overlay').style.display = 'none';
 
-            // Load global user profiles dictionary for @mentions & pfps
             onValue(ref(db, 'profiles'), (snapshot) => {
                 if (snapshot.exists()) {
                     allProfiles = snapshot.val();
@@ -1442,7 +1438,7 @@
             onChildAdded(currentMessagesRef, currentMessagesCallback);
         };
 
-        /* --- IMAGE CHUNKING FOR FIREBASE REALTIME DB (1MB CHUNKS) --- */
+        /* --- IMAGE CHUNKING FOR FIREBASE REALTIME DB --- */
         window.handleImageUpload = async function(input) {
             const file = input.files[0];
             if (!file || !currentChannelId) return;
@@ -1450,7 +1446,7 @@
             const reader = new FileReader();
             reader.onload = async function(e) {
                 const base64Data = e.target.result;
-                const CHUNK_SIZE = 1000000; // ~1MB chunks
+                const CHUNK_SIZE = 1000000;
                 const totalChunks = Math.ceil(base64Data.length / CHUNK_SIZE);
                 const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
 
@@ -1575,7 +1571,6 @@
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;");
 
-            // Highlight mentions matching @handle format
             safeText = safeText.replace(/@([a-zA-Z0-9_]+)/g, '<span class="mention-highlight">@$1</span>');
 
             const imgRegex = /(https?:\/\/[^\s]+?\.(?:png|jpg|jpeg|gif|webp|svg)(?:\?[^\s]*)?)/gi;
@@ -1617,7 +1612,6 @@
                 reassembleImage(msg.imageId, msg.totalChunks, imgEl);
             }
 
-            // Trigger local browser push notification if enabled and sender is another user
             if (notificationsEnabled && msg.uid !== friendCode && Notification.permission === 'granted') {
                 const currentChannel = document.getElementById('current-channel-name').innerText;
                 new Notification(`${msg.username} (#${currentChannel})`, {
