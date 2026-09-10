@@ -172,6 +172,66 @@
             object-fit: cover;
         }
 
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-top: 1px solid #3f4147;
+            border-bottom: 1px solid #3f4147;
+        }
+
+        .toggle-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f2f3f5;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #80848e;
+            transition: .2s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #23a55a;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
         /* --- AUTOCOMPLETE MENTION DROPDOWN --- */
         #mention-dropdown {
             position: absolute;
@@ -838,6 +898,14 @@
                 <input type="text" id="settings-atname-input" placeholder="handle">
             </div>
 
+            <div class="toggle-row">
+                <span class="toggle-label">Enable Push Notifications</span>
+                <label class="switch">
+                    <input type="checkbox" id="settings-notifications-toggle" onchange="window.handleNotificationToggleChange(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
             <div class="modal-actions">
                 <button class="btn-cancel" type="button" onclick="document.getElementById('settings-modal').style.display='none'">Cancel</button>
                 <button class="auth-btn-primary" type="button" onclick="window.saveUserSettings()">Save Changes</button>
@@ -966,6 +1034,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
@@ -978,9 +1047,12 @@
             measurementId: "G-EW5LST4X6R"
         };
 
+        const VAPID_KEY = "BEl8_M138X_SAMPLE_KEY_REPLACE_WITH_YOUR_FIREBASE_VAPID_KEY";
+
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const auth = getAuth(app);
+        const messaging = getMessaging(app);
 
         let activeServerId = null;
         let currentChannelId = null;
@@ -988,11 +1060,12 @@
         let currentUsername = 'User';
         let currentAtName = 'user';
         let currentPfpBase64 = '';
+        let notificationsEnabled = false;
         let authMode = 'login';
         let uploadedServerIconBase64 = null;
         let tempAvatarBase64 = '';
         
-        let allProfiles = {}; // uid -> { username, atName, pfp }
+        let allProfiles = {}; // uid -> { username, atName, pfp, notificationsEnabled, fcmToken }
 
         let currentMessagesRef = null;
         let currentMessagesCallback = null;
@@ -1030,6 +1103,55 @@
                 resizer.classList.remove('resizing');
             }
         });
+
+        // Notifications Integration
+        async function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                alert("This browser does not support desktop notifications.");
+                return false;
+            }
+
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    if (navigator.serviceWorker) {
+                        await navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(() => {});
+                    }
+                    const token = await getToken(messaging, { vapidKey: VAPID_KEY }).catch(() => null);
+                    if (token) {
+                        await set(ref(db, `profiles/${friendCode}/fcmToken`), token);
+                    }
+                    return true;
+                }
+            } catch (err) {
+                console.error("Error setting up push notifications:", err);
+            }
+            return false;
+        }
+
+        onMessage(messaging, (payload) => {
+            if (notificationsEnabled && Notification.permission === 'granted') {
+                new Notification(payload.notification?.title || 'New Message', {
+                    body: payload.notification?.body || '',
+                    icon: payload.notification?.icon || 'https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChat'
+                });
+            }
+        });
+
+        window.handleNotificationToggleChange = async function(toggleEl) {
+            if (toggleEl.checked) {
+                const granted = await requestNotificationPermission();
+                if (!granted) {
+                    toggleEl.checked = false;
+                    notificationsEnabled = false;
+                    alert("Notification permission was denied or blocked.");
+                } else {
+                    notificationsEnabled = true;
+                }
+            } else {
+                notificationsEnabled = false;
+            }
+        };
 
         window.switchAuthMode = function() {
             const errBox = document.getElementById('auth-error-msg');
@@ -1082,14 +1204,17 @@
                         currentUsername = allProfiles[friendCode].username || defaultName;
                         currentAtName = allProfiles[friendCode].atName || defaultName.toLowerCase();
                         currentPfpBase64 = allProfiles[friendCode].pfp || '';
+                        notificationsEnabled = !!allProfiles[friendCode].notificationsEnabled;
                     } else {
                         currentUsername = defaultName;
                         currentAtName = defaultName.toLowerCase();
                         currentPfpBase64 = '';
+                        notificationsEnabled = false;
                         set(ref(db, `profiles/${friendCode}`), {
                             username: currentUsername,
                             atName: currentAtName,
-                            pfp: currentPfpBase64
+                            pfp: currentPfpBase64,
+                            notificationsEnabled: false
                         });
                     }
                     updateProfileUI();
@@ -1134,6 +1259,7 @@
         window.openSettingsModal = function() {
             document.getElementById('settings-username-input').value = currentUsername;
             document.getElementById('settings-atname-input').value = currentAtName;
+            document.getElementById('settings-notifications-toggle').checked = notificationsEnabled;
             tempAvatarBase64 = currentPfpBase64;
             
             const preview = document.getElementById('settings-avatar-preview');
@@ -1168,11 +1294,13 @@
             currentUsername = newName;
             currentAtName = newAt;
             currentPfpBase64 = tempAvatarBase64;
+            notificationsEnabled = document.getElementById('settings-notifications-toggle').checked;
 
             set(ref(db, `profiles/${friendCode}`), {
                 username: currentUsername,
                 atName: currentAtName,
-                pfp: currentPfpBase64
+                pfp: currentPfpBase64,
+                notificationsEnabled: notificationsEnabled
             }).then(() => {
                 document.getElementById('settings-modal').style.display = 'none';
                 updateProfileUI();
@@ -1487,6 +1615,15 @@
             if (msg.imageId && msg.totalChunks) {
                 const imgEl = document.getElementById(`chunk_img_${msgId}`);
                 reassembleImage(msg.imageId, msg.totalChunks, imgEl);
+            }
+
+            // Trigger local browser push notification if enabled and sender is another user
+            if (notificationsEnabled && msg.uid !== friendCode && Notification.permission === 'granted') {
+                const currentChannel = document.getElementById('current-channel-name').innerText;
+                new Notification(`${msg.username} (#${currentChannel})`, {
+                    body: msg.text || 'Sent an image attachment',
+                    icon: msg.pfp || 'https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChat'
+                });
             }
         }
 
