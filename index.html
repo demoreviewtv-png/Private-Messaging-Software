@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PrivacyChat</title>
     
+    <!-- Tab Picture (Favicon) -->
     <link rel="icon" type="image/svg+xml" href="https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChat">
 
     <style>
@@ -14,15 +15,63 @@
             padding: 0;
             font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        body {
-            display: flex;
-            height: 100vh;
+        html, body {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
             background-color: #313338;
             color: #dbdee1;
             overflow: hidden;
             position: relative;
+        }
+
+        /* --- MOBILE & TABLET TOP NAVIGATION BAR --- */
+        #mobile-nav-bar {
+            display: none;
+            height: 48px;
+            background-color: #1e1f22;
+            border-bottom: 1px solid #1f2023;
+            align-items: center;
+            padding: 0 12px;
+            gap: 12px;
+            z-index: 105;
+            flex-shrink: 0;
+            width: 100%;
+        }
+
+        .menu-toggle-btn {
+            background: none;
+            border: none;
+            color: #f2f3f5;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-title {
+            font-weight: 600;
+            color: #f2f3f5;
+            font-size: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #mobile-drawer-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100dvh;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 99;
         }
 
         /* --- AUTHENTICATION OVERLAY --- */
@@ -31,17 +80,18 @@
             top: 0;
             left: 0;
             width: 100vw;
-            height: 100vh;
+            height: 100dvh;
             background-color: #1e1f22;
             z-index: 2000;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 16px;
         }
 
         .auth-card {
             background-color: #313338;
-            padding: 32px;
+            padding: 24px;
             border-radius: 8px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.5);
             width: 100%;
@@ -54,7 +104,7 @@
         .auth-card h2 {
             color: #f2f3f5;
             text-align: center;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 600;
         }
 
@@ -73,12 +123,12 @@
         }
 
         .auth-field input {
-            padding: 10px;
+            padding: 12px;
             background-color: #1e1f22;
             border: none;
             border-radius: 4px;
             color: #f2f3f5;
-            font-size: 14px;
+            font-size: 15px;
             outline: none;
         }
 
@@ -90,7 +140,7 @@
             border-radius: 4px;
             font-weight: 600;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 15px;
             transition: background 0.15s ease;
         }
 
@@ -123,19 +173,21 @@
             top: 0;
             left: 0;
             width: 100vw;
-            height: 100vh;
+            height: 100dvh;
             background-color: rgba(0,0,0,0.7);
             z-index: 2500;
             display: none;
             align-items: center;
             justify-content: center;
+            padding: 16px;
         }
 
         .settings-box {
             background-color: #313338;
             padding: 24px;
             border-radius: 8px;
-            width: 420px;
+            width: 100%;
+            max-width: 420px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -174,16 +226,17 @@
         /* --- AUTOCOMPLETE MENTION DROPDOWN --- */
         #mention-dropdown {
             position: absolute;
-            bottom: 80px;
-            left: 16px;
+            bottom: calc(100% + 4px);
+            left: 12px;
+            right: 12px;
             background-color: #2b2d31;
             border-radius: 8px;
-            width: 260px;
+            max-height: 180px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             display: none;
             flex-direction: column;
             z-index: 500;
-            overflow: hidden;
+            overflow-y: auto;
             border: 1px solid #1f2023;
         }
 
@@ -217,7 +270,16 @@
             font-weight: 500;
         }
 
-        /* --- DISCORD LAYOUT STRUCTURE WITH RESIZABLE SIDEBAR --- */
+        /* --- DISCORD LAYOUT STRUCTURE WITH STABLE FLEX HEIGHTS --- */
+        #app-layout {
+            display: flex;
+            width: 100vw;
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            position: relative;
+        }
+
         #server-rail {
             width: 72px;
             background-color: #1e1f22;
@@ -229,6 +291,7 @@
             flex-shrink: 0;
             z-index: 101;
             overflow-y: auto;
+            height: 100%;
         }
 
         .rail-item {
@@ -246,6 +309,7 @@
             transition: border-radius 0.2s ease, background-color 0.2s ease;
             position: relative;
             overflow: hidden;
+            flex-shrink: 0;
         }
 
         .rail-item img {
@@ -266,6 +330,7 @@
             background-color: #35363c;
             border-radius: 1px;
             margin: 4px 0;
+            flex-shrink: 0;
         }
 
         #sidebar {
@@ -275,10 +340,10 @@
             background-color: #2b2d31;
             display: flex;
             flex-direction: column;
-            border-top-left-radius: 8px;
             flex-shrink: 0;
             z-index: 100;
             position: relative;
+            height: 100%;
         }
 
         .sidebar-resize-handle {
@@ -306,6 +371,7 @@
             font-weight: 600;
             color: #f2f3f5;
             box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            flex-shrink: 0;
         }
 
         .sidebar-scrollable {
@@ -334,7 +400,8 @@
             border: none;
             color: #949ba4;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 18px;
+            padding: 2px 6px;
         }
 
         .category-add-btn:hover {
@@ -344,16 +411,16 @@
         .channel-btn {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             width: 100%;
-            padding: 6px 8px;
+            padding: 8px 10px;
             margin: 1px 0;
             background: none;
             border: none;
             color: #949ba4;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 500;
             text-align: left;
         }
@@ -385,10 +452,10 @@
             flex: 1;
             background: #1e1f22;
             border: none;
-            padding: 4px 8px;
+            padding: 6px 8px;
             color: #fff;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 13px;
             outline: none;
         }
 
@@ -396,7 +463,7 @@
             background: #5865f2;
             border: none;
             color: white;
-            padding: 0 8px;
+            padding: 0 10px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
@@ -410,6 +477,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 8px;
+            flex-shrink: 0;
         }
 
         .dock-user-info {
@@ -466,13 +534,25 @@
             color: #949ba4;
         }
 
+        #main-view-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #313338;
+            min-width: 0;
+            height: 100%;
+            position: relative;
+        }
+
         #chat-area {
             flex: 1;
             display: flex;
             flex-direction: column;
             background-color: #313338;
             min-width: 0;
+            height: 100%;
             position: relative;
+            overflow: hidden;
         }
 
         #chat-header {
@@ -484,6 +564,7 @@
             align-items: center;
             gap: 8px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            flex-shrink: 0;
         }
 
         .header-hashtag {
@@ -500,16 +581,17 @@
 
         #message-container {
             flex: 1;
-            padding: 16px;
+            padding: 12px 16px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
+            min-height: 0;
         }
 
         .message {
             display: flex;
-            gap: 16px;
+            gap: 12px;
             padding: 2px 0;
             user-select: text;
         }
@@ -521,14 +603,14 @@
         }
 
         .msg-pfp {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background-color: #5865f2;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 18px;
             flex-shrink: 0;
             margin-top: 2px;
             overflow: hidden;
@@ -544,6 +626,7 @@
             display: flex;
             flex-direction: column;
             max-width: 100%;
+            min-width: 0;
         }
 
         .msg-header {
@@ -554,36 +637,41 @@
 
         .message .username {
             font-weight: 500;
-            font-size: 15px;
+            font-size: 14px;
             color: #f2f3f5;
         }
 
         .message .timestamp {
-            font-size: 12px;
+            font-size: 11px;
             color: #949ba4;
         }
 
         .message .text {
             color: #dbdee1;
-            font-size: 15px;
-            line-height: 1.375rem;
+            font-size: 14px;
+            line-height: 1.35rem;
             word-break: break-word;
             margin-top: 2px;
         }
 
         .msg-image {
-            max-width: 400px;
-            max-height: 300px;
+            max-width: 100%;
+            max-height: 280px;
             border-radius: 8px;
             margin-top: 6px;
             display: block;
             cursor: pointer;
+            object-fit: contain;
         }
 
+        /* --- STABLE BOTTOM INPUT FIELD FOR IPAD AND PHONE --- */
         #input-form {
-            padding: 0 16px 24px 16px;
+            padding: 8px 12px calc(8px + env(safe-area-inset-bottom)) 12px;
             background-color: #313338;
             position: relative;
+            flex-shrink: 0;
+            width: 100%;
+            z-index: 10;
         }
 
         .input-wrapper-row {
@@ -591,18 +679,20 @@
             align-items: center;
             background-color: #383a40;
             border-radius: 8px;
-            padding: 0 12px;
+            padding: 4px 10px;
             gap: 8px;
+            width: 100%;
         }
 
         #message-input {
             flex: 1;
-            padding: 11px 0;
+            padding: 10px 0;
             border: none;
             background: transparent;
             color: #dbdee1;
             font-size: 15px;
             outline: none;
+            min-width: 0;
         }
 
         .attach-btn {
@@ -610,14 +700,15 @@
             color: #dbdee1;
             border: none;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 20px;
+            flex-shrink: 0;
         }
 
         .attach-btn:hover {
@@ -632,8 +723,10 @@
             flex-direction: column;
             background-color: #313338;
             min-width: 0;
-            padding: 16px;
-            gap: 16px;
+            padding: 12px;
+            gap: 12px;
+            height: 100%;
+            overflow: hidden;
         }
 
         .voice-top-bar {
@@ -641,24 +734,26 @@
             justify-content: space-between;
             align-items: center;
             background-color: #2b2d31;
-            padding: 12px 16px;
+            padding: 10px 14px;
             border-radius: 8px;
+            flex-shrink: 0;
         }
 
         .voice-channel-title {
             font-weight: 600;
             color: #f2f3f5;
-            font-size: 16px;
+            font-size: 15px;
         }
 
         .video-grid {
             flex: 1;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
             align-content: center;
             justify-content: center;
             min-height: 0;
+            overflow-y: auto;
         }
 
         .video-box {
@@ -693,21 +788,23 @@
         .voice-controls {
             display: flex;
             justify-content: center;
-            gap: 12px;
-            padding: 12px;
+            gap: 8px;
+            padding: 8px;
             background-color: #2b2d31;
             border-radius: 8px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
         }
 
         .control-btn {
             background-color: #4e5058;
             color: white;
             border: none;
-            padding: 10px 16px;
+            padding: 10px 14px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             transition: background 0.15s;
         }
 
@@ -723,10 +820,11 @@
             background-color: #da373c;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 10px 16px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 13px;
         }
 
         #home-dashboard {
@@ -744,7 +842,7 @@
 
         #home-dashboard h2 {
             color: #f2f3f5;
-            font-size: 24px;
+            font-size: 22px;
         }
 
         #create-server-modal {
@@ -752,19 +850,21 @@
             top: 0;
             left: 0;
             width: 100vw;
-            height: 100vh;
+            height: 100dvh;
             background-color: rgba(0,0,0,0.7);
             z-index: 1000;
             display: none;
             align-items: center;
             justify-content: center;
+            padding: 16px;
         }
 
         .modal-box {
             background-color: #313338;
             padding: 24px;
             border-radius: 8px;
-            width: 400px;
+            width: 100%;
+            max-width: 400px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -786,10 +886,61 @@
             color: #fff;
             cursor: pointer;
         }
+
+        /* --- RESPONSIVE BREAKPOINTS (IPAD & PHONE STABILITY) --- */
+        @media (max-width: 1024px) {
+            #mobile-nav-bar {
+                display: flex;
+            }
+
+            #chat-header {
+                display: none;
+            }
+
+            #sidebar-resizer {
+                display: none;
+            }
+
+            #server-rail {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: -320px;
+                transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 110;
+                height: 100dvh;
+            }
+
+            #sidebar {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: -320px;
+                width: 240px !important;
+                transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 109;
+                margin-left: 72px;
+                height: 100dvh;
+            }
+
+            #app-layout.drawer-open #server-rail,
+            #app-layout.drawer-open #sidebar {
+                transform: translateX(320px);
+            }
+
+            #app-layout.drawer-open #mobile-drawer-overlay {
+                display: block;
+            }
+
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
 
+    <!-- Auth Overlay Form -->
     <div id="auth-overlay">
         <form class="auth-card" id="auth-form" onsubmit="window.handleAuthAction(event)">
             <h2 id="auth-title">Welcome Back!</h2>
@@ -810,6 +961,7 @@
         </form>
     </div>
 
+    <!-- User Profile Settings Modal -->
     <div id="settings-modal">
         <div class="settings-box">
             <h3>Edit User Profile</h3>
@@ -840,6 +992,7 @@
         </div>
     </div>
 
+    <!-- Create Server Modal -->
     <div id="create-server-modal">
         <div class="modal-box">
             <h3>Customize Your Server</h3>
@@ -860,95 +1013,112 @@
         </div>
     </div>
 
-    <div id="server-rail">
-        <div class="rail-item" id="rail-home" title="Direct Messages / Home" onclick="window.selectHome()">
-            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChatHome" alt="Home">
-        </div>
-        <div class="rail-separator"></div>
-        <div class="rail-item" id="rail-server-1" title="Server 1" onclick="window.selectServer('server-1', 'Server 1')">
-            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Server1" alt="Server 1">
-        </div>
-        <div class="rail-item" id="rail-server-2" title="Server 2" onclick="window.selectServer('server-2', 'Server 2')">
-            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Server2" alt="Server 2">
-        </div>
-        <div class="rail-separator"></div>
-        <div id="custom-servers-rail" style="display:flex; flex-direction:column; gap:8px;"></div>
-        <div class="rail-item" style="color: #23a55a;" title="Add a Server" onclick="document.getElementById('create-server-modal').style.display='flex'">+</div>
-    </div>
+    <!-- App Container -->
+    <div id="app-layout">
+        <!-- Mobile Overlay Backdrop -->
+        <div id="mobile-drawer-overlay" onclick="window.toggleMobileDrawer(false)"></div>
 
-    <div id="sidebar">
-        <div class="sidebar-resize-handle" id="sidebar-resizer"></div>
-        <div class="server-header" id="current-server-title">Home</div>
-        
-        <div class="sidebar-scrollable">
-            <div class="category-header">
-                <span>Channels</span>
-                <button class="category-add-btn" onclick="window.toggleInlineAddChannel()">+</button>
+        <!-- 1. Left Server Rail -->
+        <div id="server-rail">
+            <div class="rail-item" id="rail-home" title="Direct Messages / Home" onclick="window.selectHome()">
+                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChatHome" alt="Home">
+            </div>
+            <div class="rail-separator"></div>
+            <div class="rail-item" id="rail-server-1" title="Server 1" onclick="window.selectServer('server-1', 'Server 1')">
+                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Server1" alt="Server 1">
+            </div>
+            <div class="rail-item" id="rail-server-2" title="Server 2" onclick="window.selectServer('server-2', 'Server 2')">
+                <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Server2" alt="Server 2">
+            </div>
+            <div class="rail-separator"></div>
+            <div id="custom-servers-rail" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <div class="rail-item" style="color: #23a55a;" title="Add a Server" onclick="document.getElementById('create-server-modal').style.display='flex'">+</div>
+        </div>
+
+        <!-- 2. Channels Sidebar with Resizer -->
+        <div id="sidebar">
+            <div class="sidebar-resize-handle" id="sidebar-resizer"></div>
+            <div class="server-header" id="current-server-title">Home</div>
+            
+            <div class="sidebar-scrollable">
+                <div class="category-header">
+                    <span>Channels</span>
+                    <button class="category-add-btn" onclick="window.toggleInlineAddChannel()">+</button>
+                </div>
+
+                <div class="inline-add-channel" id="inline-add-channel-box" style="display: none;">
+                    <input type="text" id="new-channel-input" placeholder="channel-name">
+                    <select id="new-channel-type">
+                        <option value="text">Text</option>
+                        <option value="voice">Voice</option>
+                    </select>
+                    <button onclick="window.submitNewChannel()">+</button>
+                </div>
+
+                <div id="channel-list"></div>
             </div>
 
-            <div class="inline-add-channel" id="inline-add-channel-box" style="display: none;">
-                <input type="text" id="new-channel-input" placeholder="channel-name">
-                <select id="new-channel-type">
-                    <option value="text">Text</option>
-                    <option value="voice">Voice</option>
-                </select>
-                <button onclick="window.submitNewChannel()">+</button>
+            <div class="user-profile-dock">
+                <div class="dock-user-info" onclick="window.openSettingsModal()" title="User Settings">
+                    <div class="dock-avatar" id="dock-avatar-display">👤</div>
+                    <div class="dock-text">
+                        <div class="dock-username" id="dock-username-display">User</div>
+                        <div class="dock-subtext" id="dock-atname-display">@user</div>
+                    </div>
+                </div>
+                <button onclick="window.logOutUser()" style="background:none; border:none; color:#da373c; cursor:pointer; font-size:12px; font-weight:bold; padding:4px;">Log Out</button>
             </div>
-
-            <div id="channel-list"></div>
         </div>
 
-        <div class="user-profile-dock">
-            <div class="dock-user-info" onclick="window.openSettingsModal()" title="User Settings">
-                <div class="dock-avatar" id="dock-avatar-display">👤</div>
-                <div class="dock-text">
-                    <div class="dock-username" id="dock-username-display">User</div>
-                    <div class="dock-subtext" id="dock-atname-display">@user</div>
+        <!-- 3. Main Content View Area -->
+        <div id="main-view-container">
+            <!-- Top Navigation Bar for Mobile and iPad -->
+            <div id="mobile-nav-bar">
+                <button class="menu-toggle-btn" onclick="window.toggleMobileDrawer()" title="Toggle Servers">☰</button>
+                <div class="mobile-title" id="mobile-nav-title">PrivacyChat</div>
+            </div>
+
+            <div id="home-dashboard">
+                <h2>Welcome to PrivacyChat</h2>
+                <p>Tap the ☰ menu or select a server to start chatting or joining voice channels.</p>
+            </div>
+
+            <div id="chat-area" style="display: none;">
+                <div id="chat-header">
+                    <span class="header-hashtag">#</span>
+                    <div class="header-title" id="current-channel-name">general</div>
+                </div>
+
+                <div id="message-container"></div>
+
+                <form id="input-form" onsubmit="window.handleMessageSubmit(event)">
+                    <div id="mention-dropdown"></div>
+
+                    <div class="input-wrapper-row">
+                        <input type="file" id="image-file-input" accept="image/*" style="display:none;" onchange="window.handleImageUpload(this)">
+                        <button type="button" class="attach-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">+</button>
+                        <input type="text" id="message-input" placeholder="Message #general" autocomplete="off" oninput="window.handleInputTyping(event)" onkeydown="window.handleInputKeyDown(event)">
+                    </div>
+                </form>
+            </div>
+
+            <div id="voice-area">
+                <div class="voice-top-bar">
+                    <div class="voice-channel-title" id="voice-channel-title-display">🔊 Voice Channel</div>
+                    <button class="call-end-btn" onclick="window.leaveVoiceChannel()">Disconnect</button>
+                </div>
+                <div class="video-grid" id="video-grid">
+                    <div class="video-box" id="box_local">
+                        <video id="local-video" autoplay playsinline muted></video>
+                        <div class="video-label" id="local-video-label">You</div>
+                    </div>
+                </div>
+                <div class="voice-controls">
+                    <button class="control-btn" id="mic-toggle-btn" onclick="window.toggleMicrophone()">Mute Mic</button>
+                    <button class="control-btn" id="cam-toggle-btn" onclick="window.toggleCamera()">Start Camera</button>
+                    <button class="control-btn" id="screen-share-btn" onclick="window.toggleScreenShare()">Share Screen</button>
                 </div>
             </div>
-            <button onclick="window.logOutUser()" style="background:none; border:none; color:#da373c; cursor:pointer; font-size:12px; font-weight:bold; padding:4px;">Log Out</button>
-        </div>
-    </div>
-
-    <div id="home-dashboard">
-        <h2>Welcome to PrivacyChat</h2>
-        <p>Select a server from the left rail to start chatting or hanging out in voice channels.</p>
-    </div>
-
-    <div id="chat-area" style="display: none;">
-        <div id="chat-header">
-            <span class="header-hashtag">#</span>
-            <div class="header-title" id="current-channel-name">general</div>
-        </div>
-
-        <div id="message-container"></div>
-
-        <form id="input-form" onsubmit="window.handleMessageSubmit(event)">
-            <div id="mention-dropdown"></div>
-
-            <div class="input-wrapper-row">
-                <input type="file" id="image-file-input" accept="image/*" style="display:none;" onchange="window.handleImageUpload(this)">
-                <button type="button" class="attach-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">+</button>
-                <input type="text" id="message-input" placeholder="Message #general" autocomplete="off" oninput="window.handleInputTyping(event)" onkeydown="window.handleInputKeyDown(event)">
-            </div>
-        </form>
-    </div>
-
-    <div id="voice-area">
-        <div class="voice-top-bar">
-            <div class="voice-channel-title" id="voice-channel-title-display">🔊 Voice Channel</div>
-            <button class="call-end-btn" onclick="window.leaveVoiceChannel()">Disconnect</button>
-        </div>
-        <div class="video-grid" id="video-grid">
-            <div class="video-box" id="box_local">
-                <video id="local-video" autoplay playsinline muted></video>
-                <div class="video-label" id="local-video-label">You</div>
-            </div>
-        </div>
-        <div class="voice-controls">
-            <button class="control-btn" id="mic-toggle-btn" onclick="window.toggleMicrophone()">Mute Mic</button>
-            <button class="control-btn" id="cam-toggle-btn" onclick="window.toggleCamera()">Start Camera</button>
-            <button class="control-btn" id="screen-share-btn" onclick="window.toggleScreenShare()">Share Screen</button>
         </div>
     </div>
 
@@ -994,6 +1164,16 @@
         let isVideoEnabled = false;
         const peerConnections = {};
         const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        // Mobile Drawer Toggle
+        window.toggleMobileDrawer = function(forceState) {
+            const layout = document.getElementById('app-layout');
+            if (typeof forceState === 'boolean') {
+                layout.classList.toggle('drawer-open', forceState);
+            } else {
+                layout.classList.toggle('drawer-open');
+            }
+        };
 
         // Sidebar Resizer Logic
         const resizer = document.getElementById('sidebar-resizer');
@@ -1198,6 +1378,7 @@
             activeServerId = null;
             currentChannelId = null;
             document.getElementById('current-server-title').innerText = 'Home';
+            document.getElementById('mobile-nav-title').innerText = 'Home';
 
             document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
             document.getElementById('rail-home').classList.add('active');
@@ -1206,12 +1387,15 @@
             document.getElementById('home-dashboard').style.display = 'flex';
             document.getElementById('chat-area').style.display = 'none';
             document.getElementById('voice-area').style.display = 'none';
+
+            window.toggleMobileDrawer(false);
         };
 
         window.selectServer = function(serverId, serverName) {
             if (activeVoiceChannelId) window.leaveVoiceChannel();
             activeServerId = serverId;
             document.getElementById('current-server-title').innerText = serverName;
+            document.getElementById('mobile-nav-title').innerText = serverName;
 
             document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
             const railEl = document.getElementById(`rail-${serverId}`);
@@ -1261,6 +1445,7 @@
                 } else {
                     window.switchChannel(channelId, channelName, 'text');
                 }
+                window.toggleMobileDrawer(false);
             };
             list.appendChild(btn);
         }
@@ -1277,6 +1462,7 @@
             document.getElementById('chat-area').style.display = 'flex';
 
             document.getElementById('current-channel-name').innerText = channelName;
+            document.getElementById('mobile-nav-title').innerText = `# ${channelName}`;
             document.getElementById('message-input').placeholder = `Message #${channelName}`;
             document.title = `#${channelName} | PrivacyChat`;
 
@@ -1534,6 +1720,7 @@
             document.getElementById('chat-area').style.display = 'none';
             document.getElementById('voice-area').style.display = 'flex';
             document.getElementById('voice-channel-title-display').innerText = `🔊 ${channelName}`;
+            document.getElementById('mobile-nav-title').innerText = `🔊 ${channelName}`;
 
             const activeBtn = document.getElementById(`btn-chan-${channelId}`);
             if (activeBtn) {
@@ -1542,7 +1729,6 @@
             }
 
             try {
-                // Media Acquisition: Video explicitly DISABLED by default
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 localStream.getVideoTracks().forEach(track => track.enabled = false);
                 isVideoEnabled = false;
@@ -1550,7 +1736,6 @@
                 document.getElementById('local-video').srcObject = localStream;
                 document.getElementById('local-video-label').innerText = `${currentUsername} (You)`;
 
-                // Listen for WebRTC signalling messages (Offers, Answers, ICE Candidates via Connection IDs)
                 activeSignalsUnsub = onChildAdded(ref(db, `voice_signals/${channelId}/${friendCode}`), async (snapshot) => {
                     if (!snapshot.exists()) return;
                     const data = snapshot.val();
@@ -1588,13 +1773,11 @@
                     remove(snapshot.ref);
                 });
 
-                // Set Connection ID for Self in Room
                 set(ref(db, `voice_rooms/${channelId}/${friendCode}`), {
                     username: currentUsername,
                     joinedAt: Date.now()
                 });
 
-                // Listen for active participants joining/leaving the call
                 activeRoomUnsub = onValue(ref(db, `voice_rooms/${channelId}`), (snapshot) => {
                     const peers = snapshot.val() || {};
                     document.querySelectorAll('.video-box').forEach(box => {
@@ -1610,7 +1793,6 @@
 
                     Object.keys(peers).forEach(peerId => {
                         if (peerId !== friendCode && !peerConnections[`${channelId}_${peerId}`]) {
-                            // Initiator logic based on lexicographical Connection ID sorting
                             if (friendCode < peerId) {
                                 createPeerConnection(channelId, peerId, true);
                             }
