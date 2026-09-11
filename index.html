@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PrivacyChat</title>
     
-    <!-- Tab Picture (Favicon) -->
     <link rel="icon" type="image/svg+xml" href="https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChat">
 
     <style>
@@ -170,66 +169,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
-
-        .toggle-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-top: 1px solid #3f4147;
-            border-bottom: 1px solid #3f4147;
-        }
-
-        .toggle-label {
-            font-size: 14px;
-            font-weight: 600;
-            color: #f2f3f5;
-        }
-
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #80848e;
-            transition: .2s;
-            border-radius: 24px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .2s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: #23a55a;
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(20px);
         }
 
         /* --- AUTOCOMPLETE MENTION DROPDOWN --- */
@@ -851,7 +790,6 @@
 </head>
 <body>
 
-    <!-- Auth Overlay Form -->
     <div id="auth-overlay">
         <form class="auth-card" id="auth-form" onsubmit="window.handleAuthAction(event)">
             <h2 id="auth-title">Welcome Back!</h2>
@@ -872,7 +810,6 @@
         </form>
     </div>
 
-    <!-- User Profile Settings Modal -->
     <div id="settings-modal">
         <div class="settings-box">
             <h3>Edit User Profile</h3>
@@ -896,14 +833,6 @@
                 <input type="text" id="settings-atname-input" placeholder="handle">
             </div>
 
-            <div class="toggle-row">
-                <span class="toggle-label">Enable Push Notifications</span>
-                <label class="switch">
-                    <input type="checkbox" id="settings-notifications-toggle" onchange="window.handleNotificationToggleChange(this)">
-                    <span class="slider"></span>
-                </label>
-            </div>
-
             <div class="modal-actions">
                 <button class="btn-cancel" type="button" onclick="document.getElementById('settings-modal').style.display='none'">Cancel</button>
                 <button class="auth-btn-primary" type="button" onclick="window.saveUserSettings()">Save Changes</button>
@@ -911,7 +840,6 @@
         </div>
     </div>
 
-    <!-- Create Server Modal -->
     <div id="create-server-modal">
         <div class="modal-box">
             <h3>Customize Your Server</h3>
@@ -932,7 +860,6 @@
         </div>
     </div>
 
-    <!-- 1. Left Server Rail -->
     <div id="server-rail">
         <div class="rail-item" id="rail-home" title="Direct Messages / Home" onclick="window.selectHome()">
             <img src="https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChatHome" alt="Home">
@@ -949,7 +876,6 @@
         <div class="rail-item" style="color: #23a55a;" title="Add a Server" onclick="document.getElementById('create-server-modal').style.display='flex'">+</div>
     </div>
 
-    <!-- 2. Channels Sidebar with Resizer -->
     <div id="sidebar">
         <div class="sidebar-resize-handle" id="sidebar-resizer"></div>
         <div class="server-header" id="current-server-title">Home</div>
@@ -984,7 +910,6 @@
         </div>
     </div>
 
-    <!-- 3. Main View Area -->
     <div id="home-dashboard">
         <h2>Welcome to PrivacyChat</h2>
         <p>Select a server from the left rail to start chatting or hanging out in voice channels.</p>
@@ -1012,7 +937,7 @@
     <div id="voice-area">
         <div class="voice-top-bar">
             <div class="voice-channel-title" id="voice-channel-title-display">🔊 Voice Channel</div>
-            <button class="call-end-btn" onclick="window.leaveVoiceChannel()" style="background:#da373c; border:none; color:white; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:600;">Disconnect</button>
+            <button class="call-end-btn" onclick="window.leaveVoiceChannel()">Disconnect</button>
         </div>
         <div class="video-grid" id="video-grid">
             <div class="video-box" id="box_local">
@@ -1022,7 +947,7 @@
         </div>
         <div class="voice-controls">
             <button class="control-btn" id="mic-toggle-btn" onclick="window.toggleMicrophone()">Mute Mic</button>
-            <button class="control-btn" id="cam-toggle-btn" onclick="window.toggleCamera()">Stop Camera</button>
+            <button class="control-btn" id="cam-toggle-btn" onclick="window.toggleCamera()">Start Camera</button>
             <button class="control-btn" id="screen-share-btn" onclick="window.toggleScreenShare()">Share Screen</button>
         </div>
     </div>
@@ -1031,7 +956,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAxCqeBWxOkVbUWSu76qRzknJYPSceniZg",
@@ -1040,16 +964,12 @@
             projectId: "privatems-vercel-app",
             storageBucket: "privatems-vercel-app.firebasestorage.app",
             messagingSenderId: "259223551478",
-            appId: "1:259223551478:web:75c8f8a00b355397c31bd7",
-            measurementId: "G-EW5LST4X6R"
+            appId: "1:259223551478:web:75c8f8a00b355397c31bd7"
         };
-
-        const VAPID_KEY = "BImc5aS6mtjhCukMMZAwJiAUQH-9BmWc0uRLnGYISRvn-n32EyylRjqXiY1-hlyJWXX9xHbtOq2U5VphPcu-jzs";
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const auth = getAuth(app);
-        const messaging = getMessaging(app);
 
         let activeServerId = null;
         let currentChannelId = null;
@@ -1057,7 +977,6 @@
         let currentUsername = 'User';
         let currentAtName = 'user';
         let currentPfpBase64 = '';
-        let notificationsEnabled = false;
         let authMode = 'login';
         let uploadedServerIconBase64 = null;
         let tempAvatarBase64 = '';
@@ -1072,6 +991,7 @@
         let localStream = null;
         let screenStream = null;
         let activeVoiceChannelId = null;
+        let isVideoEnabled = false;
         const peerConnections = {};
         const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
@@ -1100,55 +1020,6 @@
                 resizer.classList.remove('resizing');
             }
         });
-
-        // Notifications Integration
-        async function requestNotificationPermission() {
-            if (!("Notification" in window)) {
-                alert("This browser does not support desktop notifications.");
-                return false;
-            }
-
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    if (navigator.serviceWorker) {
-                        await navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(() => {});
-                    }
-                    const token = await getToken(messaging, { vapidKey: VAPID_KEY }).catch(() => null);
-                    if (token) {
-                        await set(ref(db, `profiles/${friendCode}/fcmToken`), token);
-                    }
-                    return true;
-                }
-            } catch (err) {
-                console.error("Error setting up push notifications:", err);
-            }
-            return false;
-        }
-
-        onMessage(messaging, (payload) => {
-            if (notificationsEnabled && Notification.permission === 'granted') {
-                new Notification(payload.notification?.title || 'New Message', {
-                    body: payload.notification?.body || '',
-                    icon: payload.notification?.icon || 'https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChat'
-                });
-            }
-        });
-
-        window.handleNotificationToggleChange = async function(toggleEl) {
-            if (toggleEl.checked) {
-                const granted = await requestNotificationPermission();
-                if (!granted) {
-                    toggleEl.checked = false;
-                    notificationsEnabled = false;
-                    alert("Notification permission was denied or blocked.");
-                } else {
-                    notificationsEnabled = true;
-                }
-            } else {
-                notificationsEnabled = false;
-            }
-        };
 
         window.switchAuthMode = function() {
             const errBox = document.getElementById('auth-error-msg');
@@ -1200,17 +1071,14 @@
                         currentUsername = allProfiles[friendCode].username || defaultName;
                         currentAtName = allProfiles[friendCode].atName || defaultName.toLowerCase();
                         currentPfpBase64 = allProfiles[friendCode].pfp || '';
-                        notificationsEnabled = !!allProfiles[friendCode].notificationsEnabled;
                     } else {
                         currentUsername = defaultName;
                         currentAtName = defaultName.toLowerCase();
                         currentPfpBase64 = '';
-                        notificationsEnabled = false;
                         set(ref(db, `profiles/${friendCode}`), {
                             username: currentUsername,
                             atName: currentAtName,
-                            pfp: currentPfpBase64,
-                            notificationsEnabled: false
+                            pfp: currentPfpBase64
                         });
                     }
                     updateProfileUI();
@@ -1255,7 +1123,6 @@
         window.openSettingsModal = function() {
             document.getElementById('settings-username-input').value = currentUsername;
             document.getElementById('settings-atname-input').value = currentAtName;
-            document.getElementById('settings-notifications-toggle').checked = notificationsEnabled;
             tempAvatarBase64 = currentPfpBase64;
             
             const preview = document.getElementById('settings-avatar-preview');
@@ -1290,13 +1157,11 @@
             currentUsername = newName;
             currentAtName = newAt;
             currentPfpBase64 = tempAvatarBase64;
-            notificationsEnabled = document.getElementById('settings-notifications-toggle').checked;
 
             set(ref(db, `profiles/${friendCode}`), {
                 username: currentUsername,
                 atName: currentAtName,
-                pfp: currentPfpBase64,
-                notificationsEnabled: notificationsEnabled
+                pfp: currentPfpBase64
             }).then(() => {
                 document.getElementById('settings-modal').style.display = 'none';
                 updateProfileUI();
@@ -1611,14 +1476,6 @@
                 const imgEl = document.getElementById(`chunk_img_${msgId}`);
                 reassembleImage(msg.imageId, msg.totalChunks, imgEl);
             }
-
-            if (notificationsEnabled && msg.uid !== friendCode && Notification.permission === 'granted') {
-                const currentChannel = document.getElementById('current-channel-name').innerText;
-                new Notification(`${msg.username} (#${currentChannel})`, {
-                    body: msg.text || 'Sent an image attachment',
-                    icon: msg.pfp || 'https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChat'
-                });
-            }
         }
 
         window.handleMessageSubmit = function(e) {
@@ -1664,7 +1521,7 @@
             });
         };
 
-        /* --- WEBRTC P2P VOICE & VIDEO STREAMING --- */
+        /* --- WEBRTC P2P VOICE & VIDEO MESH SIGNALLING WITH CONNECTION IDs --- */
         let activeRoomUnsub = null;
         let activeSignalsUnsub = null;
 
@@ -1685,10 +1542,15 @@
             }
 
             try {
+                // Media Acquisition: Video explicitly DISABLED by default
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localStream.getVideoTracks().forEach(track => track.enabled = false);
+                isVideoEnabled = false;
+
                 document.getElementById('local-video').srcObject = localStream;
                 document.getElementById('local-video-label').innerText = `${currentUsername} (You)`;
 
+                // Listen for WebRTC signalling messages (Offers, Answers, ICE Candidates via Connection IDs)
                 activeSignalsUnsub = onChildAdded(ref(db, `voice_signals/${channelId}/${friendCode}`), async (snapshot) => {
                     if (!snapshot.exists()) return;
                     const data = snapshot.val();
@@ -1726,11 +1588,13 @@
                     remove(snapshot.ref);
                 });
 
+                // Set Connection ID for Self in Room
                 set(ref(db, `voice_rooms/${channelId}/${friendCode}`), {
                     username: currentUsername,
                     joinedAt: Date.now()
                 });
 
+                // Listen for active participants joining/leaving the call
                 activeRoomUnsub = onValue(ref(db, `voice_rooms/${channelId}`), (snapshot) => {
                     const peers = snapshot.val() || {};
                     document.querySelectorAll('.video-box').forEach(box => {
@@ -1746,6 +1610,7 @@
 
                     Object.keys(peers).forEach(peerId => {
                         if (peerId !== friendCode && !peerConnections[`${channelId}_${peerId}`]) {
+                            // Initiator logic based on lexicographical Connection ID sorting
                             if (friendCode < peerId) {
                                 createPeerConnection(channelId, peerId, true);
                             }
@@ -1827,10 +1692,11 @@
             if (!localStream) return;
             const videoTrack = localStream.getVideoTracks()[0];
             if (videoTrack) {
-                videoTrack.enabled = !videoTrack.enabled;
+                isVideoEnabled = !isVideoEnabled;
+                videoTrack.enabled = isVideoEnabled;
                 const btn = document.getElementById('cam-toggle-btn');
-                btn.innerText = videoTrack.enabled ? 'Stop Camera' : 'Start Camera';
-                btn.classList.toggle('active', !videoTrack.enabled);
+                btn.innerText = isVideoEnabled ? 'Stop Camera' : 'Start Camera';
+                btn.classList.toggle('active', isVideoEnabled);
             }
         };
 
@@ -1847,8 +1713,13 @@
 
                     Object.values(peerConnections).forEach(pc => {
                         const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                        if (sender) sender.replaceTrack(screenTrack);
+                        if (sender) {
+                            sender.replaceTrack(screenTrack);
+                        } else {
+                            pc.addTrack(screenTrack, screenStream);
+                        }
                     });
+
                     screenTrack.onended = () => window.stopScreenShare();
                 } catch (err) {}
             } else {
