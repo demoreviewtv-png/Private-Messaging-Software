@@ -827,6 +827,75 @@
             font-size: 13px;
         }
 
+        /* --- STAGE CHANNEL VIEW AREA --- */
+        #stage-area {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            background-color: #313338;
+            min-width: 0;
+            padding: 12px;
+            gap: 12px;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .stage-section-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: #949ba4;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        /* --- FORUM CHANNEL VIEW AREA --- */
+        #forum-area {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            background-color: #313338;
+            min-width: 0;
+            padding: 16px;
+            gap: 12px;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .forum-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1f2023;
+            padding-bottom: 12px;
+        }
+
+        .forum-post-card {
+            background-color: #2b2d31;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #1f2023;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .forum-post-card:hover {
+            border-color: #5865f2;
+        }
+
+        .forum-post-title {
+            font-weight: 600;
+            font-size: 16px;
+            color: #f2f3f5;
+        }
+
+        .forum-post-meta {
+            font-size: 12px;
+            color: #949ba4;
+        }
+
         #home-dashboard {
             flex: 1;
             display: flex;
@@ -1051,6 +1120,8 @@
                     <select id="new-channel-type">
                         <option value="text">Text</option>
                         <option value="voice">Voice</option>
+                        <option value="stage">Stage</option>
+                        <option value="forum">Forum</option>
                     </select>
                     <button onclick="window.submitNewChannel()">+</button>
                 </div>
@@ -1080,7 +1151,7 @@
 
             <div id="home-dashboard">
                 <h2>Welcome to PrivacyChat</h2>
-                <p>Tap the ☰ menu or select a server to start chatting or joining voice channels.</p>
+                <p>Tap the ☰ menu or select a server to start chatting or joining channels.</p>
             </div>
 
             <div id="chat-area" style="display: none;">
@@ -1119,6 +1190,35 @@
                     <button class="control-btn" id="screen-share-btn" onclick="window.toggleScreenShare()">Share Screen</button>
                 </div>
             </div>
+
+            <div id="stage-area">
+                <div class="voice-top-bar">
+                    <div class="voice-channel-title" id="stage-channel-title-display">🎙️ Stage Channel</div>
+                    <button class="call-end-btn" onclick="window.leaveVoiceChannel()">Leave Stage</button>
+                </div>
+                <div class="stage-section-header">Speakers</div>
+                <div class="video-grid" id="stage-speakers-grid" style="flex: 0 0 auto; max-height: 40%;">
+                    <!-- Speakers grid -->
+                </div>
+                <div class="stage-section-header" style="margin-top: 12px;">Audience</div>
+                <div class="video-grid" id="stage-audience-grid">
+                    <!-- Audience members grid -->
+                </div>
+                <div class="voice-controls">
+                    <button class="control-btn" id="request-speak-btn">Request to Speak</button>
+                </div>
+            </div>
+
+            <div id="forum-area">
+                <div class="forum-header">
+                    <h3 id="forum-channel-title">💬 Forum</h3>
+                    <button class="auth-btn-primary" style="padding: 8px 14px; font-size: 13px;">New Post</button>
+                </div>
+                <div class="forum-post-card">
+                    <div class="forum-post-title">Welcome to the Forum!</div>
+                    <div class="forum-post-meta">Posted by System • 0 replies</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1143,6 +1243,7 @@
 
         let activeServerId = null;
         let currentChannelId = null;
+        let activeChannelType = 'text';
         let friendCode = '';
         let currentUsername = 'User';
         let currentAtName = 'user';
@@ -1164,6 +1265,7 @@
         let isVideoEnabled = false;
         let isHost = false;
         const peerConnections = {};
+        const candidateQueues = {};
         const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
         // Mobile Drawer Toggle
@@ -1357,6 +1459,10 @@
                     set(defaultTextRef, { name: 'general', type: 'text' });
                     const defaultVoiceRef = push(ref(db, `server_channels/${serverId}`));
                     set(defaultVoiceRef, { name: 'General Voice', type: 'voice' });
+                    const defaultStageRef = push(ref(db, `server_channels/${serverId}`));
+                    set(defaultStageRef, { name: 'Town Hall', type: 'stage' });
+                    const defaultForumRef = push(ref(db, `server_channels/${serverId}`));
+                    set(defaultForumRef, { name: 'Discussions', type: 'forum' });
                 }
             }, { onlyOnce: true });
         }
@@ -1384,10 +1490,12 @@
             document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
             document.getElementById('rail-home').classList.add('active');
 
-            document.getElementById('channel-list').innerHTML = '<div style="padding: 8px; color: #949ba4; font-size: 13px;">Select a server on the left to chat or join voice channels.</div>';
+            document.getElementById('channel-list').innerHTML = '<div style="padding: 8px; color: #949ba4; font-size: 13px;">Select a server on the left to chat or join channels.</div>';
             document.getElementById('home-dashboard').style.display = 'flex';
             document.getElementById('chat-area').style.display = 'none';
             document.getElementById('voice-area').style.display = 'none';
+            document.getElementById('stage-area').style.display = 'none';
+            document.getElementById('forum-area').style.display = 'none';
 
             window.toggleMobileDrawer(false);
         };
@@ -1418,9 +1526,10 @@
                 if (snapshot.exists()) {
                     const chanData = snapshot.val();
                     const chanId = snapshot.key;
-                    renderChannelButton(serverId, chanId, chanData.name, chanData.type || 'text');
+                    const cType = chanData.type || 'text';
+                    renderChannelButton(serverId, chanId, chanData.name, cType);
 
-                    if (!firstTextChan && chanData.type !== 'voice') {
+                    if (!firstTextChan && cType === 'text') {
                         firstTextChan = { id: chanId, name: chanData.name };
                         window.switchChannel(chanId, chanData.name, 'text');
                     }
@@ -1435,37 +1544,34 @@
             const btn = document.createElement('button');
             btn.className = 'channel-btn';
             btn.id = `btn-chan-${channelId}`;
-            const iconSymbol = type === 'voice' ? '🔊' : '#';
+            
+            const icons = { text: '#', voice: '🔊', stage: '🎙️', forum: '💬' };
+            const iconSymbol = icons[type] || '#';
+
             btn.innerHTML = `<span class="icon">${iconSymbol}</span> ${channelName}`;
             
             btn.onclick = () => {
                 document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                if (type === 'voice') {
-                    window.joinVoiceChannel(channelId, channelName);
-                } else {
-                    window.switchChannel(channelId, channelName, 'text');
-                }
+                window.switchChannel(channelId, channelName, type);
                 window.toggleMobileDrawer(false);
             };
             list.appendChild(btn);
         }
 
         window.switchChannel = function(channelId, channelName, type) {
-            if (type === 'voice') {
-                window.joinVoiceChannel(channelId, channelName);
-                return;
+            if (activeChannelType === 'voice' && type !== 'voice' && type !== 'stage') {
+                window.leaveVoiceChannel();
             }
 
             currentChannelId = channelId;
-            document.getElementById('home-dashboard').style.display = 'none';
-            document.getElementById('voice-area').style.display = 'none';
-            document.getElementById('chat-area').style.display = 'flex';
+            activeChannelType = type;
 
-            document.getElementById('current-channel-name').innerText = channelName;
-            document.getElementById('mobile-nav-title').innerText = `# ${channelName}`;
-            document.getElementById('message-input').placeholder = `Message #${channelName}`;
-            document.title = `#${channelName} | PrivacyChat`;
+            document.getElementById('home-dashboard').style.display = 'none';
+            document.getElementById('chat-area').style.display = 'none';
+            document.getElementById('voice-area').style.display = 'none';
+            document.getElementById('stage-area').style.display = 'none';
+            document.getElementById('forum-area').style.display = 'none';
 
             const activeBtn = document.getElementById(`btn-chan-${channelId}`);
             if (activeBtn) {
@@ -1473,21 +1579,41 @@
                 activeBtn.classList.add('active');
             }
 
-            const container = document.getElementById('message-container');
-            container.innerHTML = '';
+            if (type === 'voice') {
+                document.getElementById('voice-area').style.display = 'flex';
+                window.joinVoiceChannel(channelId, channelName);
+            } else if (type === 'stage') {
+                document.getElementById('stage-area').style.display = 'flex';
+                document.getElementById('stage-channel-title-display').innerText = `🎙️ ${channelName}`;
+                window.joinVoiceChannel(channelId, channelName);
+            } else if (type === 'forum') {
+                document.getElementById('forum-area').style.display = 'flex';
+                document.getElementById('forum-channel-title').innerText = `💬 ${channelName}`;
+                document.getElementById('mobile-nav-title').innerText = `💬 ${channelName}`;
+                document.title = `💬 ${channelName} | PrivacyChat`;
+            } else {
+                document.getElementById('chat-area').style.display = 'flex';
+                document.getElementById('current-channel-name').innerText = channelName;
+                document.getElementById('mobile-nav-title').innerText = `# ${channelName}`;
+                document.getElementById('message-input').placeholder = `Message #${channelName}`;
+                document.title = `#${channelName} | PrivacyChat`;
 
-            if (currentMessagesRef && currentMessagesCallback) {
-                off(currentMessagesRef, 'child_added', currentMessagesCallback);
-            }
+                const container = document.getElementById('message-container');
+                container.innerHTML = '';
 
-            currentMessagesRef = ref(db, `messages/${currentChannelId}`);
-            currentMessagesCallback = (snapshot) => {
-                if (snapshot.exists()) {
-                    renderMessageOnUI(snapshot.val(), snapshot.key);
+                if (currentMessagesRef && currentMessagesCallback) {
+                    off(currentMessagesRef, 'child_added', currentMessagesCallback);
                 }
-            };
 
-            onChildAdded(currentMessagesRef, currentMessagesCallback);
+                currentMessagesRef = ref(db, `messages/${currentChannelId}`);
+                currentMessagesCallback = (snapshot) => {
+                    if (snapshot.exists()) {
+                        renderMessageOnUI(snapshot.val(), snapshot.key);
+                    }
+                };
+
+                onChildAdded(currentMessagesRef, currentMessagesCallback);
+            }
         };
 
         /* --- IMAGE CHUNKING FOR FIREBASE REALTIME DB --- */
@@ -1717,91 +1843,100 @@
             if (activeVoiceChannelId) window.leaveVoiceChannel();
 
             activeVoiceChannelId = channelId;
-            document.getElementById('home-dashboard').style.display = 'none';
-            document.getElementById('chat-area').style.display = 'none';
-            document.getElementById('voice-area').style.display = 'flex';
             document.getElementById('voice-channel-title-display').innerText = `🔊 ${channelName}`;
             document.getElementById('mobile-nav-title').innerText = `🔊 ${channelName}`;
 
-            const activeBtn = document.getElementById(`btn-chan-${channelId}`);
-            if (activeBtn) {
-                document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
-                activeBtn.classList.add('active');
-            }
-
             try {
-                // Determine Host priority using a Firebase transaction
+                // Acquire Host role using Firebase Transaction
                 const hostRef = ref(db, `voice_hosts/${channelId}`);
                 const txResult = await runTransaction(hostRef, (currentHost) => {
-                    if (currentHost === null) {
-                        return friendCode;
-                    }
+                    if (currentHost === null) return friendCode;
                     return currentHost;
                 });
 
                 isHost = (txResult.snapshot.val() === friendCode);
 
-                // Initialize Local Media Stream
+                // Acquire Media Stream prior to peer connection configuration
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 localStream.getVideoTracks().forEach(track => track.enabled = false);
                 isVideoEnabled = false;
 
                 const localVideoEl = document.getElementById('local-video');
-                localVideoEl.srcObject = localStream;
-                document.getElementById('local-video-label').innerText = isHost 
-                    ? `${currentUsername} (Host)` 
-                    : `${currentUsername} (You)`;
+                if (localVideoEl) localVideoEl.srcObject = localStream;
+                const localLabelEl = document.getElementById('local-video-label');
+                if (localLabelEl) {
+                    localLabelEl.innerText = isHost 
+                        ? `${currentUsername} (Host)` 
+                        : `${currentUsername} (You)`;
+                }
 
-                // Register present user in room
-                set(ref(db, `voice_rooms/${channelId}/${friendCode}`), {
+                // Register user presence
+                await set(ref(db, `voice_rooms/${channelId}/${friendCode}`), {
                     username: currentUsername,
                     isHost: isHost,
                     joinedAt: Date.now()
                 });
 
-                // Listen for signals sent directly to this client
+                // Listen for directed signaling messages with Candidate Queueing
                 activeSignalsUnsub = onChildAdded(ref(db, `voice_signals/${channelId}/${friendCode}`), async (snapshot) => {
                     if (!snapshot.exists()) return;
                     const data = snapshot.val();
                     const fromPeer = data.from;
+                    const signalId = snapshot.key;
                     if (!fromPeer || fromPeer === friendCode) return;
                     
                     const pcKey = `${channelId}_${fromPeer}`;
-                    let pc = peerConnections[pcKey];
 
                     if (data.type === 'offer') {
+                        let pc = peerConnections[pcKey];
                         if (!pc) pc = createPeerConnection(channelId, fromPeer, false);
-                        if (pc.signalingState !== 'stable') {
-                            await pc.setLocalDescription({type: 'rollback'}).catch(()=>{});
-                        }
+                        
                         await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                        
+                        if (candidateQueues[pcKey]) {
+                            for (const cand of candidateQueues[pcKey]) {
+                                await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+                            }
+                            delete candidateQueues[pcKey];
+                        }
+
                         const answer = await pc.createAnswer();
                         await pc.setLocalDescription(answer);
 
-                        set(ref(db, `voice_signals/${channelId}/${fromPeer}/${friendCode}`), {
+                        set(ref(db, `voice_signals/${channelId}/${fromPeer}/ans_${friendCode}`), {
                             from: friendCode,
                             type: 'answer',
                             sdp: answer
                         });
                     } else if (data.type === 'answer') {
+                        const pc = peerConnections[pcKey];
                         if (pc && pc.signalingState === 'have-local-offer') {
                             await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                            
+                            if (candidateQueues[pcKey]) {
+                                for (const cand of candidateQueues[pcKey]) {
+                                    await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+                                }
+                                delete candidateQueues[pcKey];
+                            }
                         }
                     } else if (data.type === 'candidate') {
-                        if (pc && data.candidate) {
-                            try {
-                                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-                            } catch (e) {}
+                        const pc = peerConnections[pcKey];
+                        if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+                            await pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(() => {});
+                        } else {
+                            if (!candidateQueues[pcKey]) candidateQueues[pcKey] = [];
+                            candidateQueues[pcKey].push(data.candidate);
                         }
                     }
-                    remove(snapshot.ref);
+                    
+                    remove(ref(db, `voice_signals/${channelId}/${friendCode}/${signalId}`));
                 });
 
-                // Host orchestrates connections to each joining peer
+                // Host orchestrates room connections
                 activeRoomUnsub = onValue(ref(db, `voice_rooms/${channelId}`), (snapshot) => {
                     const peers = snapshot.val() || {};
                     
-                    // Clean up disconnected participants
                     document.querySelectorAll('.video-box').forEach(box => {
                         const peerId = box.id.replace('box_', '');
                         if (peerId !== 'local' && !peers[peerId]) {
@@ -1813,7 +1948,6 @@
                         }
                     });
 
-                    // Host initiates outgoing streams first to joining peers
                     if (isHost) {
                         Object.keys(peers).forEach(peerId => {
                             if (peerId !== friendCode && !peerConnections[`${channelId}_${peerId}`]) {
@@ -1821,7 +1955,6 @@
                             }
                         });
                     } else {
-                        // Non-hosts connect to Host if present
                         const currentHostId = Object.keys(peers).find(pId => peers[pId].isHost);
                         if (currentHostId && currentHostId !== friendCode && !peerConnections[`${channelId}_${currentHostId}`]) {
                             createPeerConnection(channelId, currentHostId, false);
@@ -1841,14 +1974,13 @@
             const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[pcKey] = pc;
 
-            // Attach local MediaStream tracks before creating offers
             if (localStream) {
                 localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
             }
 
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
-                    set(ref(db, `voice_signals/${channelId}/${peerId}/${friendCode}_cand_${Date.now()}`), {
+                    set(ref(db, `voice_signals/${channelId}/${peerId}/cand_${friendCode}_${Date.now()}`), {
                         from: friendCode,
                         type: 'candidate',
                         candidate: event.candidate.toJSON()
@@ -1867,10 +1999,10 @@
                         <video autoplay playsinline></video>
                         <div class="video-label" id="label_${peerId}">${allProfiles[peerId]?.username || 'Participant'}</div>
                     `;
-                    grid.appendChild(videoBox);
+                    if (grid) grid.appendChild(videoBox);
                 }
                 const remoteVideo = videoBox.querySelector('video');
-                if (remoteVideo.srcObject !== event.streams[0]) {
+                if (remoteVideo && remoteVideo.srcObject !== event.streams[0]) {
                     remoteVideo.srcObject = event.streams[0];
                 }
             };
@@ -1878,12 +2010,12 @@
             if (isInitiator) {
                 pc.createOffer().then(async (offer) => {
                     await pc.setLocalDescription(offer);
-                    set(ref(db, `voice_signals/${channelId}/${peerId}/${friendCode}`), {
+                    set(ref(db, `voice_signals/${channelId}/${peerId}/off_${friendCode}`), {
                         from: friendCode,
                         type: 'offer',
                         sdp: offer
                     });
-                }).catch(err => {});
+                }).catch(() => {});
             }
 
             return pc;
@@ -1895,8 +2027,10 @@
             if (audioTrack) {
                 audioTrack.enabled = !audioTrack.enabled;
                 const btn = document.getElementById('mic-toggle-btn');
-                btn.innerText = audioTrack.enabled ? 'Mute Mic' : 'Unmute Mic';
-                btn.classList.toggle('active', !audioTrack.enabled);
+                if (btn) {
+                    btn.innerText = audioTrack.enabled ? 'Mute Mic' : 'Unmute Mic';
+                    btn.classList.toggle('active', !audioTrack.enabled);
+                }
             }
         };
 
@@ -1907,8 +2041,10 @@
                 isVideoEnabled = !isVideoEnabled;
                 videoTrack.enabled = isVideoEnabled;
                 const btn = document.getElementById('cam-toggle-btn');
-                btn.innerText = isVideoEnabled ? 'Stop Camera' : 'Start Camera';
-                btn.classList.toggle('active', isVideoEnabled);
+                if (btn) {
+                    btn.innerText = isVideoEnabled ? 'Stop Camera' : 'Start Camera';
+                    btn.classList.toggle('active', isVideoEnabled);
+                }
             }
         };
 
@@ -1918,10 +2054,16 @@
                 try {
                     screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                     const screenTrack = screenStream.getVideoTracks()[0];
-                    document.getElementById('local-video').srcObject = screenStream;
-                    document.getElementById('local-video-label').innerText = `${currentUsername} (Screen)`;
-                    btn.innerText = 'Stop Sharing';
-                    btn.classList.add('active');
+                    const localVid = document.getElementById('local-video');
+                    if (localVid) localVid.srcObject = screenStream;
+                    
+                    const localLbl = document.getElementById('local-video-label');
+                    if (localLbl) localLbl.innerText = `${currentUsername} (Screen)`;
+                    
+                    if (btn) {
+                        btn.innerText = 'Stop Sharing';
+                        btn.classList.add('active');
+                    }
 
                     Object.values(peerConnections).forEach(pc => {
                         const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -1946,10 +2088,15 @@
             }
             if (localStream) {
                 const videoTrack = localStream.getVideoTracks()[0];
-                document.getElementById('local-video').srcObject = localStream;
-                document.getElementById('local-video-label').innerText = isHost 
-                    ? `${currentUsername} (Host)` 
-                    : `${currentUsername} (You)`;
+                const localVid = document.getElementById('local-video');
+                if (localVid) localVid.srcObject = localStream;
+                
+                const localLbl = document.getElementById('local-video-label');
+                if (localLbl) {
+                    localLbl.innerText = isHost 
+                        ? `${currentUsername} (Host)` 
+                        : `${currentUsername} (You)`;
+                }
 
                 Object.values(peerConnections).forEach(pc => {
                     const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -1957,8 +2104,10 @@
                 });
             }
             const btn = document.getElementById('screen-share-btn');
-            btn.innerText = 'Share Screen';
-            btn.classList.remove('active');
+            if (btn) {
+                btn.innerText = 'Share Screen';
+                btn.classList.remove('active');
+            }
         };
 
         window.leaveVoiceChannel = function() {
@@ -1992,6 +2141,7 @@
 
             activeVoiceChannelId = null;
             document.getElementById('voice-area').style.display = 'none';
+            document.getElementById('stage-area').style.display = 'none';
             window.selectHome();
         };
 
@@ -2019,6 +2169,10 @@
                 set(chanRef1, { name: 'general', type: 'text' });
                 const chanRef2 = push(ref(db, `server_channels/${serverId}`));
                 set(chanRef2, { name: 'General Voice', type: 'voice' });
+                const chanRef3 = push(ref(db, `server_channels/${serverId}`));
+                set(chanRef3, { name: 'Stage', type: 'stage' });
+                const chanRef4 = push(ref(db, `server_channels/${serverId}`));
+                set(chanRef4, { name: 'Forum', type: 'forum' });
                 
                 uploadedServerIconBase64 = null;
                 document.getElementById('custom-server-icon-url').value = '';
