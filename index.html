@@ -1124,7 +1124,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove, get, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -1162,6 +1162,7 @@
         let screenStream = null;
         let activeVoiceChannelId = null;
         let isVideoEnabled = false;
+        let isHost = false;
         const peerConnections = {};
         const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
@@ -1707,7 +1708,7 @@
             });
         };
 
-        /* --- WEBRTC P2P VOICE & VIDEO MESH SIGNALLING WITH CONNECTION IDs --- */
+        /* --- WEBRTC HOST-FIRST VOICE & VIDEO CALL STREAMING LOGIC --- */
         let activeRoomUnsub = null;
         let activeSignalsUnsub = null;
 
@@ -1729,13 +1730,36 @@
             }
 
             try {
+                // Determine Host priority using a Firebase transaction
+                const hostRef = ref(db, `voice_hosts/${channelId}`);
+                const txResult = await runTransaction(hostRef, (currentHost) => {
+                    if (currentHost === null) {
+                        return friendCode;
+                    }
+                    return currentHost;
+                });
+
+                isHost = (txResult.snapshot.val() === friendCode);
+
+                // Initialize Local Media Stream
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 localStream.getVideoTracks().forEach(track => track.enabled = false);
                 isVideoEnabled = false;
 
-                document.getElementById('local-video').srcObject = localStream;
-                document.getElementById('local-video-label').innerText = `${currentUsername} (You)`;
+                const localVideoEl = document.getElementById('local-video');
+                localVideoEl.srcObject = localStream;
+                document.getElementById('local-video-label').innerText = isHost 
+                    ? `${currentUsername} (Host)` 
+                    : `${currentUsername} (You)`;
 
+                // Register present user in room
+                set(ref(db, `voice_rooms/${channelId}/${friendCode}`), {
+                    username: currentUsername,
+                    isHost: isHost,
+                    joinedAt: Date.now()
+                });
+
+                // Listen for signals sent directly to this client
                 activeSignalsUnsub = onChildAdded(ref(db, `voice_signals/${channelId}/${friendCode}`), async (snapshot) => {
                     if (!snapshot.exists()) return;
                     const data = snapshot.val();
@@ -1773,13 +1797,11 @@
                     remove(snapshot.ref);
                 });
 
-                set(ref(db, `voice_rooms/${channelId}/${friendCode}`), {
-                    username: currentUsername,
-                    joinedAt: Date.now()
-                });
-
+                // Host orchestrates connections to each joining peer
                 activeRoomUnsub = onValue(ref(db, `voice_rooms/${channelId}`), (snapshot) => {
                     const peers = snapshot.val() || {};
+                    
+                    // Clean up disconnected participants
                     document.querySelectorAll('.video-box').forEach(box => {
                         const peerId = box.id.replace('box_', '');
                         if (peerId !== 'local' && !peers[peerId]) {
@@ -1791,17 +1813,24 @@
                         }
                     });
 
-                    Object.keys(peers).forEach(peerId => {
-                        if (peerId !== friendCode && !peerConnections[`${channelId}_${peerId}`]) {
-                            if (friendCode < peerId) {
+                    // Host initiates outgoing streams first to joining peers
+                    if (isHost) {
+                        Object.keys(peers).forEach(peerId => {
+                            if (peerId !== friendCode && !peerConnections[`${channelId}_${peerId}`]) {
                                 createPeerConnection(channelId, peerId, true);
                             }
+                        });
+                    } else {
+                        // Non-hosts connect to Host if present
+                        const currentHostId = Object.keys(peers).find(pId => peers[pId].isHost);
+                        if (currentHostId && currentHostId !== friendCode && !peerConnections[`${channelId}_${currentHostId}`]) {
+                            createPeerConnection(channelId, currentHostId, false);
                         }
-                    });
+                    }
                 });
 
             } catch (err) {
-                alert("Could not access microphone/camera. Please check browser permissions.");
+                alert("Could not access microphone or camera. Please grant browser permissions.");
             }
         };
 
@@ -1812,6 +1841,7 @@
             const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[pcKey] = pc;
 
+            // Attach local MediaStream tracks before creating offers
             if (localStream) {
                 localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
             }
@@ -1835,7 +1865,7 @@
                     videoBox.id = `box_${peerId}`;
                     videoBox.innerHTML = `
                         <video autoplay playsinline></video>
-                        <div class="video-label" id="label_${peerId}">${allProfiles[peerId]?.username || 'Peer'}</div>
+                        <div class="video-label" id="label_${peerId}">${allProfiles[peerId]?.username || 'Participant'}</div>
                     `;
                     grid.appendChild(videoBox);
                 }
@@ -1917,7 +1947,9 @@
             if (localStream) {
                 const videoTrack = localStream.getVideoTracks()[0];
                 document.getElementById('local-video').srcObject = localStream;
-                document.getElementById('local-video-label').innerText = `${currentUsername} (You)`;
+                document.getElementById('local-video-label').innerText = isHost 
+                    ? `${currentUsername} (Host)` 
+                    : `${currentUsername} (You)`;
 
                 Object.values(peerConnections).forEach(pc => {
                     const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -1947,6 +1979,11 @@
             if (activeVoiceChannelId && friendCode) {
                 remove(ref(db, `voice_rooms/${activeVoiceChannelId}/${friendCode}`));
                 remove(ref(db, `voice_signals/${activeVoiceChannelId}/${friendCode}`));
+
+                if (isHost) {
+                    remove(ref(db, `voice_hosts/${activeVoiceChannelId}`));
+                    isHost = false;
+                }
             }
 
             document.querySelectorAll('.video-box').forEach(box => {
