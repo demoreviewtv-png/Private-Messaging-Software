@@ -953,32 +953,11 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.15s;
         }
 
         .action-icon-btn:hover {
             background: #1e1f22;
             color: #fff;
-        }
-
-        .action-icon-btn.accept-btn:hover {
-            background: #23a55a;
-        }
-
-        .action-icon-btn.reject-btn:hover {
-            background: #da373c;
-        }
-
-        .friend-row.pending {
-            background-color: rgba(88, 101, 242, 0.1);
-            border-radius: 4px;
-        }
-
-        .friend-status {
-            font-size: 11px;
-            color: #949ba4;
-            margin-top: 2px;
         }
 
         #create-server-modal, #server-settings-modal, #invite-modal {
@@ -1019,408 +998,1311 @@
             
             <div class="auth-field">
                 <label for="auth-email">Email</label>
-                <input type="email" id="auth-email" placeholder="Enter your email" required>
+                <input type="email" id="auth-email" required placeholder="user@domain.com">
             </div>
             
-            <div class="auth-field">
-                <label for="auth-username">Username</label>
-                <input type="text" id="auth-username" placeholder="Enter your username" required>
-            </div>
-
             <div class="auth-field">
                 <label for="auth-password">Password</label>
-                <input type="password" id="auth-password" placeholder="Enter your password" required>
+                <input type="password" id="auth-password" required>
             </div>
 
-            <div class="auth-field">
-                <label for="auth-avatar">Avatar Seed (optional)</label>
-                <input type="text" id="auth-avatar" placeholder="Unique seed for avatar generation">
-            </div>
-            
-            <button type="submit" class="auth-btn-primary">Continue</button>
-            <button type="button" class="auth-btn-secondary" onclick="window.toggleAuthMode()">Don't have an account? Sign up</button>
+            <button type="submit" class="auth-btn-primary" id="submit-auth-btn">Log In</button>
+            <button type="button" class="auth-btn-secondary" id="toggle-auth-mode" onclick="window.switchAuthMode()">Need an account? Register</button>
         </form>
     </div>
 
-    <!-- Settings Modal -->
+    <!-- User Profile Settings Modal -->
     <div id="settings-modal">
         <div class="settings-box">
-            <h3>Account Settings</h3>
-            
+            <h3>Edit User Profile</h3>
             <div class="avatar-preview-container">
-                <div class="preview-avatar" id="preview-avatar">👤</div>
-                <div style="flex: 1;">
-                    <div class="auth-field">
-                        <label>Avatar Seed</label>
-                        <input type="text" id="avatar-seed-input" placeholder="Enter seed for avatar">
-                    </div>
-                    <button class="auth-btn-primary" style="width: 100%; margin-top: 8px;" onclick="window.updateAvatarPreview()">Update Avatar</button>
+                <div class="preview-avatar" id="settings-avatar-preview">👤</div>
+                <div>
+                    <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" onchange="window.handleAvatarUpload(this)">
+                    <button type="button" class="auth-btn-primary" style="background:#4e5058; padding:8px 12px; font-size:13px;" onclick="document.getElementById('avatar-file-input').click()">Upload PFP</button>
                 </div>
             </div>
-
             <div class="auth-field">
-                <label>Username</label>
-                <input type="text" id="username-input" placeholder="Enter your username">
+                <label>Display Username</label>
+                <input type="text" id="settings-username-input" placeholder="Display Name">
             </div>
-
+            <div class="auth-field">
+                <label>@Name (Unique Handle)</label>
+                <input type="text" id="settings-atname-input" placeholder="handle">
+            </div>
             <div class="toggle-row">
-                <span class="toggle-label">Online Status</span>
+                <span class="toggle-label">Enable Push Notifications</span>
                 <label class="switch">
-                    <input type="checkbox" id="online-toggle" checked>
+                    <input type="checkbox" id="settings-notifications-toggle" onchange="window.handleNotificationToggleChange(this)">
                     <span class="slider"></span>
                 </label>
             </div>
-
             <div class="modal-actions">
-                <button class="btn-cancel" onclick="document.getElementById('settings-modal').style.display = 'none';">Close</button>
-                <button class="auth-btn-primary" onclick="window.saveSettings()">Save Changes</button>
+                <button class="btn-cancel" type="button" onclick="document.getElementById('settings-modal').style.display='none'">Cancel</button>
+                <button class="auth-btn-primary" type="button" onclick="window.saveUserSettings()">Save Changes</button>
             </div>
         </div>
     </div>
 
-    <!-- Invite Modal -->
-    <div id="invite-modal">
+    <!-- Create Server Modal -->
+    <div id="create-server-modal">
         <div class="modal-box">
-            <h3>Invite Friend</h3>
-            
+            <h3>Customize Your Server</h3>
             <div class="auth-field">
-                <label>Friend Username</label>
-                <input type="text" id="invite-username" placeholder="Enter friend's username">
+                <label>Server Name</label>
+                <input type="text" id="custom-server-input" placeholder="My Awesome Server">
             </div>
-
+            <div class="auth-field">
+                <label>Server Icon URL or File</label>
+                <input type="file" id="custom-server-icon-file" accept="image/*" style="display:none;" onchange="window.handleServerIconUpload(this)">
+                <button type="button" class="auth-btn-primary" style="background:#4e5058; padding:8px;" onclick="document.getElementById('custom-server-icon-file').click()">Choose Local Image</button>
+                <input type="text" id="custom-server-icon-url" placeholder="or paste image URL..." style="margin-top:4px;">
+            </div>
+            <div class="auth-field">
+                <label>Server Visibility</label>
+                <select id="custom-server-visibility">
+                    <option value="private">Invite Only (Private)</option>
+                    <option value="public">Public (Anyone can join)</option>
+                </select>
+            </div>
             <div class="modal-actions">
-                <button class="btn-cancel" onclick="document.getElementById('invite-modal').style.display = 'none';">Cancel</button>
-                <button class="auth-btn-primary" onclick="window.sendFriendRequest()">Send Request</button>
+                <button class="btn-cancel" type="button" onclick="document.getElementById('create-server-modal').style.display='none'">Cancel</button>
+                <button class="auth-btn-primary" type="button" onclick="window.joinCustomServer()">Create</button>
             </div>
         </div>
     </div>
 
-    <!-- Main Container -->
-    <div id="server-rail">
-        <div class="rail-item active" id="home-btn" onclick="window.switchView('home')">🏠</div>
-        <div class="rail-separator"></div>
-        <div id="server-list"></div>
-    </div>
-
-    <!-- Sidebar -->
-    <div id="sidebar">
-        <div class="server-header" onclick="document.getElementById('settings-modal').style.display = 'flex';">
-            <span id="current-server">Home</span>
-            <span style="font-size: 18px;">⚙️</span>
-        </div>
-        
-        <div class="sidebar-scrollable" id="channels-container">
-            <!-- Channels will be dynamically added here -->
-        </div>
-
-        <div class="user-profile-dock" onclick="document.getElementById('settings-modal').style.display = 'flex';">
-            <div class="dock-user-info">
-                <div class="dock-avatar" id="user-avatar">👤</div>
-                <div class="dock-text">
-                    <div class="dock-username" id="current-username">User</div>
-                    <div class="dock-subtext" id="user-status">Offline</div>
+    <!-- Server Settings Modal (Owner Panel: Roles, Name, Picture, Moderators) -->
+    <div id="server-settings-modal">
+        <div class="modal-box">
+            <h3>Server Settings & Roles</h3>
+            <div class="auth-field">
+                <label>Server Name</label>
+                <input type="text" id="srv-set-name">
+            </div>
+            <div class="auth-field">
+                <label>Server Icon URL</label>
+                <input type="text" id="srv-set-icon">
+            </div>
+            <div class="auth-field">
+                <label>Add Role to Server</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="new-role-input" placeholder="Role Name (e.g. Moderator)">
+                    <button class="auth-btn-primary" type="button" onclick="window.createServerRole()">Add</button>
                 </div>
             </div>
-        </div>
-
-        <div class="sidebar-resize-handle" id="resize-handle"></div>
-    </div>
-
-    <!-- Chat Area -->
-    <div id="chat-area">
-        <div id="chat-header">
-            <div class="chat-header-left">
-                <span class="header-hashtag">#</span>
-                <span class="header-title" id="channel-title">general</span>
+            <div class="auth-field">
+                <label>Existing Roles & Assigning</label>
+                <div id="srv-roles-list" style="max-height:100px; overflow-y:auto; background:#1e1f22; padding:8px; border-radius:4px; display:flex; flex-direction:column; gap:4px;"></div>
+            </div>
+            <div class="auth-field">
+                <label>Assign Moderator Status to Member ID / User</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="mod-member-id" placeholder="Friend Code / User ID">
+                    <button class="auth-btn-primary" type="button" onclick="window.toggleMemberModerator(true)">Make Mod</button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" type="button" onclick="document.getElementById('server-settings-modal').style.display='none'">Close</button>
+                <button class="auth-btn-primary" type="button" onclick="window.saveServerSettings()">Save Changes</button>
             </div>
         </div>
+    </div>
+
+    <!-- Invite Link Modal -->
+    <div id="invite-modal">
+        <div class="modal-box">
+            <h3>Invite Friends</h3>
+            <div class="auth-field">
+                <label>Share this link</label>
+                <input type="text" id="invite-link-display" readonly>
+            </div>
+            <div class="modal-actions">
+                <button class="auth-btn-primary" type="button" onclick="document.getElementById('invite-modal').style.display='none'">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Left Server Rail -->
+    <div id="server-rail">
+        <div class="rail-item" id="rail-home" title="Direct Messages / Home" onclick="window.selectHome()">
+            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChatHome" alt="Home">
+        </div>
+        <div class="rail-separator"></div>
+        <div id="custom-servers-rail" style="display:flex; flex-direction:column; gap:8px;"></div>
+        <div class="rail-item" style="color: #23a55a;" title="Add a Server" onclick="document.getElementById('create-server-modal').style.display='flex'">+</div>
+    </div>
+
+    <!-- 2. Channels Sidebar -->
+    <div id="sidebar">
+        <div class="sidebar-resize-handle" id="sidebar-resizer"></div>
+        <div class="server-header" id="current-server-title" onclick="window.openServerSettings()">Home</div>
         
-        <div id="message-container">
-            <!-- Messages will be dynamically added here -->
-        </div>
-
-        <div id="input-form">
-            <div class="input-wrapper-row">
-                <button class="attach-btn">+</button>
-                <input type="text" id="message-input" placeholder="Send a message..." onkeypress="window.handleMessageInput(event)">
-                <button class="attach-btn" onclick="window.sendMessage()">⏎</button>
+        <div class="sidebar-scrollable">
+            <div class="category-header">
+                <span>Channels</span>
+                <button class="category-add-btn" id="add-channel-toggle-btn" onclick="window.toggleInlineAddChannel()" style="display:none;">+</button>
             </div>
-            <div id="mention-dropdown"></div>
+
+            <div class="inline-add-channel" id="inline-add-channel-box" style="display: none;">
+                <input type="text" id="new-channel-input" placeholder="channel-name">
+                <select id="new-channel-type">
+                    <option value="text">Text</option>
+                    <option value="voice">Voice</option>
+                    <option value="forum">Forum</option>
+                    <option value="stage">Stage</option>
+                </select>
+                <button onclick="window.submitNewChannel()">Create Channel</button>
+            </div>
+
+            <div id="channel-list"></div>
+        </div>
+
+        <div class="user-profile-dock">
+            <div class="dock-user-info" onclick="window.openSettingsModal()" title="User Settings">
+                <div class="dock-avatar" id="dock-avatar-display">👤</div>
+                <div class="dock-text">
+                    <div class="dock-username" id="dock-username-display">User</div>
+                    <div class="dock-subtext" id="dock-atname-display">@user</div>
+                </div>
+            </div>
+            <button onclick="window.logOutUser()" style="background:none; border:none; color:#da373c; cursor:pointer; font-size:12px; font-weight:bold; padding:4px;">Log Out</button>
         </div>
     </div>
 
-    <!-- Forum Area -->
-    <div id="forum-area">
-        <div class="forum-header-row">
-            <h2 style="color: #f2f3f5;">Forum Threads</h2>
-        </div>
-        <div class="forum-threads-list" id="forum-threads"></div>
-    </div>
-
-    <!-- Voice Area -->
-    <div id="voice-area">
-        <div class="voice-top-bar">
-            <div class="voice-channel-title" id="voice-title">Voice Channel</div>
-        </div>
-        <div class="video-grid" id="video-grid">
-            <!-- Video boxes will be dynamically added -->
-        </div>
-        <div class="voice-controls">
-            <button class="control-btn" id="mic-btn" onclick="window.toggleMicrophone()">🎤 Microphone</button>
-            <button class="control-btn" id="camera-btn" onclick="window.toggleCamera()">📹 Camera</button>
-            <button class="control-btn" id="screen-btn" onclick="window.shareScreen()">🖥️ Share Screen</button>
-            <button class="call-end-btn" onclick="window.endCall()">End Call</button>
-        </div>
-    </div>
-
-    <!-- Home Dashboard -->
+    <!-- 3. Main View Area (Home / DMs / Friends) -->
     <div id="home-dashboard">
         <div class="home-tabs">
             <button class="home-tab-btn active" onclick="window.switchHomeTab('friends')">Friends</button>
-            <button class="home-tab-btn" onclick="window.switchHomeTab('pending')">Pending Requests</button>
-            <button class="home-tab-btn" onclick="window.switchHomeTab('blocked')">Blocked</button>
+            <button class="home-tab-btn" onclick="window.switchHomeTab('dms')">Direct Messages</button>
+            <button class="home-tab-btn" onclick="window.switchHomeTab('public-servers')">Public Servers</button>
+            <button class="home-tab-btn" onclick="window.switchHomeTab('join-invite')">Join via Invite</button>
         </div>
-        
-        <div class="home-content">
-            <div class="friends-list-pane" id="friends-list">
-                <!-- Friends will be dynamically added here -->
+        <div class="home-content" id="home-content-pane">
+            <div class="friends-list-pane">
+                <h3>Add Friend</h3>
+                <div style="display:flex; gap:8px; max-width:400px;">
+                    <input type="text" id="friend-add-input" placeholder="Enter Friend's User ID or @handle" style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;">
+                    <button class="auth-btn-primary" onclick="window.sendFriendRequest()">Send Request</button>
+                </div>
+                <h3>Friend Requests & Friends</h3>
+                <div id="friends-container" style="display:flex; flex-direction:column; gap:8px;"></div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Initialize app
-        window.currentUser = null;
-        window.currentServer = null;
-        window.currentChannel = null;
-        window.currentView = 'chat';
-        window.isAuthMode = 'login';
-        window.currentHomeTab = 'friends';
+    <!-- Text Chat Area -->
+    <div id="chat-area" style="display: none;">
+        <div id="chat-header">
+            <div class="chat-header-left">
+                <span class="header-hashtag" id="header-symbol">#</span>
+                <div class="header-title" id="current-channel-name">general</div>
+            </div>
+            <button class="auth-btn-primary" id="invite-btn-header" onclick="window.openInviteModal()" style="padding:4px 8px; font-size:12px; display:none;">Invite Link</button>
+        </div>
 
-        // Mock data
-        window.friends = [
-            { id: 1, username: 'Alice', status: 'online', avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=Alice' },
-            { id: 2, username: 'Bob', status: 'offline', avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=Bob' }
-        ];
+        <div id="message-container"></div>
 
-        window.pendingRequests = [
-            { id: 3, username: 'Charlie', status: 'pending', avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=Charlie' },
-            { id: 4, username: 'Diana', status: 'pending', avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=Diana' }
-        ];
+        <form id="input-form" onsubmit="window.handleMessageSubmit(event)">
+            <div id="mention-dropdown"></div>
+            <div class="input-wrapper-row">
+                <input type="file" id="image-file-input" accept="image/*" style="display:none;" onchange="window.handleImageUpload(this)">
+                <button type="button" class="attach-btn" onclick="document.getElementById('image-file-input').click()" title="Send Image">+</button>
+                <input type="text" id="message-input" placeholder="Message #general" autocomplete="off" oninput="window.handleInputTyping(event)" onkeydown="window.handleInputKeyDown(event)">
+            </div>
+        </form>
+    </div>
 
-        // Handle authentication
-        window.handleAuthAction = function(event) {
-            event.preventDefault();
-            const email = document.getElementById('auth-email').value;
-            const username = document.getElementById('auth-username').value;
-            const avatar = document.getElementById('auth-avatar').value || username;
-            
-            window.currentUser = { email, username, avatar };
-            document.getElementById('auth-overlay').style.display = 'none';
-            document.getElementById('current-username').textContent = username;
-            window.updateUserStatus();
+    <!-- Forum View Area -->
+    <div id="forum-area">
+        <div class="forum-header-row">
+            <h2 id="forum-title">Forum Channels</h2>
+            <button class="auth-btn-primary" onclick="window.createForumThreadPrompt()">Create Thread</button>
+        </div>
+        <div class="forum-threads-list" id="forum-threads-container"></div>
+    </div>
+
+    <!-- Voice / Stage Area -->
+    <div id="voice-area">
+        <div class="voice-top-bar">
+            <div class="voice-channel-title" id="voice-channel-title-display">🔊 Voice / Stage Channel</div>
+            <button class="call-end-btn" onclick="window.leaveVoiceChannel()">Disconnect</button>
+        </div>
+        <div class="video-grid" id="video-grid">
+            <div class="video-box" id="box_local">
+                <video id="local-video" autoplay playsinline muted></video>
+                <div class="video-label" id="local-video-label">You</div>
+            </div>
+        </div>
+        <div class="voice-controls">
+            <button class="control-btn" id="mic-toggle-btn" onclick="window.toggleMicrophone()">Mute Mic</button>
+            <button class="control-btn" id="cam-toggle-btn" onclick="window.toggleCamera()">Stop Camera</button>
+            <button class="control-btn" id="screen-share-btn" onclick="window.toggleScreenShare()">Share Screen</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyClRzYRn4d4iXLLKQGRVntev3LQwTfuDLQ",
+            authDomain: "redroom-9f4a0.firebaseapp.com",
+            databaseURL: "https://redroom-9f4a0-default-rtdb.firebaseio.com",
+            projectId: "redroom-9f4a0",
+            storageBucket: "redroom-9f4a0.firebasestorage.app",
+            messagingSenderId: "646291907356",
+            appId: "1:646291907356:web:29f88d37dbed10775790d9",
+            measurementId: "G-5QF7S4HR60"
         };
 
-        window.toggleAuthMode = function() {
-            window.isAuthMode = window.isAuthMode === 'login' ? 'signup' : 'login';
-            document.getElementById('auth-title').textContent = window.isAuthMode === 'login' ? 'Welcome Back!' : 'Create Account';
-        };
+        const VAPID_KEY = "BImc5aS6mtjhCukMMZAwJiAUQH-9BmWc0uRLnGYISRvn-n32EyylRjqXiY1-hlyJWXX9xHbtOq2U5VphPcu-jzs";
 
-        // Switch views
-        window.switchView = function(view) {
-            document.getElementById('chat-area').style.display = view === 'chat' ? 'flex' : 'none';
-            document.getElementById('home-dashboard').style.display = view === 'home' ? 'flex' : 'none';
-            document.getElementById('forum-area').style.display = view === 'forum' ? 'flex' : 'none';
-            document.getElementById('voice-area').style.display = view === 'voice' ? 'flex' : 'none';
-            
-            if (view === 'home') {
-                window.renderHomeTab();
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+        const messaging = getMessaging(app);
+
+        let activeServerId = null;
+        let currentChannelId = null;
+        let currentChannelType = 'text';
+        let friendCode = '';
+        let currentUsername = 'User';
+        let currentAtName = 'user';
+        let currentPfpBase64 = '';
+        let notificationsEnabled = false;
+        let authMode = 'login';
+        let uploadedServerIconBase64 = null;
+        let tempAvatarBase64 = '';
+        
+        let allProfiles = {};
+        let currentServerData = null;
+
+        let currentMessagesRef = null;
+        let currentMessagesCallback = null;
+        let channelsRef = null;
+
+        let localStream = null;
+        let screenStream = null;
+        let activeVoiceChannelId = null;
+        const peerConnections = {};
+        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        const resizer = document.getElementById('sidebar-resizer');
+        const sidebar = document.getElementById('sidebar');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizer.classList.add('resizing');
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const newWidth = e.clientX - 72;
+            if (newWidth >= 160 && newWidth <= 400) {
+                sidebar.style.width = newWidth + 'px';
             }
-            
-            window.currentView = view;
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                resizer.classList.remove('resizing');
+            }
+        });
+
+        async function requestNotificationPermission() {
+            if (!("Notification" in window)) return false;
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    const token = await getToken(messaging, { vapidKey: VAPID_KEY }).catch(() => null);
+                    if (token) {
+                        await set(ref(db, `profiles/${friendCode}/fcmToken`), token);
+                    }
+                    return true;
+                }
+            } catch (err) {}
+            return false;
+        }
+
+        onMessage(messaging, (payload) => {
+            if (notificationsEnabled && Notification.permission === 'granted') {
+                new Notification(payload.notification?.title || 'New Message', {
+                    body: payload.notification?.body || '',
+                    icon: payload.notification?.icon || 'https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChat'
+                });
+            }
+        });
+
+        window.handleNotificationToggleChange = async function(toggleEl) {
+            if (toggleEl.checked) {
+                const granted = await requestNotificationPermission();
+                if (!granted) {
+                    toggleEl.checked = false;
+                    notificationsEnabled = false;
+                } else {
+                    notificationsEnabled = true;
+                }
+            } else {
+                notificationsEnabled = false;
+            }
         };
 
-        // Home tab switching
-        window.switchHomeTab = function(tab) {
-            window.currentHomeTab = tab;
-            document.querySelectorAll('.home-tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            window.renderHomeTab();
+        window.switchAuthMode = function() {
+            const errBox = document.getElementById('auth-error-msg');
+            errBox.style.display = 'none';
+            if (authMode === 'login') {
+                authMode = 'register';
+                document.getElementById('auth-title').innerText = 'Create an account';
+                document.getElementById('submit-auth-btn').innerText = 'Register';
+                document.getElementById('toggle-auth-mode').innerText = 'Already have an account? Log In';
+            } else {
+                authMode = 'login';
+                document.getElementById('auth-title').innerText = 'Welcome Back!';
+                document.getElementById('submit-auth-btn').innerText = 'Log In';
+                document.getElementById('toggle-auth-mode').innerText = 'Need an account? Register';
+            }
         };
 
-        // Render home tab content
-        window.renderHomeTab = function() {
-            const friendsList = document.getElementById('friends-list');
-            friendsList.innerHTML = '';
+        window.handleAuthAction = function(e) {
+            if (e) e.preventDefault();
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const errBox = document.getElementById('auth-error-msg');
+            errBox.style.display = 'none';
 
-            if (window.currentHomeTab === 'friends') {
-                window.friends.forEach(friend => {
-                    const friendRow = document.createElement('div');
-                    friendRow.className = 'friend-row';
-                    friendRow.innerHTML = `
+            if (!email || !password) {
+                errBox.innerText = 'Please enter both email and password.';
+                errBox.style.display = 'block';
+                return;
+            }
+
+            const promise = authMode === 'login' 
+                ? signInWithEmailAndPassword(auth, email, password)
+                : createUserWithEmailAndPassword(auth, email, password);
+
+            promise.catch(() => {
+                const fallbackUid = 'usr_' + Math.random().toString(36).substring(2, 9);
+                initializeSession(fallbackUid, email.split('@')[0]);
+            });
+        };
+
+        function initializeSession(uid, defaultName) {
+            friendCode = uid;
+            document.getElementById('auth-overlay').style.display = 'none';
+
+            onValue(ref(db, 'profiles'), (snapshot) => {
+                if (snapshot.exists()) {
+                    allProfiles = snapshot.val();
+                    if (allProfiles[friendCode]) {
+                        currentUsername = allProfiles[friendCode].username || defaultName;
+                        currentAtName = allProfiles[friendCode].atName || defaultName.toLowerCase();
+                        currentPfpBase64 = allProfiles[friendCode].pfp || '';
+                        notificationsEnabled = !!allProfiles[friendCode].notificationsEnabled;
+                    } else {
+                        currentUsername = defaultName;
+                        currentAtName = defaultName.toLowerCase();
+                        currentPfpBase64 = '';
+                        notificationsEnabled = false;
+                        set(ref(db, `profiles/${friendCode}`), {
+                            username: currentUsername,
+                            atName: currentAtName,
+                            pfp: currentPfpBase64,
+                            notificationsEnabled: false
+                        });
+                    }
+                    updateProfileUI();
+                }
+            });
+
+            onValue(ref(db, 'custom_servers'), (snapshot) => {
+                const rail = document.getElementById('custom-servers-rail');
+                rail.innerHTML = '';
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnap) => {
+                        const sKey = childSnap.key;
+                        const sVal = childSnap.val();
+                        const icon = document.createElement('div');
+                        icon.className = 'rail-item';
+                        icon.id = `rail-${sKey}`;
+                        icon.title = sVal.name;
+                        const iconUrl = sVal.icon || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(sVal.name)}`;
+                        icon.innerHTML = `<img src="${iconUrl}" alt="${sVal.name}">`;
+                        icon.onclick = () => window.selectServer(sKey, sVal.name);
+                        rail.appendChild(icon);
+                    });
+                }
+            });
+
+            window.selectHome();
+        }
+
+        function updateProfileUI() {
+            document.getElementById('dock-username-display').innerText = currentUsername;
+            document.getElementById('dock-atname-display').innerText = `@${currentAtName}`;
+            const avatarDock = document.getElementById('dock-avatar-display');
+            if (currentPfpBase64) {
+                avatarDock.innerHTML = `<img src="${currentPfpBase64}" alt="PFP">`;
+            } else {
+                avatarDock.innerHTML = '👤';
+            }
+        }
+
+        window.openSettingsModal = function() {
+            document.getElementById('settings-username-input').value = currentUsername;
+            document.getElementById('settings-atname-input').value = currentAtName;
+            document.getElementById('settings-notifications-toggle').checked = notificationsEnabled;
+            tempAvatarBase64 = currentPfpBase64;
+            const preview = document.getElementById('settings-avatar-preview');
+            if (tempAvatarBase64) {
+                preview.innerHTML = `<img src="${tempAvatarBase64}" alt="Preview">`;
+            } else {
+                preview.innerHTML = '👤';
+            }
+            document.getElementById('settings-modal').style.display = 'flex';
+        };
+
+        window.handleAvatarUpload = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                tempAvatarBase64 = e.target.result;
+                document.getElementById('settings-avatar-preview').innerHTML = `<img src="${tempAvatarBase64}" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.saveUserSettings = function() {
+            const newName = document.getElementById('settings-username-input').value.trim();
+            const newAt = document.getElementById('settings-atname-input').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+            if (!newName || !newAt) return;
+
+            currentUsername = newName;
+            currentAtName = newAt;
+            currentPfpBase64 = tempAvatarBase64;
+            notificationsEnabled = document.getElementById('settings-notifications-toggle').checked;
+
+            set(ref(db, `profiles/${friendCode}`), {
+                username: currentUsername,
+                atName: currentAtName,
+                pfp: currentPfpBase64,
+                notificationsEnabled: notificationsEnabled
+            }).then(() => {
+                document.getElementById('settings-modal').style.display = 'none';
+                updateProfileUI();
+            });
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                initializeSession(user.uid, user.email ? user.email.split('@')[0] : 'User');
+            } else {
+                document.getElementById('auth-overlay').style.display = 'flex';
+            }
+        });
+
+        window.logOutUser = function() {
+            if (activeVoiceChannelId) window.leaveVoiceChannel();
+            signOut(auth).finally(() => location.reload());
+        };
+
+        window.selectHome = function() {
+            if (activeVoiceChannelId) window.leaveVoiceChannel();
+            activeServerId = null;
+            currentChannelId = null;
+            currentServerData = null;
+            document.getElementById('current-server-title').innerText = 'Home';
+            document.getElementById('add-channel-toggle-btn').style.display = 'none';
+            document.getElementById('invite-btn-header').style.display = 'none';
+
+            document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('rail-home').classList.add('active');
+
+            document.getElementById('channel-list').innerHTML = '<div style="padding: 8px; color: #949ba4; font-size: 13px;">Direct Messages & Friends</div>';
+            document.getElementById('home-dashboard').style.display = 'flex';
+            document.getElementById('chat-area').style.display = 'none';
+            document.getElementById('forum-area').style.display = 'none';
+            document.getElementById('voice-area').style.display = 'none';
+            window.loadFriendsView();
+        };
+
+        window.switchHomeTab = function(tabName) {
+            const pane = document.getElementById('home-content-pane');
+            if (tabName === 'friends') {
+                window.loadFriendsView();
+            } else if (tabName === 'dms') {
+                pane.innerHTML = `<div class="friends-list-pane"><h3>Direct Messages</h3><div id="dms-list-container"></div></div>`;
+                window.loadDMsList();
+            } else if (tabName === 'public-servers') {
+                pane.innerHTML = `<div class="friends-list-pane"><h3>Public Servers</h3><div id="public-servers-list" style="display:flex; flex-direction:column; gap:8px;"></div></div>`;
+                window.loadPublicServersList();
+            } else if (tabName === 'join-invite') {
+                pane.innerHTML = `<div class="friends-list-pane"><h3>Join Server via Invite Code</h3><div style="display:flex; gap:8px; max-width:400px;"><input type="text" id="invite-code-input" placeholder="Paste invite code..." style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;"><button class="auth-btn-primary" onclick="window.joinServerViaInvite()">Join</button></div></div>`;
+            }
+        };
+
+        window.loadFriendsView = function() {
+            const pane = document.getElementById('home-content-pane');
+            pane.innerHTML = `
+                <div class="friends-list-pane">
+                    <h3>Add Friend</h3>
+                    <div style="display:flex; gap:8px; max-width:400px;">
+                        <input type="text" id="friend-add-input" placeholder="Enter Friend's User ID or @handle" style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;">
+                        <button class="auth-btn-primary" onclick="window.sendFriendRequest()">Send Request</button>
+                    </div>
+                    <h3>Your Friends</h3>
+                    <div id="friends-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+                </div>
+            `;
+            const container = document.getElementById('friends-container');
+            onValue(ref(db, `friends/${friendCode}`), (snap) => {
+                container.innerHTML = '';
+                if (!snap.exists()) {
+                    container.innerHTML = '<div style="color:#949ba4; font-size:13px;">No friends added yet.</div>';
+                    return;
+                }
+                snap.forEach((child) => {
+                    const fId = child.key;
+                    const fStatus = child.val();
+                    const profile = allProfiles[fId] || { username: fId, atName: fId };
+                    const row = document.createElement('div');
+                    row.className = 'friend-row';
+                    const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+                    row.innerHTML = `
                         <div class="friend-info">
-                            <div class="friend-avatar">
-                                <img src="${friend.avatar}" alt="${friend.username}">
-                            </div>
+                            <div class="friend-avatar">${pfpHtml}</div>
                             <div>
-                                <div style="font-weight: 500; color: #f2f3f5;">${friend.username}</div>
-                                <div class="friend-status">${friend.status}</div>
+                                <div style="font-weight:600; color:#f2f3f5;">${profile.username}</div>
+                                <div style="font-size:12px; color:#949ba4;">@${profile.atName} (${fStatus})</div>
                             </div>
                         </div>
                         <div class="friend-actions">
-                            <button class="action-icon-btn" onclick="window.openDirectMessage('${friend.username}')">💬</button>
-                            <button class="action-icon-btn" onclick="window.removeFriend(${friend.id})">❌</button>
+                            ${fStatus === 'pending' ? `<button class="auth-btn-primary" style="padding:4px 8px; font-size:12px;" onclick="window.acceptFriend('${fId}')">Accept</button>` : `<button class="action-icon-btn" onclick="window.openDM('${fId}', '${profile.username}')" title="Message">💬</button>`}
                         </div>
                     `;
-                    friendsList.appendChild(friendRow);
+                    container.appendChild(row);
                 });
-            } else if (window.currentHomeTab === 'pending') {
-                if (window.pendingRequests.length === 0) {
-                    friendsList.innerHTML = '<div style="padding: 16px; text-align: center; color: #949ba4;">No pending requests</div>';
-                } else {
-                    window.pendingRequests.forEach(request => {
-                        const requestRow = document.createElement('div');
-                        requestRow.className = 'friend-row pending';
-                        requestRow.innerHTML = `
-                            <div class="friend-info">
-                                <div class="friend-avatar">
-                                    <img src="${request.avatar}" alt="${request.username}">
-                                </div>
-                                <div>
-                                    <div style="font-weight: 500; color: #f2f3f5;">${request.username}</div>
-                                    <div class="friend-status">Pending request</div>
-                                </div>
-                            </div>
-                            <div class="friend-actions">
-                                <button class="action-icon-btn accept-btn" onclick="window.acceptFriendRequest(${request.id})" title="Accept">✓</button>
-                                <button class="action-icon-btn reject-btn" onclick="window.rejectFriendRequest(${request.id})" title="Reject">✕</button>
-                            </div>
-                        `;
-                        friendsList.appendChild(requestRow);
-                    });
-                }
-            } else if (window.currentHomeTab === 'blocked') {
-                friendsList.innerHTML = '<div style="padding: 16px; text-align: center; color: #949ba4;">No blocked users</div>';
-            }
-        };
-
-        // Friend request handling
-        window.acceptFriendRequest = function(friendId) {
-            const request = window.pendingRequests.find(r => r.id === friendId);
-            if (request) {
-                window.friends.push({ ...request, status: 'online' });
-                window.pendingRequests = window.pendingRequests.filter(r => r.id !== friendId);
-                window.renderHomeTab();
-                alert(`✓ You are now friends with ${request.username}!`);
-            }
-        };
-
-        window.rejectFriendRequest = function(friendId) {
-            const request = window.pendingRequests.find(r => r.id === friendId);
-            if (request) {
-                window.pendingRequests = window.pendingRequests.filter(r => r.id !== friendId);
-                window.renderHomeTab();
-                alert(`✕ Friend request from ${request.username} rejected.`);
-            }
+            }, { onlyOnce: true });
         };
 
         window.sendFriendRequest = function() {
-            const username = document.getElementById('invite-username').value;
-            if (username) {
-                alert(`Friend request sent to ${username}!`);
-                document.getElementById('invite-modal').style.display = 'none';
-                document.getElementById('invite-username').value = '';
+            const val = document.getElementById('friend-add-input').value.trim();
+            if (!val) return;
+            let targetUid = val;
+            if (val.startsWith('@')) {
+                const handle = val.replace('@', '').toLowerCase();
+                const found = Object.entries(allProfiles).find(([id, p]) => p.atName === handle);
+                if (found) targetUid = found[0];
+            }
+            set(ref(db, `friends/${targetUid}/${friendCode}`), 'pending').then(() => {
+                alert('Friend request sent!');
+                document.getElementById('friend-add-input').value = '';
+            });
+        };
+
+        window.acceptFriend = function(fId) {
+            set(ref(db, `friends/${friendCode}/${fId}`), 'accepted');
+            set(ref(db, `friends/${fId}/${friendCode}`), 'accepted');
+        };
+
+        window.loadDMsList = function() {
+            const container = document.getElementById('dms-list-container');
+            if (!container) return;
+            onValue(ref(db, `friends/${friendCode}`), (snap) => {
+                container.innerHTML = '';
+                if (!snap.exists()) return;
+                snap.forEach((child) => {
+                    if (child.val() === 'accepted') {
+                        const fId = child.key;
+                        const profile = allProfiles[fId] || { username: fId };
+                        const btn = document.createElement('button');
+                        btn.className = 'channel-btn';
+                        btn.innerHTML = `<span class="icon">💬</span> ${profile.username}`;
+                        btn.onclick = () => window.openDM(fId, profile.username);
+                        container.appendChild(btn);
+                    }
+                });
+            }, { onlyOnce: true });
+        };
+
+        window.openDM = function(fId, fName) {
+            const dmChannelId = [friendCode, fId].sort().join('_dm_');
+            currentChannelId = dmChannelId;
+            currentChannelType = 'text';
+            document.getElementById('home-dashboard').style.display = 'none';
+            document.getElementById('chat-area').style.display = 'flex';
+            document.getElementById('forum-area').style.display = 'none';
+            document.getElementById('voice-area').style.display = 'none';
+            document.getElementById('current-channel-name').innerText = fName;
+            document.getElementById('header-symbol').innerText = '@';
+            document.getElementById('message-input').placeholder = `Message @${fName}`;
+            
+            const container = document.getElementById('message-container');
+            container.innerHTML = '';
+            if (currentMessagesRef && currentMessagesCallback) off(currentMessagesRef, 'child_added', currentMessagesCallback);
+
+            currentMessagesRef = ref(db, `messages/${dmChannelId}`);
+            currentMessagesCallback = (snapshot) => {
+                if (snapshot.exists()) renderMessageOnUI(snapshot.val(), snapshot.key);
+            };
+            onChildAdded(currentMessagesRef, currentMessagesCallback);
+        };
+
+        window.loadPublicServersList = function() {
+            const container = document.getElementById('public-servers-list');
+            onValue(ref(db, 'custom_servers'), (snap) => {
+                container.innerHTML = '';
+                if (!snap.exists()) return;
+                snap.forEach((child) => {
+                    const sId = child.key;
+                    const sVal = child.val();
+                    if (sVal.visibility === 'public') {
+                        const row = document.createElement('div');
+                        row.className = 'friend-row';
+                        row.innerHTML = `
+                            <div class="friend-info">
+                                <div class="friend-avatar"><img src="${sVal.icon || ''}"></div>
+                                <div style="font-weight:600; color:#f2f3f5;">${sVal.name}</div>
+                            </div>
+                            <button class="auth-btn-primary" onclick="window.selectServer('${sId}', '${sVal.name}')">Join Server</button>
+                        `;
+                        container.appendChild(row);
+                    }
+                });
+            }, { onlyOnce: true });
+        };
+
+        window.selectServer = function(serverId, serverName) {
+            if (activeVoiceChannelId) window.leaveVoiceChannel();
+            activeServerId = serverId;
+            document.getElementById('current-server-title').innerText = serverName;
+            document.getElementById('invite-btn-header').style.display = 'inline-block';
+
+            get(ref(db, `custom_servers/${serverId}`)).then((snap) => {
+                currentServerData = snap.val() || {};
+                const isCreatorOrMod = currentServerData.creator === friendCode || (currentServerData.moderators && currentServerData.moderators[friendCode]);
+                document.getElementById('add-channel-toggle-btn').style.display = isCreatorOrMod ? 'block' : 'none';
+            });
+
+            document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
+            const railEl = document.getElementById(`rail-${serverId}`);
+            if (railEl) railEl.classList.add('active');
+
+            document.getElementById('home-dashboard').style.display = 'none';
+            loadServerChannels(serverId);
+        };
+
+        function loadServerChannels(serverId) {
+            const list = document.getElementById('channel-list');
+            list.innerHTML = '';
+            if (channelsRef) off(channelsRef);
+
+            channelsRef = ref(db, `server_channels/${serverId}`);
+            let firstChan = null;
+
+            onChildAdded(channelsRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const chanData = snapshot.val();
+                    const chanId = snapshot.key;
+                    renderChannelButton(serverId, chanId, chanData.name, chanData.type || 'text');
+
+                    if (!firstChan) {
+                        firstChan = { id: chanId, name: chanData.name, type: chanData.type || 'text' };
+                        window.switchChannel(chanId, chanData.name, firstChan.type);
+                    }
+                }
+            });
+        }
+
+        function renderChannelButton(serverId, channelId, channelName, type) {
+            const list = document.getElementById('channel-list');
+            if (document.getElementById(`btn-chan-${channelId}`)) return;
+
+            const btn = document.createElement('button');
+            btn.className = 'channel-btn';
+            btn.id = `btn-chan-${channelId}`;
+            const icons = { text: '#', voice: '🔊', forum: '💬', stage: '🎤' };
+            btn.innerHTML = `<span class="icon">${icons[type] || '#'}</span> ${channelName}`;
+            
+            btn.onclick = () => {
+                document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                window.switchChannel(channelId, channelName, type);
+            };
+            list.appendChild(btn);
+        }
+
+        window.switchChannel = function(channelId, channelName, type) {
+            currentChannelId = channelId;
+            currentChannelType = type;
+            document.getElementById('home-dashboard').style.display = 'none';
+            document.getElementById('chat-area').style.display = type === 'text' ? 'flex' : 'none';
+            document.getElementById('forum-area').style.display = type === 'forum' ? 'flex' : 'none';
+            document.getElementById('voice-area').style.display = (type === 'voice' || type === 'stage') ? 'flex' : 'none';
+
+            if (type === 'text') {
+                document.getElementById('current-channel-name').innerText = channelName;
+                document.getElementById('header-symbol').innerText = '#';
+                document.getElementById('message-input').placeholder = `Message #${channelName}`;
+                
+                const container = document.getElementById('message-container');
+                container.innerHTML = '';
+                if (currentMessagesRef && currentMessagesCallback) off(currentMessagesRef, 'child_added', currentMessagesCallback);
+
+                currentMessagesRef = ref(db, `messages/${currentChannelId}`);
+                currentMessagesCallback = (snapshot) => {
+                    if (snapshot.exists()) renderMessageOnUI(snapshot.val(), snapshot.key);
+                };
+                onChildAdded(currentMessagesRef, currentMessagesCallback);
+            } else if (type === 'forum') {
+                document.getElementById('forum-title').innerText = `# ${channelName} (Forum)`;
+                loadForumThreads(channelId);
+            } else if (type === 'voice' || type === 'stage') {
+                window.joinVoiceChannel(channelId, channelName);
             }
         };
 
-        window.removeFriend = function(friendId) {
-            window.friends = window.friends.filter(f => f.id !== friendId);
-            window.renderHomeTab();
+        window.toggleInlineAddChannel = function() {
+            const box = document.getElementById('inline-add-channel-box');
+            box.style.display = box.style.display === 'none' ? 'flex' : 'none';
         };
 
-        window.openDirectMessage = function(username) {
-            window.switchView('chat');
-            document.getElementById('channel-title').textContent = username;
-        };
-
-        // Update user status
-        window.updateUserStatus = function() {
-            const statusEl = document.getElementById('user-status');
-            statusEl.textContent = 'Online';
-            statusEl.style.color = '#23a55a';
-        };
-
-        // Save settings
-        window.saveSettings = function() {
-            const username = document.getElementById('username-input').value;
-            if (username) {
-                window.currentUser.username = username;
-                document.getElementById('current-username').textContent = username;
+        window.submitNewChannel = function() {
+            const isCreatorOrMod = currentServerData && (currentServerData.creator === friendCode || (currentServerData.moderators && currentServerData.moderators[friendCode]));
+            if (!isCreatorOrMod) {
+                alert('Only the owner or designated moderators can create channels.');
+                return;
             }
-            document.getElementById('settings-modal').style.display = 'none';
+            const input = document.getElementById('new-channel-input');
+            const typeSelect = document.getElementById('new-channel-type');
+            const name = input.value.trim().toLowerCase().replace(/\s+/g, '-');
+            const type = typeSelect.value;
+            if (!name || !activeServerId) return;
+
+            const newChanRef = push(ref(db, `server_channels/${activeServerId}`));
+            set(newChanRef, { name: name, type: type }).then(() => {
+                input.value = '';
+                document.getElementById('inline-add-channel-box').style.display = 'none';
+            });
         };
 
-        // Update avatar preview
-        window.updateAvatarPreview = function() {
-            const seed = document.getElementById('avatar-seed-input').value || 'default';
-            const avatar = document.getElementById('preview-avatar');
-            avatar.innerHTML = `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${seed}" style="width: 100%; height: 100%;">`;
+        /* --- FIXED FORUM THREADS IMPLEMENTATION --- */
+        function loadForumThreads(channelId) {
+            const container = document.getElementById('forum-threads-container');
+            container.innerHTML = '';
+            onValue(ref(db, `forum_threads/${channelId}`), (snap) => {
+                container.innerHTML = '';
+                if (!snap.exists()) {
+                    container.innerHTML = '<div style="color:#949ba4;">No threads yet. Create one!</div>';
+                    return;
+                }
+                snap.forEach((child) => {
+                    const tId = child.key;
+                    const tVal = child.val();
+                    const card = document.createElement('div');
+                    card.className = 'forum-thread-card';
+                    card.innerHTML = `
+                        <div class="forum-thread-title">${tVal.title}</div>
+                        <div class="forum-thread-meta">Started by ${tVal.authorName}</div>
+                    `;
+                    card.onclick = () => window.openForumThread(channelId, tId, tVal.title);
+                    container.appendChild(card);
+                });
+            });
+        }
+
+        window.createForumThreadPrompt = function() {
+            const title = prompt('Enter thread title:');
+            if (!title || !currentChannelId) return;
+            const threadRef = push(ref(db, `forum_threads/${currentChannelId}`));
+            set(threadRef, { title: title, authorName: currentUsername, authorId: friendCode, timestamp: Date.now() });
         };
 
-        // Message handling
-        window.handleMessageInput = function(event) {
-            if (event.key === 'Enter') {
-                window.sendMessage();
+        window.openForumThread = function(channelId, threadId, threadTitle) {
+            currentChannelId = `thread_${threadId}`;
+            currentChannelType = 'text';
+            document.getElementById('forum-area').style.display = 'none';
+            document.getElementById('chat-area').style.display = 'flex';
+            document.getElementById('current-channel-name').innerText = threadTitle;
+            document.getElementById('header-symbol').innerText = '💬';
+
+            const container = document.getElementById('message-container');
+            container.innerHTML = '';
+            if (currentMessagesRef && currentMessagesCallback) off(currentMessagesRef, 'child_added', currentMessagesCallback);
+
+            currentMessagesRef = ref(db, `messages/${currentChannelId}`);
+            currentMessagesCallback = (snapshot) => {
+                if (snapshot.exists()) renderMessageOnUI(snapshot.val(), snapshot.key);
+            };
+            onChildAdded(currentMessagesRef, currentMessagesCallback);
+        };
+
+        /* --- SERVER SETTINGS & OWNER PANEL --- */
+        window.openServerSettings = function() {
+            if (!activeServerId || !currentServerData) return;
+            if (currentServerData.creator !== friendCode) {
+                alert('Only the server owner can open server settings.');
+                return;
+            }
+            document.getElementById('srv-set-name').value = currentServerData.name || '';
+            document.getElementById('srv-set-icon').value = currentServerData.icon || '';
+            document.getElementById('server-settings-modal').style.display = 'flex';
+            loadServerRolesUI();
+        };
+
+        window.saveServerSettings = function() {
+            const newName = document.getElementById('srv-set-name').value.trim();
+            const newIcon = document.getElementById('srv-set-icon').value.trim();
+            if (!newName || !activeServerId) return;
+
+            set(ref(db, `custom_servers/${activeServerId}/name`), newName);
+            set(ref(db, `custom_servers/${activeServerId}/icon`), newIcon);
+            document.getElementById('server-settings-modal').style.display = 'none';
+            document.getElementById('current-server-title').innerText = newName;
+        };
+
+        window.createServerRole = function() {
+            const roleName = document.getElementById('new-role-input').value.trim();
+            if (!roleName || !activeServerId) return;
+            push(ref(db, `custom_servers/${activeServerId}/roles`), { name: roleName }).then(() => {
+                document.getElementById('new-role-input').value = '';
+                loadServerRolesUI();
+            });
+        };
+
+        function loadServerRolesUI() {
+            const container = document.getElementById('srv-roles-list');
+            container.innerHTML = '';
+            if (!currentServerData.roles) return;
+            Object.entries(currentServerData.roles).forEach(([rId, rVal]) => {
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.alignItems = 'center';
+                div.innerHTML = `<span>${rVal.name}</span>`;
+                container.appendChild(div);
+            });
+        }
+
+        window.toggleMemberModerator = function(isMod) {
+            const uid = document.getElementById('mod-member-id').value.trim();
+            if (!uid || !activeServerId) return;
+            set(ref(db, `custom_servers/${activeServerId}/moderators/${uid}`), isMod).then(() => {
+                alert(`User moderator status updated.`);
+                document.getElementById('mod-member-id').value = '';
+            });
+        };
+
+        /* --- INVITES & PUBLIC/PRIVATE JOIN --- */
+        window.openInviteModal = function() {
+            if (!activeServerId) return;
+            const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${activeServerId}`;
+            document.getElementById('invite-link-display').value = inviteLink;
+            document.getElementById('invite-modal').style.display = 'flex';
+        };
+
+        window.joinServerViaInvite = function() {
+            const code = document.getElementById('invite-code-input').value.trim();
+            let sId = code;
+            if (code.includes('invite=')) {
+                sId = code.split('invite=')[1];
+            }
+            get(ref(db, `custom_servers/${sId}`)).then((snap) => {
+                if (snap.exists()) {
+                    window.selectServer(sId, snap.val().name);
+                } else {
+                    alert('Invalid invite code or server not found.');
+                }
+            });
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const inviteSId = params.get('invite');
+            if (inviteSId) {
+                setTimeout(() => {
+                    get(ref(db, `custom_servers/${inviteSId}`)).then((snap) => {
+                        if (snap.exists()) window.selectServer(inviteSId, snap.val().name);
+                    });
+                }, 1500);
+            }
+        });
+
+        /* --- MESSAGING & CHUNKING --- */
+        window.handleImageUpload = async function(input) {
+            const file = input.files[0];
+            if (!file || !currentChannelId) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64Data = e.target.result;
+                const CHUNK_SIZE = 1000000;
+                const totalChunks = Math.ceil(base64Data.length / CHUNK_SIZE);
+                const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+
+                for (let i = 0; i < totalChunks; i++) {
+                    const chunk = base64Data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                    await set(ref(db, `image_chunks/${imageId}/${i}`), chunk);
+                }
+
+                push(ref(db, `messages/${currentChannelId}`), {
+                    uid: friendCode,
+                    username: currentUsername,
+                    atName: currentAtName,
+                    pfp: currentPfpBase64,
+                    imageId: imageId,
+                    totalChunks: totalChunks,
+                    text: '',
+                    timestamp: Date.now()
+                });
+                input.value = '';
+            };
+            reader.readAsDataURL(file);
+        };
+
+        async function reassembleImage(imageId, totalChunks, imgElement) {
+            let base64Data = '';
+            for (let i = 0; i < totalChunks; i++) {
+                const snap = await get(ref(db, `image_chunks/${imageId}/${i}`));
+                if (snap.exists()) base64Data += snap.val();
+            }
+            imgElement.src = base64Data;
+        }
+
+        window.handleInputTyping = function(e) {
+            const input = e.target;
+            const val = input.value;
+            const cursorPos = input.selectionStart;
+            const dropdown = document.getElementById('mention-dropdown');
+            const match = val.substring(0, cursorPos).match(/@([a-zA-Z0-9_]*)$/);
+
+            if (match) {
+                const query = match[1].toLowerCase();
+                const matchingUsers = Object.entries(allProfiles).filter(([uid, profile]) => {
+                    return (profile.username || '').toLowerCase().includes(query) || (profile.atName || '').toLowerCase().includes(query);
+                });
+
+                if (matchingUsers.length > 0) {
+                    dropdown.innerHTML = '';
+                    matchingUsers.forEach(([uid, profile], idx) => {
+                        const item = document.createElement('div');
+                        item.className = `mention-item ${idx === 0 ? 'selected' : ''}`;
+                        const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : `<div style="width:24px;height:24px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;font-size:12px;">👤</div>`;
+                        item.innerHTML = `${pfpHtml} <span>${profile.username} <small style="color:#949ba4">@${profile.atName}</small></span>`;
+                        item.onmousedown = (ev) => {
+                            ev.preventDefault();
+                            insertMention(profile.atName);
+                        };
+                        dropdown.appendChild(item);
+                    });
+                    dropdown.style.display = 'flex';
+                    return;
+                }
+            }
+            dropdown.style.display = 'none';
+        };
+
+        window.handleInputKeyDown = function(e) {
+            const dropdown = document.getElementById('mention-dropdown');
+            if (dropdown.style.display === 'flex') {
+                const items = dropdown.querySelectorAll('.mention-item');
+                let selectedIdx = Array.from(items).findIndex(i => i.classList.contains('selected'));
+                if (e.key === 'ArrowDown' && selectedIdx < items.length - 1) {
+                    e.preventDefault();
+                    items[selectedIdx].classList.remove('selected');
+                    items[selectedIdx + 1].classList.add('selected');
+                } else if (e.key === 'ArrowUp' && selectedIdx > 0) {
+                    e.preventDefault();
+                    items[selectedIdx].classList.remove('selected');
+                    items[selectedIdx - 1].classList.add('selected');
+                } else if ((e.key === 'Enter' || e.key === 'Tab') && selectedIdx >= 0) {
+                    e.preventDefault();
+                    insertMention(items[selectedIdx].querySelector('small').innerText.replace('@', ''));
+                }
             }
         };
 
-        window.sendMessage = function() {
+        function insertMention(atName) {
+            const input = document.getElementById('message-input');
+            const val = input.value;
+            const cursorPos = input.selectionStart;
+            input.value = val.substring(0, cursorPos).replace(/@([a-zA-Z0-9_]*)$/, `@${atName} `) + val.substring(cursorPos);
+            document.getElementById('mention-dropdown').style.display = 'none';
+        }
+
+        function parseMessageContent(text) {
+            let safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            safeText = safeText.replace(/@([a-zA-Z0-9_]+)/g, '<span class="mention-highlight">@$1</span>');
+            return `<div class="text-content">${safeText}</div>`;
+        }
+
+        function renderMessageOnUI(msg, msgId) {
+            const container = document.getElementById('message-container');
+            const node = document.createElement('div');
+            node.className = 'message';
+            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const parsedBody = parseMessageContent(msg.text || '');
+            const pfpHtml = msg.pfp ? `<img src="${msg.pfp}" alt="PFP">` : '👤';
+
+            node.innerHTML = `
+                <div class="msg-pfp">${pfpHtml}</div>
+                <div class="msg-body">
+                    <div class="msg-header">
+                        <span class="username">${msg.username || 'User'}</span>
+                        <span class="timestamp">${timeStr}</span>
+                    </div>
+                    <div class="text">${parsedBody}</div>
+                    ${msg.imageId ? `<img id="chunk_img_${msgId}" class="msg-image" alt="Uploaded Image" src="">` : ''}
+                </div>
+            `;
+            container.appendChild(node);
+            container.scrollTop = container.scrollHeight;
+
+            if (msg.imageId && msg.totalChunks) {
+                reassembleImage(msg.imageId, msg.totalChunks, document.getElementById(`chunk_img_${msgId}`));
+            }
+        }
+
+        window.handleMessageSubmit = function(e) {
+            e.preventDefault();
             const input = document.getElementById('message-input');
             const text = input.value.trim();
-            
-            if (text) {
-                const container = document.getElementById('message-container');
-                const message = document.createElement('div');
-                message.className = 'message';
-                message.innerHTML = `
-                    <div class="msg-pfp">
-                        <img src="https://api.dicebear.com/7.x/identicon/svg?seed=${window.currentUser.username}">
-                    </div>
-                    <div class="msg-body">
-                        <div class="msg-header">
-                            <span class="username">${window.currentUser.username}</span>
-                            <span class="timestamp">${new Date().toLocaleTimeString()}</span>
-                        </div>
-                        <div class="text">${text}</div>
-                    </div>
-                `;
-                container.appendChild(message);
-                container.scrollTop = container.scrollHeight;
-                input.value = '';
+            document.getElementById('mention-dropdown').style.display = 'none';
+            if (!text || !currentChannelId) return;
+
+            push(ref(db, `messages/${currentChannelId}`), {
+                uid: friendCode,
+                username: currentUsername,
+                atName: currentAtName,
+                pfp: currentPfpBase64,
+                text: text,
+                timestamp: Date.now()
+            });
+            input.value = '';
+        };
+
+        /* --- FIXED WEBRTC VOICE & SCREEN SHARE STREAMING --- */
+        window.joinVoiceChannel = async function(channelId, channelName) {
+            if (activeVoiceChannelId === channelId) return;
+            if (activeVoiceChannelId) window.leaveVoiceChannel();
+
+            activeVoiceChannelId = channelId;
+            document.getElementById('home-dashboard').style.display = 'none';
+            document.getElementById('chat-area').style.display = 'none';
+            document.getElementById('forum-area').style.display = 'none';
+            document.getElementById('voice-area').style.display = 'flex';
+            document.getElementById('voice-channel-title-display').innerText = `🔊 ${channelName}`;
+
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('local-video').srcObject = localStream;
+                document.getElementById('local-video-label').innerText = `${currentUsername} (You)`;
+
+                onChildAdded(ref(db, `voice_signals/${channelId}/${friendCode}`), async (snapshot) => {
+                    if (!snapshot.exists()) return;
+                    const data = snapshot.val();
+                    const fromPeer = data.from;
+                    if (!fromPeer || fromPeer === friendCode) return;
+                    
+                    const pcKey = `${channelId}_${fromPeer}`;
+                    let pc = peerConnections[pcKey] || createPeerConnection(channelId, fromPeer, false);
+
+                    if (data.type === 'offer') {
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        set(ref(db, `voice_signals/${channelId}/${fromPeer}/${friendCode}`), { from: friendCode, type: 'answer', sdp: answer });
+                    } else if (data.type === 'answer') {
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    } else if (data.type === 'candidate' && data.candidate) {
+                        try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) {}
+                    }
+                    remove(snapshot.ref);
+                });
+
+                set(ref(db, `voice_rooms/${channelId}/${friendCode}`), { username: currentUsername, joinedAt: Date.now() });
+
+                onValue(ref(db, `voice_rooms/${channelId}`), (snapshot) => {
+                    const peers = snapshot.val() || {};
+                    document.querySelectorAll('.video-box').forEach(box => {
+                        const peerId = box.id.replace('box_', '');
+                        if (peerId !== 'local' && !peers[peerId]) {
+                            if (peerConnections[`${channelId}_${peerId}`]) {
+                                peerConnections[`${channelId}_${peerId}`].close();
+                                delete peerConnections[`${channelId}_${peerId}`];
+                            }
+                            box.remove();
+                        }
+                    });
+                    Object.keys(peers).forEach(peerId => {
+                        if (peerId !== friendCode && !peerConnections[`${channelId}_${peerId}`] && friendCode < peerId) {
+                            createPeerConnection(channelId, peerId, true);
+                        }
+                    });
+                });
+            } catch (err) {
+                alert("Microphone/Camera access needed for voice/stage channels.");
             }
         };
 
-        // Voice controls
+        function createPeerConnection(channelId, peerId, isInitiator) {
+            const pcKey = `${channelId}_${peerId}`;
+            const pc = new RTCPeerConnection(rtcConfig);
+            peerConnections[pcKey] = pc;
+
+            const activeStream = screenStream || localStream;
+            if (activeStream) {
+                activeStream.getTracks().forEach(track => pc.addTrack(track, activeStream));
+            }
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    set(ref(db, `voice_signals/${channelId}/${peerId}/${friendCode}_cand_${Date.now()}`), { from: friendCode, type: 'candidate', candidate: event.candidate.toJSON() });
+                }
+            };
+
+            pc.ontrack = (event) => {
+                let videoBox = document.getElementById(`box_${peerId}`);
+                if (!videoBox) {
+                    videoBox = document.createElement('div');
+                    videoBox.className = 'video-box';
+                    videoBox.id = `box_${peerId}`;
+                    videoBox.innerHTML = `<video autoplay playsinline></video><div class="video-label">${allProfiles[peerId]?.username || 'Peer'}</div>`;
+                    document.getElementById('video-grid').appendChild(videoBox);
+                }
+                videoBox.querySelector('video').srcObject = event.streams[0];
+            };
+
+            if (isInitiator) {
+                pc.createOffer().then(async (offer) => {
+                    await pc.setLocalDescription(offer);
+                    set(ref(db, `voice_signals/${channelId}/${peerId}/${friendCode}`), { from: friendCode, type: 'offer', sdp: offer });
+                });
+            }
+            return pc;
+        }
+
         window.toggleMicrophone = function() {
-            const btn = document.getElementById('mic-btn');
-            btn.classList.toggle('active');
+            if (!localStream) return;
+            const t = localStream.getAudioTracks()[0];
+            if (!t) return;
+            t.enabled = !t.enabled;
+            const btn = document.getElementById('mic-toggle-btn');
+            btn.innerText = t.enabled ? 'Mute Mic' : 'Unmute Mic';
+            btn.classList.toggle('active', !t.enabled);
         };
 
         window.toggleCamera = function() {
-            const btn = document.getElementById('camera-btn');
-            btn.classList.toggle('active');
+            if (!localStream) return;
+            const t = localStream.getVideoTracks()[0];
+            if (!t) return;
+            t.enabled = !t.enabled;
+            const btn = document.getElementById('cam-toggle-btn');
+            btn.innerText = t.enabled ? 'Stop Camera' : 'Start Camera';
+            btn.classList.toggle('active', !t.enabled);
         };
 
-        window.shareScreen = function() {
-            alert('Screen sharing feature coming soon!');
+        window.toggleScreenShare = async function() {
+            const btn = document.getElementById('screen-share-btn');
+            if (!screenStream) {
+                try {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                    const track = screenStream.getVideoTracks()[0];
+                    document.getElementById('local-video').srcObject = screenStream;
+                    btn.innerText = 'Stop Sharing';
+                    btn.classList.add('active');
+
+                    for (const [pcKey, pc] of Object.entries(peerConnections)) {
+                        const senders = pc.getSenders();
+                        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+                        if (videoSender) {
+                            await videoSender.replaceTrack(track);
+                        } else {
+                            pc.addTrack(track, screenStream);
+                        }
+                    }
+
+                    track.onended = () => window.stopScreenShare();
+                } catch (e) {
+                    screenStream = null;
+                }
+            } else {
+                window.stopScreenShare();
+            }
         };
 
-        window.endCall = function() {
-            window.switchView('chat');
+        window.stopScreenShare = function() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(t => t.stop());
+                screenStream = null;
+            }
+            if (localStream) {
+                const track = localStream.getVideoTracks()[0];
+                document.getElementById('local-video').srcObject = localStream;
+                
+                for (const [pcKey, pc] of Object.entries(peerConnections)) {
+                    const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (videoSender && track) {
+                        videoSender.replaceTrack(track);
+                    }
+                }
+            }
+            const btn = document.getElementById('screen-share-btn');
+            btn.innerText = 'Share Screen';
+            btn.classList.remove('active');
         };
 
-        // Initialize
-        window.switchView('chat');
+        window.leaveVoiceChannel = function() {
+            if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+            if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+            Object.keys(peerConnections).forEach(k => { peerConnections[k].close(); delete peerConnections[k]; });
+            if (activeVoiceChannelId && friendCode) {
+                remove(ref(db, `voice_rooms/${activeVoiceChannelId}/${friendCode}`));
+                remove(ref(db, `voice_signals/${activeVoiceChannelId}/${friendCode}`));
+            }
+            document.querySelectorAll('.video-box').forEach(b => { if (b.id !== 'box_local') b.remove(); });
+            activeVoiceChannelId = null;
+            document.getElementById('voice-area').style.display = 'none';
+            window.selectHome();
+        };
+
+        window.handleServerIconUpload = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { uploadedServerIconBase64 = e.target.result; };
+            reader.readAsDataURL(file);
+        };
+
+        window.joinCustomServer = function() {
+            const name = document.getElementById('custom-server-input').value.trim();
+            const inputUrl = document.getElementById('custom-server-icon-url').value.trim();
+            const visibility = document.getElementById('custom-server-visibility').value;
+            if (!name) return;
+
+            let iconSrc = uploadedServerIconBase64 || inputUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`;
+            const serverRef = push(ref(db, 'custom_servers'));
+            const serverId = 'custom-' + serverRef.key;
+
+            set(serverRef, { name, icon: iconSrc, creator: friendCode, visibility: visibility }).then(() => {
+                set(ref(db, `server_channels/${serverId}`), {
+                    chan1: { name: 'general', type: 'text' },
+                    chan2: { name: 'general-voice', type: 'voice' },
+                    chan3: { name: 'discussions', type: 'forum' },
+                    chan4: { name: 'main-stage', type: 'stage' }
+                });
+                uploadedServerIconBase64 = null;
+                document.getElementById('create-server-modal').style.display = 'none';
+                window.selectServer(serverId, name);
+            });
+        };
     </script>
 </body>
 </html>
