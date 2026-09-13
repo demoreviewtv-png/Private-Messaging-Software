@@ -1570,7 +1570,7 @@
                 }
                 snap.forEach((child) => {
                     const fId = child.key;
-                    const fStatus = child.val(); // 'accepted' or 'pending'
+                    const fStatus = child.val();
                     const profile = allProfiles[fId] || { username: fId, atName: fId };
                     const row = document.createElement('div');
                     row.className = 'friend-row';
@@ -1599,7 +1599,7 @@
             if (val.startsWith('@')) {
                 const handle = val.replace('@', '').toLowerCase();
                 const found = Object.entries(allProfiles).find(([id, p]) => p.atName === handle);
-                if (found) targetUid = found.first || found[0];
+                if (found) targetUid = found[0];
             }
             set(ref(db, `friends/${targetUid}/${friendCode}`), 'pending').then(() => {
                 alert('Friend request sent!');
@@ -1793,9 +1793,10 @@
             });
         };
 
-        /* --- FORUM THREADS IMPLEMENTATION --- */
+        /* --- FIXED FORUM THREADS IMPLEMENTATION --- */
         function loadForumThreads(channelId) {
             const container = document.getElementById('forum-threads-container');
+            container.innerHTML = '';
             onValue(ref(db, `forum_threads/${channelId}`), (snap) => {
                 container.innerHTML = '';
                 if (!snap.exists()) {
@@ -1814,7 +1815,7 @@
                     card.onclick = () => window.openForumThread(channelId, tId, tVal.title);
                     container.appendChild(card);
                 });
-            }, { onlyOnce: true });
+            });
         }
 
         window.createForumThreadPrompt = function() {
@@ -1922,7 +1923,6 @@
             });
         };
 
-        // Auto join via URL query on startup
         window.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
             const inviteSId = params.get('invite');
@@ -2088,7 +2088,7 @@
             input.value = '';
         };
 
-        /* --- WEBRTC VOICE & STAGE STREAMING --- */
+        /* --- FIXED WEBRTC VOICE & SCREEN SHARE STREAMING --- */
         window.joinVoiceChannel = async function(channelId, channelName) {
             if (activeVoiceChannelId === channelId) return;
             if (activeVoiceChannelId) window.leaveVoiceChannel();
@@ -2157,7 +2157,11 @@
             const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[pcKey] = pc;
 
-            if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            // Stream local tracks (handles screenStream replacement if active)
+            const activeStream = screenStream || localStream;
+            if (activeStream) {
+                activeStream.getTracks().forEach(track => pc.addTrack(track, activeStream));
+            }
 
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
@@ -2189,6 +2193,7 @@
         window.toggleMicrophone = function() {
             if (!localStream) return;
             const t = localStream.getAudioTracks()[0];
+            if (!t) return;
             t.enabled = !t.enabled;
             const btn = document.getElementById('mic-toggle-btn');
             btn.innerText = t.enabled ? 'Mute Mic' : 'Unmute Mic';
@@ -2198,6 +2203,7 @@
         window.toggleCamera = function() {
             if (!localStream) return;
             const t = localStream.getVideoTracks()[0];
+            if (!t) return;
             t.enabled = !t.enabled;
             const btn = document.getElementById('cam-toggle-btn');
             btn.innerText = t.enabled ? 'Stop Camera' : 'Start Camera';
@@ -2213,12 +2219,22 @@
                     document.getElementById('local-video').srcObject = screenStream;
                     btn.innerText = 'Stop Sharing';
                     btn.classList.add('active');
-                    Object.values(peerConnections).forEach(pc => {
-                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                        if (sender) sender.replaceTrack(track);
-                    });
+
+                    // Broadcast new screen track across all peer connections properly
+                    for (const [pcKey, pc] of Object.entries(peerConnections)) {
+                        const senders = pc.getSenders();
+                        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+                        if (videoSender) {
+                            await videoSender.replaceTrack(track);
+                        } else {
+                            pc.addTrack(track, screenStream);
+                        }
+                    }
+
                     track.onended = () => window.stopScreenShare();
-                } catch (e) {}
+                } catch (e) {
+                    screenStream = null;
+                }
             } else {
                 window.stopScreenShare();
             }
@@ -2232,10 +2248,13 @@
             if (localStream) {
                 const track = localStream.getVideoTracks()[0];
                 document.getElementById('local-video').srcObject = localStream;
-                Object.values(peerConnections).forEach(pc => {
-                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                    if (sender && track) sender.replaceTrack(track);
-                });
+                
+                for (const [pcKey, pc] of Object.entries(peerConnections)) {
+                    const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (videoSender && track) {
+                        videoSender.replaceTrack(track);
+                    }
+                }
             }
             const btn = document.getElementById('screen-share-btn');
             btn.innerText = 'Share Screen';
