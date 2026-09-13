@@ -1557,39 +1557,51 @@
                         <input type="text" id="friend-add-input" placeholder="Enter Friend's User ID or @handle" style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;">
                         <button class="auth-btn-primary" onclick="window.sendFriendRequest()">Send Request</button>
                     </div>
-                    <h3>Your Friends</h3>
+                    <h3>Friend Requests & Friends</h3>
                     <div id="friends-container" style="display:flex; flex-direction:column; gap:8px;"></div>
                 </div>
             `;
             const container = document.getElementById('friends-container');
+            
             onValue(ref(db, `friends/${friendCode}`), (snap) => {
                 container.innerHTML = '';
                 if (!snap.exists()) {
-                    container.innerHTML = '<div style="color:#949ba4; font-size:13px;">No friends added yet.</div>';
+                    container.innerHTML = '<div style="color:#949ba4; font-size:13px;">No friends or requests yet.</div>';
                     return;
                 }
+                
                 snap.forEach((child) => {
                     const fId = child.key;
                     const fStatus = child.val();
                     const profile = allProfiles[fId] || { username: fId, atName: fId };
                     const row = document.createElement('div');
                     row.className = 'friend-row';
-                    const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+                    const pfpHtml = profile.pfp ? `<img src="${profile.pfp}" style="width:100%;height:100%;object-fit:cover;">` : '👤';
+                    
+                    let actionHtml = '';
+                    if (fStatus === 'pending') {
+                        actionHtml = `<button class="auth-btn-primary" style="padding:4px 12px; font-size:12px; background-color:#23a55a;" onclick="window.acceptFriend('${fId}')">Accept</button>`;
+                    } else if (fStatus === 'accepted') {
+                        actionHtml = `<button class="action-icon-btn" onclick="window.openDM('${fId}', '${profile.username}')" title="Message">💬</button>`;
+                    } else {
+                        actionHtml = `<span style="font-size:12px; color:#949ba4;">Request Sent</span>`;
+                    }
+
                     row.innerHTML = `
                         <div class="friend-info">
                             <div class="friend-avatar">${pfpHtml}</div>
                             <div>
                                 <div style="font-weight:600; color:#f2f3f5;">${profile.username}</div>
-                                <div style="font-size:12px; color:#949ba4;">@${profile.atName} (${fStatus})</div>
+                                <div style="font-size:12px; color:#949ba4;">@${profile.atName}</div>
                             </div>
                         </div>
                         <div class="friend-actions">
-                            ${fStatus === 'pending' ? `<button class="auth-btn-primary" style="padding:4px 8px; font-size:12px;" onclick="window.acceptFriend('${fId}')">Accept</button>` : `<button class="action-icon-btn" onclick="window.openDM('${fId}', '${profile.username}')" title="Message">💬</button>`}
+                            ${actionHtml}
                         </div>
                     `;
                     container.appendChild(row);
                 });
-            }, { onlyOnce: true });
+            });
         };
 
         window.sendFriendRequest = function() {
@@ -1608,8 +1620,12 @@
         };
 
         window.acceptFriend = function(fId) {
-            set(ref(db, `friends/${friendCode}/${fId}`), 'accepted');
-            set(ref(db, `friends/${fId}/${friendCode}`), 'accepted');
+            const updates = {};
+            updates[`friends/${friendCode}/${fId}`] = 'accepted';
+            updates[`friends/${fId}/${friendCode}`] = 'accepted';
+            set(ref(db), updates).then(() => {
+                window.loadDMsList();
+            });
         };
 
         window.loadDMsList = function() {
@@ -1793,7 +1809,7 @@
             });
         };
 
-        /* --- FIXED FORUM THREADS IMPLEMENTATION --- */
+        /* --- FORUM THREADS IMPLEMENTATION --- */
         function loadForumThreads(channelId) {
             const container = document.getElementById('forum-threads-container');
             container.innerHTML = '';
@@ -2088,7 +2104,7 @@
             input.value = '';
         };
 
-        /* --- FIXED WEBRTC VOICE & SCREEN SHARE STREAMING --- */
+        /* --- WEBRTC VOICE & SCREEN SHARE STREAMING --- */
         window.joinVoiceChannel = async function(channelId, channelName) {
             if (activeVoiceChannelId === channelId) return;
             if (activeVoiceChannelId) window.leaveVoiceChannel();
