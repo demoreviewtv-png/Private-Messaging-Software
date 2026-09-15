@@ -1,4 +1,4 @@
-d<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -541,6 +541,7 @@ d<!DOCTYPE html>
             font-size: 16px;
             flex-shrink: 0;
             overflow: hidden;
+            position: relative;
         }
 
         .dock-avatar img {
@@ -548,6 +549,21 @@ d<!DOCTYPE html>
             height: 100%;
             object-fit: cover;
         }
+
+        .status-indicator {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid #232428;
+        }
+
+        .status-online { background-color: #23a55a; }
+        .status-idle { background-color: #f0b232; }
+        .status-dnd { background-color: #f23f43; }
+        .status-offline { background-color: #80848e; }
 
         .dock-text {
             display: flex;
@@ -567,6 +583,87 @@ d<!DOCTYPE html>
         .dock-subtext {
             font-size: 11px;
             color: #949ba4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Right Members List Sidebar */
+        #members-sidebar {
+            width: 240px;
+            background-color: #2b2d31;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            border-left: 1px solid #1f2023;
+            padding: 16px 8px;
+            gap: 12px;
+            overflow-y: auto;
+            z-index: 99;
+        }
+
+        .members-group-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #949ba4;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .member-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .member-avatar-box {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #5865f2;
+            position: relative;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .member-avatar-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .member-meta {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .member-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #dbdee1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .member-status-text {
+            font-size: 11px;
+            color: #949ba4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         #chat-area {
@@ -1061,6 +1158,19 @@ d<!DOCTYPE html>
                 <label>@Name (Unique Handle)</label>
                 <input type="text" id="settings-atname-input" placeholder="handle">
             </div>
+            <div class="auth-field">
+                <label>Custom Status Message</label>
+                <input type="text" id="settings-status-msg-input" placeholder="What's on your mind?">
+            </div>
+            <div class="auth-field">
+                <label>Online Status Mode</label>
+                <select id="settings-status-select">
+                    <option value="online">Online</option>
+                    <option value="idle">Idle</option>
+                    <option value="dnd">Do Not Disturb</option>
+                    <option value="offline">Invisible / Offline</option>
+                </select>
+            </div>
             <div class="toggle-row">
                 <span class="toggle-label">Enable Push Notifications</span>
                 <label class="switch">
@@ -1079,22 +1189,25 @@ d<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- Admin Console Modal -->
+    <!-- Cool Admin Console Modal -->
     <div id="admin-console-modal">
-        <div class="settings-box" style="border: 2px solid #5865f2;">
-            <h3 style="color: #f2f3f5;">🔒 Admin Console</h3>
-            <p style="font-size: 13px; color: #949ba4;">Manage global settings and view registered system users.</p>
+        <div class="settings-box" style="border: 2px solid #5865f2; background: linear-gradient(145deg, #313338, #232428);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <h3 style="color: #f2f3f5; display: flex; align-items: center; gap: 8px;">🛡️ Admin Dashboard</h3>
+                <span style="font-size: 11px; background: #5865f2; color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: bold;">SECURE ACCESS</span>
+            </div>
+            <p style="font-size: 13px; color: #949ba4;">Global system management console unlocked via Firebase authentication flag.</p>
             <div class="auth-field">
-                <label>System Users & Admin Status</label>
-                <div id="admin-users-list" style="max-height: 150px; overflow-y: auto; background: #1e1f22; padding: 8px; border-radius: 4px; display: flex; flex-direction: column; gap: 6px;"></div>
+                <label>Registered Platform Users & Privileges</label>
+                <div id="admin-users-list" style="max-height: 200px; overflow-y: auto; background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3f4147;"></div>
             </div>
             <div class="modal-actions">
-                <button class="btn-cancel" type="button" onclick="document.getElementById('admin-console-modal').style.display='none'">Close Console</button>
+                <button class="auth-btn-primary" type="button" onclick="document.getElementById('admin-console-modal').style.display='none'">Close Console</button>
             </div>
         </div>
     </div>
 
-    <!-- Redesigned Create Server Modal -->
+    <!-- Create Server Modal -->
     <div id="create-server-modal">
         <div class="modal-box" style="background: #2b2d31; border: 1px solid #3f4147;">
             <h3 style="text-align: center; font-size: 20px;">Create Your Server</h3>
@@ -1146,13 +1259,13 @@ d<!DOCTYPE html>
                 </div>
             </div>
             <div class="auth-field">
-                <label>Existing Roles & Assigning</label>
+                <label>Existing Roles</label>
                 <div id="srv-roles-list" style="max-height:100px; overflow-y:auto; background:#1e1f22; padding:8px; border-radius:4px; display:flex; flex-direction:column; gap:4px;"></div>
             </div>
             <div class="auth-field">
-                <label>Assign Moderator Status to Member ID / User</label>
+                <label>Assign Moderator Status to Member ID</label>
                 <div style="display:flex; gap:8px;">
-                    <input type="text" id="mod-member-id" placeholder="Friend Code / User ID">
+                    <input type="text" id="mod-member-id" placeholder="User ID">
                     <button class="auth-btn-primary" type="button" onclick="window.toggleMemberModerator(true)">Make Mod</button>
                 </div>
             </div>
@@ -1228,15 +1341,18 @@ d<!DOCTYPE html>
 
         <div class="user-profile-dock">
             <div class="dock-user-info" onclick="window.openSettingsModal()" title="User Settings">
-                <div class="dock-avatar" id="dock-avatar-display">👤</div>
+                <div class="dock-avatar" id="dock-avatar-display">
+                    👤
+                    <div class="status-indicator status-online" id="dock-status-dot"></div>
+                </div>
                 <div class="dock-text">
                     <div class="dock-username" id="dock-username-display">User</div>
                     <div class="dock-subtext" id="dock-atname-display">@user</div>
                 </div>
             </div>
             <div style="display: flex; gap: 4px; align-items: center;">
-                <button id="open-admin-btn" onclick="window.openAdminConsole()" style="background:none; border:none; color:#5865f2; cursor:pointer; font-size:12px; font-weight:bold; padding:4px; display:none;">Admin</button>
-                <button onclick="window.logOutUser()" style="background:none; border:none; color:#da373c; cursor:pointer; font-size:12px; font-weight:bold; padding:4px;">Log Out</button>
+                <button id="open-admin-btn" onclick="window.openAdminConsole()" style="background:#5865f2; border:none; color:#fff; cursor:pointer; font-size:11px; font-weight:bold; padding:4px 6px; border-radius:4px; display:none;">Admin</button>
+                <button onclick="window.logOutUser()" style="background:none; border:none; color:#da373c; cursor:pointer; font-size:11px; font-weight:bold; padding:4px;" title="Log Out">Exit</button>
             </div>
         </div>
     </div>
@@ -1312,6 +1428,12 @@ d<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- 4. Right Members List Sidebar -->
+    <div id="members-sidebar" style="display: none;">
+        <div class="members-group-title" id="members-group-header">Members — 0</div>
+        <div id="server-members-container" style="display: flex; flex-direction: column; gap: 4px;"></div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, update, push, onChildAdded, onValue, off, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -1343,6 +1465,8 @@ d<!DOCTYPE html>
         let currentUsername = 'User';
         let currentAtName = 'user';
         let currentPfpBase64 = '';
+        let currentStatus = 'online';
+        let currentStatusMsg = '';
         let notificationsEnabled = false;
         let authMode = 'login';
         let uploadedServerIconBase64 = null;
@@ -1379,7 +1503,7 @@ d<!DOCTYPE html>
             },
             {
                 title: "Text Chat & Media Sharing",
-                desc: "Text channels let you type messages, mention friends using '@', and safely upload or share image files directly in chat."
+                desc: "Text channels let you type messages, mention server members using '@', and safely upload or share image files directly in chat."
             },
             {
                 title: "Voice, Video & Screen Sharing",
@@ -1512,6 +1636,8 @@ d<!DOCTYPE html>
                         currentUsername = allProfiles[friendCode].username || defaultName;
                         currentAtName = allProfiles[friendCode].atName || defaultName.toLowerCase();
                         currentPfpBase64 = allProfiles[friendCode].pfp || '';
+                        currentStatus = allProfiles[friendCode].status || 'online';
+                        currentStatusMsg = allProfiles[friendCode].statusMsg || '';
                         notificationsEnabled = !!allProfiles[friendCode].notificationsEnabled;
 
                         if (allProfiles[friendCode].admin === undefined) {
@@ -1528,6 +1654,8 @@ d<!DOCTYPE html>
                         currentUsername = defaultName;
                         currentAtName = defaultName.toLowerCase();
                         currentPfpBase64 = '';
+                        currentStatus = 'online';
+                        currentStatusMsg = '';
                         notificationsEnabled = false;
                         isAdminUser = false;
 
@@ -1535,6 +1663,8 @@ d<!DOCTYPE html>
                             username: currentUsername,
                             atName: currentAtName,
                             pfp: currentPfpBase64,
+                            status: 'online',
+                            statusMsg: '',
                             notificationsEnabled: false,
                             newAccount: true,
                             admin: "false"
@@ -1542,6 +1672,7 @@ d<!DOCTYPE html>
                         window.startTutorial();
                     }
                     updateProfileUI();
+                    updateActiveMembersSidebar();
                 }
             });
 
@@ -1615,12 +1746,13 @@ d<!DOCTYPE html>
 
         function updateProfileUI() {
             document.getElementById('dock-username-display').innerText = currentUsername;
-            document.getElementById('dock-atname-display').innerText = `@${currentAtName}`;
+            document.getElementById('dock-atname-display').innerText = currentStatusMsg ? currentStatusMsg : `@${currentAtName}`;
+            
             const avatarDock = document.getElementById('dock-avatar-display');
             if (currentPfpBase64) {
-                avatarDock.innerHTML = `<img src="${currentPfpBase64}" alt="PFP">`;
+                avatarDock.innerHTML = `<img src="${currentPfpBase64}" alt="PFP"><div class="status-indicator status-${currentStatus}" id="dock-status-dot"></div>`;
             } else {
-                avatarDock.innerHTML = '👤';
+                avatarDock.innerHTML = `👤<div class="status-indicator status-${currentStatus}" id="dock-status-dot"></div>`;
             }
 
             const adminBtn = document.getElementById('open-admin-btn');
@@ -1642,13 +1774,16 @@ d<!DOCTYPE html>
                 row.style.display = 'flex';
                 row.style.justifyContent = 'space-between';
                 row.style.alignItems = 'center';
-                row.style.padding = '4px 0';
-                row.style.borderBottom = '1px solid #2b2d31';
+                row.style.padding = '6px 0';
+                row.style.borderBottom = '1px solid #3f4147';
                 
                 const isUserAdmin = profile.admin === "true";
                 row.innerHTML = `
-                    <span style="font-size: 13px; color: #dbdee1;">${profile.username} (@${profile.atName})</span>
-                    <span style="font-size: 11px; color: ${isUserAdmin ? '#23a55a' : '#949ba4'};">Admin: ${profile.admin || "false"}</span>
+                    <div>
+                        <div style="font-size: 13px; font-weight: 600; color: #f2f3f5;">${profile.username} (@${profile.atName})</div>
+                        <div style="font-size: 11px; color: #949ba4;">ID: ${uId}</div>
+                    </div>
+                    <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: ${isUserAdmin ? '#23a55a' : '#3f4147'}; color: #fff;">Admin: ${profile.admin || "false"}</span>
                 `;
                 container.appendChild(row);
             });
@@ -1659,6 +1794,8 @@ d<!DOCTYPE html>
         window.openSettingsModal = function() {
             document.getElementById('settings-username-input').value = currentUsername;
             document.getElementById('settings-atname-input').value = currentAtName;
+            document.getElementById('settings-status-msg-input').value = currentStatusMsg;
+            document.getElementById('settings-status-select').value = currentStatus;
             document.getElementById('settings-notifications-toggle').checked = notificationsEnabled;
             tempAvatarBase64 = currentPfpBase64;
             const preview = document.getElementById('settings-avatar-preview');
@@ -1684,11 +1821,15 @@ d<!DOCTYPE html>
         window.saveUserSettings = function() {
             const newName = document.getElementById('settings-username-input').value.trim();
             const newAt = document.getElementById('settings-atname-input').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+            const newStatusMsg = document.getElementById('settings-status-msg-input').value.trim();
+            const newStatus = document.getElementById('settings-status-select').value;
 
             if (!newName || !newAt) return;
 
             currentUsername = newName;
             currentAtName = newAt;
+            currentStatusMsg = newStatusMsg;
+            currentStatus = newStatus;
             currentPfpBase64 = tempAvatarBase64;
             notificationsEnabled = document.getElementById('settings-notifications-toggle').checked;
 
@@ -1698,12 +1839,15 @@ d<!DOCTYPE html>
                 username: currentUsername,
                 atName: currentAtName,
                 pfp: currentPfpBase64,
+                status: currentStatus,
+                statusMsg: currentStatusMsg,
                 notificationsEnabled: notificationsEnabled,
                 newAccount: false,
                 admin: existingAdminValue
             }).then(() => {
                 document.getElementById('settings-modal').style.display = 'none';
                 updateProfileUI();
+                updateActiveMembersSidebar();
             });
         };
 
@@ -1737,6 +1881,7 @@ d<!DOCTYPE html>
             document.getElementById('chat-area').style.display = 'none';
             document.getElementById('forum-area').style.display = 'none';
             document.getElementById('voice-area').style.display = 'none';
+            document.getElementById('members-sidebar').style.display = 'none';
             window.loadFriendsView();
         };
 
@@ -1877,10 +2022,13 @@ d<!DOCTYPE html>
             document.getElementById('chat-area').style.display = 'flex';
             document.getElementById('forum-area').style.display = 'none';
             document.getElementById('voice-area').style.display = 'none';
+            document.getElementById('members-sidebar').style.display = 'flex';
             document.getElementById('current-channel-name').innerText = fName;
             document.getElementById('header-symbol').innerText = '@';
             document.getElementById('message-input').placeholder = `Message @${fName}`;
             
+            updateActiveMembersSidebar();
+
             const container = document.getElementById('message-container');
             container.innerHTML = '';
             if (currentMessagesRef && currentMessagesCallback) off(currentMessagesRef, 'child_added', currentMessagesCallback);
@@ -1961,11 +2109,13 @@ d<!DOCTYPE html>
             activeServerId = serverId;
             document.getElementById('current-server-title').innerText = serverName;
             document.getElementById('invite-btn-header').style.display = 'inline-block';
+            document.getElementById('members-sidebar').style.display = 'flex';
 
             get(ref(db, `custom_servers/${serverId}`)).then((snap) => {
                 currentServerData = snap.val() || {};
                 const isCreatorOrMod = currentServerData.creator === friendCode || (currentServerData.moderators && currentServerData.moderators[friendCode]);
                 document.getElementById('add-channel-toggle-btn').style.display = isCreatorOrMod ? 'block' : 'none';
+                updateActiveMembersSidebar();
             });
 
             document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
@@ -2023,6 +2173,9 @@ d<!DOCTYPE html>
             document.getElementById('chat-area').style.display = type === 'text' ? 'flex' : 'none';
             document.getElementById('forum-area').style.display = type === 'forum' ? 'flex' : 'none';
             document.getElementById('voice-area').style.display = (type === 'voice' || type === 'stage') ? 'flex' : 'none';
+            document.getElementById('members-sidebar').style.display = 'flex';
+
+            updateActiveMembersSidebar();
 
             if (type === 'text') {
                 document.getElementById('current-channel-name').innerText = channelName;
@@ -2045,6 +2198,69 @@ d<!DOCTYPE html>
                 window.joinVoiceChannel(channelId, channelName);
             }
         };
+
+        // Populate Right Members Sidebar displaying online status and custom status messages
+        function updateActiveMembersSidebar() {
+            const container = document.getElementById('server-members-container');
+            const header = document.getElementById('members-group-header');
+            if (!container || !header) return;
+            container.innerHTML = '';
+
+            let membersToDisplay = [];
+            if (activeServerId) {
+                // In a server view, list users who are part of user_servers
+                onValue(ref(db, `user_servers`), (snap) => {
+                    const allUserServers = snap.val() || {};
+                    membersToDisplay = Object.entries(allProfiles).filter(([uId, p]) => {
+                        return (allUserServers[uId] && allUserServers[uId][activeServerId]) || uId === friendCode;
+                    });
+                    renderMembersList(membersToDisplay);
+                }, { onlyOnce: true });
+            } else {
+                // In Home / DM view, display self and accepted friends
+                onValue(ref(db, `friends/${friendCode}`), (snap) => {
+                    membersToDisplay = [[friendCode, allProfiles[friendCode] || { username: currentUsername, status: currentStatus, statusMsg: currentStatusMsg }]];
+                    if (snap.exists()) {
+                        snap.forEach((child) => {
+                            const fId = child.key;
+                            const fData = child.val();
+                            const status = typeof fData === 'object' ? fData.status : fData;
+                            if (status === 'accepted' && allProfiles[fId]) {
+                                membersToDisplay.push([fId, allProfiles[fId]]);
+                            }
+                        });
+                    }
+                    renderMembersList(membersToDisplay);
+                }, { onlyOnce: true });
+            }
+        }
+
+        function renderMembersList(members) {
+            const container = document.getElementById('server-members-container');
+            const header = document.getElementById('members-group-header');
+            container.innerHTML = '';
+            header.innerText = `Members — ${members.length}`;
+
+            members.forEach(([uId, profile]) => {
+                const item = document.createElement('div');
+                item.className = 'member-item';
+                const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+                const uStatus = profile.status || 'online';
+                const uStatusMsg = profile.statusMsg ? profile.statusMsg : `@${profile.atName || 'user'}`;
+
+                item.innerHTML = `
+                    <div class="member-avatar-box">
+                        ${pfpHtml}
+                        <div class="status-indicator status-${uStatus}"></div>
+                    </div>
+                    <div class="member-meta">
+                        <div class="member-name">${profile.username || 'User'}</div>
+                        <div class="member-status-text">${uStatusMsg}</div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
 
         window.toggleInlineAddChannel = function() {
             const box = document.getElementById('inline-add-channel-box');
@@ -2241,6 +2457,7 @@ d<!DOCTYPE html>
             imgElement.src = base64Data;
         }
 
+        // Restrict @ mentions strictly to members of the current server / DM session
         window.handleInputTyping = function(e) {
             const input = e.target;
             const val = input.value;
@@ -2250,7 +2467,21 @@ d<!DOCTYPE html>
 
             if (match) {
                 const query = match[1].toLowerCase();
-                const matchingUsers = Object.entries(allProfiles).filter(([uid, profile]) => {
+                
+                // Fetch valid member list matching current context
+                let candidateMembers = [];
+                if (activeServerId) {
+                    onValue(ref(db, `user_servers`), (snap) => {
+                        const allUserServers = snap.val() || {};
+                        candidateMembers = Object.entries(allProfiles).filter(([uId, p]) => {
+                            return (allUserServers[uId] && allUserServers[uId][activeServerId]) || uId === friendCode;
+                        });
+                    }, { onlyOnce: true });
+                } else {
+                    candidateMembers = Object.entries(allProfiles).filter(([uId]) => uId === friendCode);
+                }
+
+                const matchingUsers = candidateMembers.filter(([uid, profile]) => {
                     return (profile.username || '').toLowerCase().includes(query) || (profile.atName || '').toLowerCase().includes(query);
                 });
 
@@ -2362,6 +2593,7 @@ d<!DOCTYPE html>
             document.getElementById('chat-area').style.display = 'none';
             document.getElementById('forum-area').style.display = 'none';
             document.getElementById('voice-area').style.display = 'flex';
+            document.getElementById('members-sidebar').style.display = 'flex';
             document.getElementById('voice-channel-title-display').innerText = `🔊 ${channelName}`;
 
             try {
