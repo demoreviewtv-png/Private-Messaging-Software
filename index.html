@@ -312,7 +312,6 @@
             font-weight: 500;
         }
 
-        /* Discord Layout Tweaks */
         #server-rail {
             width: 72px;
             background-color: #1e1f22;
@@ -736,7 +735,6 @@
             color: #fff;
         }
 
-        /* --- FORUM VIEW --- */
         #forum-area {
             flex: 1;
             display: none;
@@ -786,7 +784,6 @@
             color: #949ba4;
         }
 
-        /* --- STAGE & VOICE CHANNEL VIEW --- */
         #voice-area {
             flex: 1;
             display: none;
@@ -891,7 +888,6 @@
             font-weight: 600;
         }
 
-        /* --- HOME DASHBOARD & FRIENDS / DMs --- */
         #home-dashboard {
             flex: 1;
             display: flex;
@@ -996,19 +992,6 @@
             color: #fff;
         }
 
-        #create-server-modal, #server-settings-modal, #invite-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0,0,0,0.7);
-            z-index: 2000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
         .modal-actions {
             display: flex;
             justify-content: flex-end;
@@ -1047,13 +1030,14 @@
         </form>
     </div>
 
-    <!-- Onboarding / Tutorial Modal -->
+    <!-- Onboarding / Extended Tutorial Modal -->
     <div id="tutorial-modal">
         <div class="tutorial-box">
             <h3 id="tutorial-title">Welcome to PrivacyChat!</h3>
-            <p id="tutorial-desc">This quick guide will help you get started. You can create custom servers, join voice channels, and chat securely with friends.</p>
-            <div class="modal-actions" style="justify-content: center;">
-                <button class="auth-btn-primary" type="button" onclick="window.dismissTutorial()">Got it, let's go!</button>
+            <p id="tutorial-desc">This quick guide will walk you through the app features.</p>
+            <div class="modal-actions" style="justify-content: space-between; width: 100%;">
+                <button class="btn-cancel" type="button" id="tutorial-prev-btn" style="display:none;" onclick="window.prevTutorialStep()">Back</button>
+                <button class="auth-btn-primary" type="button" id="tutorial-next-btn" onclick="window.nextTutorialStep()">Next</button>
             </div>
         </div>
     </div>
@@ -1084,6 +1068,10 @@
                     <span class="slider"></span>
                 </label>
             </div>
+            <div class="auth-field" style="border-top: 1px solid #3f4147; padding-top: 12px;">
+                <label>App Guide & Walkthrough</label>
+                <button type="button" class="auth-btn-primary" style="background: #4e5058;" onclick="window.startTutorial()">Rerun Tutorial</button>
+            </div>
             <div class="modal-actions">
                 <button class="btn-cancel" type="button" onclick="document.getElementById('settings-modal').style.display='none'">Cancel</button>
                 <button class="auth-btn-primary" type="button" onclick="window.saveUserSettings()">Save Changes</button>
@@ -1091,30 +1079,34 @@
         </div>
     </div>
 
-    <!-- Create Server Modal -->
+    <!-- Redesigned Create Server Modal -->
     <div id="create-server-modal">
-        <div class="modal-box">
-            <h3>Customize Your Server</h3>
+        <div class="modal-box" style="background: #2b2d31; border: 1px solid #3f4147;">
+            <h3 style="text-align: center; font-size: 20px;">Create Your Server</h3>
+            <p style="text-align: center; color: #949ba4; font-size: 13px; margin-top: -8px;">Your server is where you and your friends hang out. Make yours and start talking.</p>
+            
+            <div class="auth-field" style="align-items: center; margin: 8px 0;">
+                <div class="preview-avatar" id="server-icon-preview-box" style="cursor:pointer;" onclick="document.getElementById('custom-server-icon-file').click()" title="Click to upload icon">🏠</div>
+                <input type="file" id="custom-server-icon-file" accept="image/*" style="display:none;" onchange="window.handleServerIconUpload(this)">
+                <span style="font-size: 11px; color: #949ba4; margin-top: 4px;">Upload Server Icon</span>
+            </div>
+
             <div class="auth-field">
                 <label>Server Name</label>
-                <input type="text" id="custom-server-input" placeholder="My Awesome Server">
+                <input type="text" id="custom-server-input" placeholder="e.g. My Awesome Hangout">
             </div>
+            
             <div class="auth-field">
-                <label>Server Icon URL or File</label>
-                <input type="file" id="custom-server-icon-file" accept="image/*" style="display:none;" onchange="window.handleServerIconUpload(this)">
-                <button type="button" class="auth-btn-primary" style="background:#4e5058; padding:8px;" onclick="document.getElementById('custom-server-icon-file').click()">Choose Local Image</button>
-                <input type="text" id="custom-server-icon-url" placeholder="or paste image URL..." style="margin-top:4px;">
-            </div>
-            <div class="auth-field">
-                <label>Server Visibility</label>
+                <label>Visibility Setting</label>
                 <select id="custom-server-visibility">
-                    <option value="private">Invite Only (Private)</option>
-                    <option value="public">Public (Anyone can join)</option>
+                    <option value="private">Private (Invite Only)</option>
+                    <option value="public">Public (Visible in Server Discovery)</option>
                 </select>
             </div>
-            <div class="modal-actions">
-                <button class="btn-cancel" type="button" onclick="document.getElementById('create-server-modal').style.display='none'">Cancel</button>
-                <button class="auth-btn-primary" type="button" onclick="window.joinCustomServer()">Create</button>
+
+            <div class="modal-actions" style="justify-content: space-between; margin-top: 16px;">
+                <button class="btn-cancel" type="button" onclick="document.getElementById('create-server-modal').style.display='none'">Back</button>
+                <button class="auth-btn-primary" type="button" onclick="window.joinCustomServer()" style="padding: 10px 24px;">Create Server</button>
             </div>
         </div>
     </div>
@@ -1304,7 +1296,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, push, onChildAdded, onValue, off, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, update, push, onChildAdded, onValue, off, remove, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
@@ -1351,6 +1343,34 @@
         let activeVoiceChannelId = null;
         const peerConnections = {};
         const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        let currentTutorialStep = 0;
+        const tutorialSteps = [
+            {
+                title: "Welcome to PrivacyChat!",
+                desc: "This quick guide will walk you through each tab and feature of the app to help you chat securely."
+            },
+            {
+                title: "Home & Direct Messages Tab",
+                desc: "Clicking the top home icon on the left sidebar opens your home dashboard. Here you can manage your friends list, open 1-on-1 direct messages, or check public servers."
+            },
+            {
+                title: "Servers & Channels Sidebar",
+                desc: "Servers you join or create show up as icons down the left rail. Clicking a server loads its channel list in the sidebar, split into text chat, voice rooms, forums, and stage channels."
+            },
+            {
+                title: "Text Chat & Media Sharing",
+                desc: "Text channels let you type messages, mention friends using '@', and safely upload or share image files directly in chat."
+            },
+            {
+                title: "Voice, Video & Screen Sharing",
+                desc: "Joining a Voice or Stage channel opens the live video grid. You can mute your microphone, toggle your camera on/off, or share your computer screen with others!"
+            },
+            {
+                title: "You're All Set!",
+                desc: "You can rerun this tutorial anytime from your User Settings (bottom-left gear/profile area). Enjoy chatting!"
+            }
+        ];
 
         const resizer = document.getElementById('sidebar-resizer');
         const sidebar = document.getElementById('sidebar');
@@ -1453,7 +1473,6 @@
             } else {
                 createUserWithEmailAndPassword(auth, email, password)
                     .then((userCredential) => {
-                        // Mark new account flag as true in Firebase upon registration
                         set(ref(db, `profiles/${userCredential.user.uid}/newAccount`), true);
                     })
                     .catch((error) => {
@@ -1476,9 +1495,8 @@
                         currentPfpBase64 = allProfiles[friendCode].pfp || '';
                         notificationsEnabled = !!allProfiles[friendCode].notificationsEnabled;
 
-                        // Check if "new account" flip is enabled in firebase
                         if (allProfiles[friendCode].newAccount) {
-                            document.getElementById('tutorial-modal').style.display = 'flex';
+                            window.startTutorial();
                         }
                     } else {
                         currentUsername = defaultName;
@@ -1492,7 +1510,7 @@
                             notificationsEnabled: false,
                             newAccount: true
                         });
-                        document.getElementById('tutorial-modal').style.display = 'flex';
+                        window.startTutorial();
                     }
                     updateProfileUI();
                 }
@@ -1526,9 +1544,43 @@
             checkUrlInvite();
         }
 
+        window.startTutorial = function() {
+            currentTutorialStep = 0;
+            document.getElementById('settings-modal').style.display = 'none';
+            updateTutorialModalContent();
+            document.getElementById('tutorial-modal').style.display = 'flex';
+        };
+
+        window.nextTutorialStep = function() {
+            if (currentTutorialStep < tutorialSteps.length - 1) {
+                currentTutorialStep++;
+                updateTutorialModalContent();
+            } else {
+                window.dismissTutorial();
+            }
+        };
+
+        window.prevTutorialStep = function() {
+            if (currentTutorialStep > 0) {
+                currentTutorialStep--;
+                updateTutorialModalContent();
+            }
+        };
+
+        function updateTutorialModalContent() {
+            const step = tutorialSteps[currentTutorialStep];
+            document.getElementById('tutorial-title').innerText = step.title;
+            document.getElementById('tutorial-desc').innerText = step.desc;
+            
+            const prevBtn = document.getElementById('tutorial-prev-btn');
+            const nextBtn = document.getElementById('tutorial-next-btn');
+            
+            prevBtn.style.display = currentTutorialStep > 0 ? 'inline-block' : 'none';
+            nextBtn.innerText = currentTutorialStep === tutorialSteps.length - 1 ? "Let's Go!" : "Next";
+        }
+
         window.dismissTutorial = function() {
             document.getElementById('tutorial-modal').style.display = 'none';
-            // Turn off the new account flag in Firebase so it doesn't replay
             set(ref(db, `profiles/${friendCode}/newAccount`), false);
         };
 
@@ -1716,7 +1768,7 @@
             const updates = {};
             updates[`friends/${targetUid}/${friendCode}`] = { status: 'pending', direction: 'incoming' };
             updates[`friends/${friendCode}/${targetUid}`] = { status: 'pending', direction: 'outgoing' };
-            set(ref(db), updates).then(() => {
+            update(ref(db), updates).then(() => {
                 alert('Friend request sent!');
                 document.getElementById('friend-add-input').value = '';
             });
@@ -1726,7 +1778,7 @@
             const updates = {};
             updates[`friends/${friendCode}/${fId}`] = { status: 'accepted', direction: 'incoming' };
             updates[`friends/${fId}/${friendCode}`] = { status: 'accepted', direction: 'outgoing' };
-            set(ref(db), updates).then(() => {
+            update(ref(db), updates).then(() => {
                 window.loadDMsList();
             });
         };
@@ -2425,17 +2477,19 @@
             const file = input.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) { uploadedServerIconBase64 = e.target.result; };
+            reader.onload = function(e) {
+                uploadedServerIconBase64 = e.target.result;
+                document.getElementById('server-icon-preview-box').innerHTML = `<img src="${uploadedServerIconBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+            };
             reader.readAsDataURL(file);
         };
 
         window.joinCustomServer = function() {
             const name = document.getElementById('custom-server-input').value.trim();
-            const inputUrl = document.getElementById('custom-server-icon-url').value.trim();
             const visibility = document.getElementById('custom-server-visibility').value;
             if (!name) return;
 
-            let iconSrc = uploadedServerIconBase64 || inputUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`;
+            let iconSrc = uploadedServerIconBase64 || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`;
             const serverRef = push(ref(db, 'custom_servers'));
             const serverId = 'custom-' + serverRef.key;
 
@@ -2449,10 +2503,12 @@
             };
             updates[`user_servers/${friendCode}/${serverId}`] = true;
 
-            set(ref(db), updates).then(() => {
+            update(ref(db), updates).then(() => {
                 uploadedServerIconBase64 = null;
                 document.getElementById('create-server-modal').style.display = 'none';
                 window.selectServer(serverId, name);
+            }).catch((err) => {
+                alert("Failed to create server: " + err.message);
             });
         };
     </script>
