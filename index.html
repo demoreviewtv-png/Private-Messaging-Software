@@ -116,43 +116,46 @@
             display: none;
         }
 
-        #tutorial-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0,0,0,0.8);
-            z-index: 3000;
-            display: none;
+        /* Avatar Frames */
+        .avatar-container {
+            position: relative;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
-        .tutorial-box {
-            background-color: #313338;
-            padding: 32px;
-            border-radius: 8px;
-            width: 480px;
+        .avatar-img-wrap {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
             display: flex;
-            flex-direction: column;
-            gap: 16px;
-            text-align: center;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            background-color: #5865f2;
         }
 
-        .tutorial-box h3 {
-            color: #f2f3f5;
-            font-size: 22px;
+        .avatar-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
-        .tutorial-box p {
-            color: #b5bac1;
-            font-size: 14px;
-            line-height: 1.4;
+        .frame-gold {
+            box-shadow: 0 0 0 3px #f0b232, 0 0 10px rgba(240,178,50,0.6);
+        }
+        .frame-neon {
+            box-shadow: 0 0 0 3px #00a8fc, 0 0 12px rgba(0,168,252,0.8);
+        }
+        .frame-purple {
+            box-shadow: 0 0 0 3px #9b59b6, 0 0 12px rgba(155,89,182,0.8);
+        }
+        .frame-fire {
+            box-shadow: 0 0 0 3px #e74c3c, 0 0 12px rgba(231,76,60,0.8);
         }
 
-        #settings-modal, #server-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal, #admin-console-modal {
+        #tutorial-modal, #settings-modal, #server-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal, #admin-console-modal, #gift-modal {
             position: fixed;
             top: 0;
             left: 0;
@@ -533,21 +536,8 @@
         .dock-avatar {
             width: 32px;
             height: 32px;
-            border-radius: 50%;
-            background-color: #5865f2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            flex-shrink: 0;
-            overflow: hidden;
             position: relative;
-        }
-
-        .dock-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            flex-shrink: 0;
         }
 
         .status-indicator {
@@ -558,6 +548,7 @@
             height: 10px;
             border-radius: 50%;
             border: 2px solid #232428;
+            z-index: 2;
         }
 
         .status-online { background-color: #23a55a; }
@@ -627,20 +618,8 @@
         .member-avatar-box {
             width: 32px;
             height: 32px;
-            border-radius: 50%;
-            background-color: #5865f2;
             position: relative;
             flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .member-avatar-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
         }
 
         .member-meta {
@@ -720,30 +699,27 @@
             user-select: text;
         }
 
+        .message.merged {
+            margin-top: -12px;
+            padding-left: 56px;
+        }
+
         .message:hover {
             background-color: #2e3035;
-            margin: 0 -16px;
-            padding: 2px 16px;
+            margin-left: -16px;
+            margin-right: -16px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .message.merged:hover {
+            padding-left: 56px;
         }
 
         .msg-pfp {
             width: 40px;
             height: 40px;
-            border-radius: 50%;
-            background-color: #5865f2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
             flex-shrink: 0;
             margin-top: 2px;
-            overflow: hidden;
-        }
-
-        .msg-pfp img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
         }
 
         .msg-body {
@@ -1052,18 +1028,7 @@
         .friend-avatar {
             width: 36px;
             height: 36px;
-            border-radius: 50%;
-            background-color: #5865f2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .friend-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            position: relative;
         }
 
         .friend-actions {
@@ -1102,6 +1067,19 @@
             color: #fff;
             cursor: pointer;
         }
+
+        .coin-badge {
+            background-color: #2b2d31;
+            border: 1px solid #f0b232;
+            color: #f0b232;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
     </style>
 </head>
 <body>
@@ -1127,11 +1105,11 @@
         </form>
     </div>
 
-    <!-- Onboarding / Extended Tutorial Modal -->
+    <!-- Onboarding Tutorial Modal -->
     <div id="tutorial-modal">
-        <div class="tutorial-box">
-            <h3 id="tutorial-title">Welcome to PrivacyChat!</h3>
-            <p id="tutorial-desc">This quick guide will walk you through the app features.</p>
+        <div class="tutorial-box" style="background-color: #313338; padding: 32px; border-radius: 8px; width: 480px; display: flex; flex-direction: column; gap: 16px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+            <h3 id="tutorial-title" style="color: #f2f3f5; font-size: 22px;">Welcome to PrivacyChat!</h3>
+            <p id="tutorial-desc" style="color: #b5bac1; font-size: 14px; line-height: 1.4;">This quick guide will walk you through app features.</p>
             <div class="modal-actions" style="justify-content: space-between; width: 100%;">
                 <button class="btn-cancel" type="button" id="tutorial-prev-btn" style="display:none;" onclick="window.prevTutorialStep()">Back</button>
                 <button class="auth-btn-primary" type="button" id="tutorial-next-btn" onclick="window.nextTutorialStep()">Next</button>
@@ -1142,9 +1120,11 @@
     <!-- User Profile Settings Modal -->
     <div id="settings-modal">
         <div class="settings-box">
-            <h3>Edit User Profile</h3>
+            <h3>Edit User Profile & Style</h3>
             <div class="avatar-preview-container">
-                <div class="preview-avatar" id="settings-avatar-preview">👤</div>
+                <div class="preview-avatar avatar-container" id="settings-avatar-preview">
+                    <div class="avatar-img-wrap">👤</div>
+                </div>
                 <div>
                     <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" onchange="window.handleAvatarUpload(this)">
                     <button type="button" class="auth-btn-primary" style="background:#4e5058; padding:8px 12px; font-size:13px;" onclick="document.getElementById('avatar-file-input').click()">Upload PFP</button>
@@ -1163,6 +1143,16 @@
                 <input type="text" id="settings-status-msg-input" placeholder="What's on your mind?">
             </div>
             <div class="auth-field">
+                <label>Profile Picture Frame</label>
+                <select id="settings-frame-select">
+                    <option value="">None</option>
+                    <option value="frame-gold">Gold Ring</option>
+                    <option value="frame-neon">Cyber Neon</option>
+                    <option value="frame-purple">Royal Purple</option>
+                    <option value="frame-fire">Fire Glow</option>
+                </select>
+            </div>
+            <div class="auth-field">
                 <label>Online Status Mode</label>
                 <select id="settings-status-select">
                     <option value="online">Online</option>
@@ -1178,10 +1168,6 @@
                     <span class="slider"></span>
                 </label>
             </div>
-            <div class="auth-field" style="border-top: 1px solid #3f4147; padding-top: 12px;">
-                <label>App Guide & Walkthrough</label>
-                <button type="button" class="auth-btn-primary" style="background: #4e5058;" onclick="window.startTutorial()">Rerun Tutorial</button>
-            </div>
             <div class="modal-actions">
                 <button class="btn-cancel" type="button" onclick="document.getElementById('settings-modal').style.display='none'">Cancel</button>
                 <button class="auth-btn-primary" type="button" onclick="window.saveUserSettings()">Save Changes</button>
@@ -1189,14 +1175,33 @@
         </div>
     </div>
 
-    <!-- Cool Admin Console Modal -->
+    <!-- Gifting Currency Modal -->
+    <div id="gift-modal">
+        <div class="settings-box">
+            <h3>🎁 Send Coin Gift</h3>
+            <p style="font-size: 13px; color: #b5bac1;">Transfer your daily earned coins to a friend!</p>
+            <div class="auth-field">
+                <label>Recipient Friend</label>
+                <select id="gift-recipient-select"></select>
+            </div>
+            <div class="auth-field">
+                <label>Amount (Coins)</label>
+                <input type="number" id="gift-amount-input" min="1" value="10">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" type="button" onclick="document.getElementById('gift-modal').style.display='none'">Cancel</button>
+                <button class="auth-btn-primary" type="button" onclick="window.confirmSendGift()">Send Gift</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Console Modal -->
     <div id="admin-console-modal">
         <div class="settings-box" style="border: 2px solid #5865f2; background: linear-gradient(145deg, #313338, #232428);">
             <div style="display: flex; align-items: center; justify-content: space-between;">
                 <h3 style="color: #f2f3f5; display: flex; align-items: center; gap: 8px;">🛡️ Admin Dashboard</h3>
                 <span style="font-size: 11px; background: #5865f2; color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: bold;">SECURE ACCESS</span>
             </div>
-            <p style="font-size: 13px; color: #949ba4;">Global system management console unlocked via Firebase authentication flag.</p>
             <div class="auth-field">
                 <label>Registered Platform Users & Privileges</label>
                 <div id="admin-users-list" style="max-height: 200px; overflow-y: auto; background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3f4147;"></div>
@@ -1211,19 +1216,17 @@
     <div id="create-server-modal">
         <div class="modal-box" style="background: #2b2d31; border: 1px solid #3f4147;">
             <h3 style="text-align: center; font-size: 20px;">Create Your Server</h3>
-            <p style="text-align: center; color: #949ba4; font-size: 13px; margin-top: -8px;">Your server is where you and your friends hang out. Make yours and start talking.</p>
-            
             <div class="auth-field" style="align-items: center; margin: 8px 0;">
-                <div class="preview-avatar" id="server-icon-preview-box" style="cursor:pointer;" onclick="document.getElementById('custom-server-icon-file').click()" title="Click to upload icon">🏠</div>
+                <div class="preview-avatar avatar-container" id="server-icon-preview-box" style="cursor:pointer;" onclick="document.getElementById('custom-server-icon-file').click()" title="Click to upload icon">
+                    <div class="avatar-img-wrap">🏠</div>
+                </div>
                 <input type="file" id="custom-server-icon-file" accept="image/*" style="display:none;" onchange="window.handleServerIconUpload(this)">
                 <span style="font-size: 11px; color: #949ba4; margin-top: 4px;">Upload Server Icon</span>
             </div>
-
             <div class="auth-field">
                 <label>Server Name</label>
                 <input type="text" id="custom-server-input" placeholder="e.g. My Awesome Hangout">
             </div>
-            
             <div class="auth-field">
                 <label>Visibility Setting</label>
                 <select id="custom-server-visibility">
@@ -1231,7 +1234,6 @@
                     <option value="public">Public (Visible in Server Discovery)</option>
                 </select>
             </div>
-
             <div class="modal-actions" style="justify-content: space-between; margin-top: 16px;">
                 <button class="btn-cancel" type="button" onclick="document.getElementById('create-server-modal').style.display='none'">Back</button>
                 <button class="auth-btn-primary" type="button" onclick="window.joinCustomServer()" style="padding: 10px 24px;">Create Server</button>
@@ -1254,20 +1256,13 @@
             <div class="auth-field">
                 <label>Add Role to Server</label>
                 <div style="display:flex; gap:8px;">
-                    <input type="text" id="new-role-input" placeholder="Role Name (e.g. Moderator)">
+                    <input type="text" id="new-role-input" placeholder="Role Name">
                     <button class="auth-btn-primary" type="button" onclick="window.createServerRole()">Add</button>
                 </div>
             </div>
             <div class="auth-field">
                 <label>Existing Roles</label>
                 <div id="srv-roles-list" style="max-height:100px; overflow-y:auto; background:#1e1f22; padding:8px; border-radius:4px; display:flex; flex-direction:column; gap:4px;"></div>
-            </div>
-            <div class="auth-field">
-                <label>Assign Moderator Status to Member ID</label>
-                <div style="display:flex; gap:8px;">
-                    <input type="text" id="mod-member-id" placeholder="User ID">
-                    <button class="auth-btn-primary" type="button" onclick="window.toggleMemberModerator(true)">Make Mod</button>
-                </div>
             </div>
             <div class="modal-actions">
                 <button class="btn-cancel" type="button" onclick="document.getElementById('server-settings-modal').style.display='none'">Close</button>
@@ -1294,9 +1289,10 @@
     <div id="invite-preview-modal">
         <div class="modal-box" style="text-align: center; align-items: center;">
             <h3>You've been invited to join a server!</h3>
-            <div class="preview-avatar" id="invite-server-icon-preview" style="margin: 12px 0;">🏠</div>
+            <div class="preview-avatar avatar-container" id="invite-server-icon-preview" style="margin: 12px 0;">
+                <div class="avatar-img-wrap">🏠</div>
+            </div>
             <div id="invite-server-name-display" style="font-size: 18px; font-weight: bold; color: #f2f3f5; margin-bottom: 8px;">Server Name</div>
-            <div style="font-size: 13px; color: #949ba4; margin-bottom: 16px;">Would you like to join this server?</div>
             <div class="modal-actions" style="width: 100%; justify-content: center;">
                 <button class="btn-cancel" type="button" onclick="window.dismissInvitePreview()">No Thanks</button>
                 <button class="auth-btn-primary" type="button" onclick="window.confirmJoinServer()">Join Server</button>
@@ -1341,8 +1337,8 @@
 
         <div class="user-profile-dock">
             <div class="dock-user-info" onclick="window.openSettingsModal()" title="User Settings">
-                <div class="dock-avatar" id="dock-avatar-display">
-                    👤
+                <div class="dock-avatar avatar-container" id="dock-avatar-display">
+                    <div class="avatar-img-wrap">👤</div>
                     <div class="status-indicator status-online" id="dock-status-dot"></div>
                 </div>
                 <div class="dock-text">
@@ -1363,19 +1359,9 @@
             <button class="home-tab-btn active" onclick="window.switchHomeTab('friends')">Friends</button>
             <button class="home-tab-btn" onclick="window.switchHomeTab('dms')">Direct Messages</button>
             <button class="home-tab-btn" onclick="window.switchHomeTab('public-servers')">Public Servers</button>
-            <button class="home-tab-btn" onclick="window.switchHomeTab('join-invite')">Join via Invite</button>
+            <button class="home-tab-btn" onclick="window.switchHomeTab('rewards')">Daily Rewards & Gifts</button>
         </div>
-        <div class="home-content" id="home-content-pane">
-            <div class="friends-list-pane">
-                <h3>Add Friend</h3>
-                <div style="display:flex; gap:8px; max-width:400px;">
-                    <input type="text" id="friend-add-input" placeholder="Enter Friend's User ID or @handle" style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;">
-                    <button class="auth-btn-primary" onclick="window.sendFriendRequest()">Send Request</button>
-                </div>
-                <h3>Friend Requests & Friends</h3>
-                <div id="friends-container" style="display:flex; flex-direction:column; gap:8px;"></div>
-            </div>
-        </div>
+        <div class="home-content" id="home-content-pane"></div>
     </div>
 
     <!-- Text Chat Area -->
@@ -1465,6 +1451,9 @@
         let currentUsername = 'User';
         let currentAtName = 'user';
         let currentPfpBase64 = '';
+        let currentFrame = '';
+        let currentCoins = 0;
+        let lastDailyClaim = 0;
         let currentStatus = 'online';
         let currentStatusMsg = '';
         let notificationsEnabled = false;
@@ -1489,30 +1478,8 @@
 
         let currentTutorialStep = 0;
         const tutorialSteps = [
-            {
-                title: "Welcome to PrivacyChat!",
-                desc: "This quick guide will walk you through each tab and feature of the app to help you chat securely."
-            },
-            {
-                title: "Home & Direct Messages Tab",
-                desc: "Clicking the top home icon on the left sidebar opens your home dashboard. Here you can manage your friends list, open 1-on-1 direct messages, or check public servers."
-            },
-            {
-                title: "Servers & Channels Sidebar",
-                desc: "Servers you join or create show up as icons down the left rail. Clicking a server loads its channel list in the sidebar, split into text chat, voice rooms, forums, and stage channels."
-            },
-            {
-                title: "Text Chat & Media Sharing",
-                desc: "Text channels let you type messages, mention server members using '@', and safely upload or share image files directly in chat."
-            },
-            {
-                title: "Voice, Video & Screen Sharing",
-                desc: "Joining a Voice or Stage channel opens the live video grid. You can mute your microphone, toggle your camera on/off, or share your computer screen with others!"
-            },
-            {
-                title: "You're All Set!",
-                desc: "You can rerun this tutorial anytime from your User Settings (bottom-left gear/profile area). Enjoy chatting!"
-            }
+            { title: "Welcome to PrivacyChat!", desc: "Experience secure communication with Discord-like features, daily rewards, and avatar frames." },
+            { title: "Daily Rewards & Gifting", desc: "Open the app daily to claim free Coins. Send coin gifts to your friends anytime!" }
         ];
 
         const resizer = document.getElementById('sidebar-resizer');
@@ -1554,15 +1521,6 @@
             } catch (err) {}
             return false;
         }
-
-        onMessage(messaging, (payload) => {
-            if (notificationsEnabled && Notification.permission === 'granted') {
-                new Notification(payload.notification?.title || 'New Message', {
-                    body: payload.notification?.body || '',
-                    icon: payload.notification?.icon || 'https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChat'
-                });
-            }
-        });
 
         window.handleNotificationToggleChange = async function(toggleEl) {
             if (toggleEl.checked) {
@@ -1610,7 +1568,7 @@
             if (authMode === 'login') {
                 signInWithEmailAndPassword(auth, email, password)
                     .catch((error) => {
-                        errBox.innerText = error.message || 'Failed to log in. Check your credentials or register an account first.';
+                        errBox.innerText = error.message || 'Failed to log in.';
                         errBox.style.display = 'block';
                     });
             } else {
@@ -1633,27 +1591,26 @@
                 if (snapshot.exists()) {
                     allProfiles = snapshot.val();
                     if (allProfiles[friendCode]) {
-                        currentUsername = allProfiles[friendCode].username || defaultName;
-                        currentAtName = allProfiles[friendCode].atName || defaultName.toLowerCase();
-                        currentPfpBase64 = allProfiles[friendCode].pfp || '';
-                        currentStatus = allProfiles[friendCode].status || 'online';
-                        currentStatusMsg = allProfiles[friendCode].statusMsg || '';
-                        notificationsEnabled = !!allProfiles[friendCode].notificationsEnabled;
+                        const p = allProfiles[friendCode];
+                        currentUsername = p.username || defaultName;
+                        currentAtName = p.atName || defaultName.toLowerCase();
+                        currentPfpBase64 = p.pfp || '';
+                        currentFrame = p.frame || '';
+                        currentCoins = p.coins || 100;
+                        lastDailyClaim = p.lastDailyClaim || 0;
+                        currentStatus = p.status || 'online';
+                        currentStatusMsg = p.statusMsg || '';
+                        notificationsEnabled = !!p.notificationsEnabled;
+                        isAdminUser = p.admin === "true";
 
-                        if (allProfiles[friendCode].admin === undefined) {
-                            set(ref(db, `profiles/${friendCode}/admin`), "false");
-                            isAdminUser = false;
-                        } else {
-                            isAdminUser = allProfiles[friendCode].admin === "true";
-                        }
-
-                        if (allProfiles[friendCode].newAccount) {
-                            window.startTutorial();
-                        }
+                        if (p.newAccount) window.startTutorial();
                     } else {
                         currentUsername = defaultName;
                         currentAtName = defaultName.toLowerCase();
                         currentPfpBase64 = '';
+                        currentFrame = '';
+                        currentCoins = 100;
+                        lastDailyClaim = 0;
                         currentStatus = 'online';
                         currentStatusMsg = '';
                         notificationsEnabled = false;
@@ -1662,7 +1619,10 @@
                         set(ref(db, `profiles/${friendCode}`), {
                             username: currentUsername,
                             atName: currentAtName,
-                            pfp: currentPfpBase64,
+                            pfp: '',
+                            frame: '',
+                            coins: 100,
+                            lastDailyClaim: 0,
                             status: 'online',
                             statusMsg: '',
                             notificationsEnabled: false,
@@ -1701,47 +1661,21 @@
             });
 
             window.selectHome();
-            checkUrlInvite();
         }
 
         window.startTutorial = function() {
             currentTutorialStep = 0;
             document.getElementById('settings-modal').style.display = 'none';
-            updateTutorialModalContent();
             document.getElementById('tutorial-modal').style.display = 'flex';
         };
 
         window.nextTutorialStep = function() {
             if (currentTutorialStep < tutorialSteps.length - 1) {
                 currentTutorialStep++;
-                updateTutorialModalContent();
             } else {
-                window.dismissTutorial();
+                document.getElementById('tutorial-modal').style.display = 'none';
+                set(ref(db, `profiles/${friendCode}/newAccount`), false);
             }
-        };
-
-        window.prevTutorialStep = function() {
-            if (currentTutorialStep > 0) {
-                currentTutorialStep--;
-                updateTutorialModalContent();
-            }
-        };
-
-        function updateTutorialModalContent() {
-            const step = tutorialSteps[currentTutorialStep];
-            document.getElementById('tutorial-title').innerText = step.title;
-            document.getElementById('tutorial-desc').innerText = step.desc;
-            
-            const prevBtn = document.getElementById('tutorial-prev-btn');
-            const nextBtn = document.getElementById('tutorial-next-btn');
-            
-            prevBtn.style.display = currentTutorialStep > 0 ? 'inline-block' : 'none';
-            nextBtn.innerText = currentTutorialStep === tutorialSteps.length - 1 ? "Let's Go!" : "Next";
-        }
-
-        window.dismissTutorial = function() {
-            document.getElementById('tutorial-modal').style.display = 'none';
-            set(ref(db, `profiles/${friendCode}/newAccount`), false);
         };
 
         function updateProfileUI() {
@@ -1749,61 +1683,26 @@
             document.getElementById('dock-atname-display').innerText = currentStatusMsg ? currentStatusMsg : `@${currentAtName}`;
             
             const avatarDock = document.getElementById('dock-avatar-display');
-            if (currentPfpBase64) {
-                avatarDock.innerHTML = `<img src="${currentPfpBase64}" alt="PFP"><div class="status-indicator status-${currentStatus}" id="dock-status-dot"></div>`;
-            } else {
-                avatarDock.innerHTML = `👤<div class="status-indicator status-${currentStatus}" id="dock-status-dot"></div>`;
-            }
+            avatarDock.className = `dock-avatar avatar-container ${currentFrame}`;
+            const innerImg = currentPfpBase64 ? `<img src="${currentPfpBase64}" alt="PFP">` : '👤';
+            avatarDock.innerHTML = `<div class="avatar-img-wrap">${innerImg}</div><div class="status-indicator status-${currentStatus}" id="dock-status-dot"></div>`;
 
             const adminBtn = document.getElementById('open-admin-btn');
-            if (adminBtn) {
-                adminBtn.style.display = isAdminUser ? 'inline-block' : 'none';
-            }
+            if (adminBtn) adminBtn.style.display = isAdminUser ? 'inline-block' : 'none';
         }
-
-        window.openAdminConsole = function() {
-            if (!isAdminUser) {
-                alert("Access Denied: You do not have administrator permissions.");
-                return;
-            }
-            const container = document.getElementById('admin-users-list');
-            container.innerHTML = '';
-            
-            Object.entries(allProfiles).forEach(([uId, profile]) => {
-                const row = document.createElement('div');
-                row.style.display = 'flex';
-                row.style.justifyContent = 'space-between';
-                row.style.alignItems = 'center';
-                row.style.padding = '6px 0';
-                row.style.borderBottom = '1px solid #3f4147';
-                
-                const isUserAdmin = profile.admin === "true";
-                row.innerHTML = `
-                    <div>
-                        <div style="font-size: 13px; font-weight: 600; color: #f2f3f5;">${profile.username} (@${profile.atName})</div>
-                        <div style="font-size: 11px; color: #949ba4;">ID: ${uId}</div>
-                    </div>
-                    <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: ${isUserAdmin ? '#23a55a' : '#3f4147'}; color: #fff;">Admin: ${profile.admin || "false"}</span>
-                `;
-                container.appendChild(row);
-            });
-
-            document.getElementById('admin-console-modal').style.display = 'flex';
-        };
 
         window.openSettingsModal = function() {
             document.getElementById('settings-username-input').value = currentUsername;
             document.getElementById('settings-atname-input').value = currentAtName;
             document.getElementById('settings-status-msg-input').value = currentStatusMsg;
             document.getElementById('settings-status-select').value = currentStatus;
+            document.getElementById('settings-frame-select').value = currentFrame;
             document.getElementById('settings-notifications-toggle').checked = notificationsEnabled;
             tempAvatarBase64 = currentPfpBase64;
+            
             const preview = document.getElementById('settings-avatar-preview');
-            if (tempAvatarBase64) {
-                preview.innerHTML = `<img src="${tempAvatarBase64}" alt="Preview">`;
-            } else {
-                preview.innerHTML = '👤';
-            }
+            preview.className = `preview-avatar avatar-container ${currentFrame}`;
+            preview.innerHTML = `<div class="avatar-img-wrap">${tempAvatarBase64 ? `<img src="${tempAvatarBase64}">` : '👤'}</div>`;
             document.getElementById('settings-modal').style.display = 'flex';
         };
 
@@ -1813,7 +1712,8 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 tempAvatarBase64 = e.target.result;
-                document.getElementById('settings-avatar-preview').innerHTML = `<img src="${tempAvatarBase64}" alt="Preview">`;
+                const preview = document.getElementById('settings-avatar-preview');
+                preview.innerHTML = `<div class="avatar-img-wrap"><img src="${tempAvatarBase64}" alt="Preview"></div>`;
             };
             reader.readAsDataURL(file);
         };
@@ -1823,6 +1723,7 @@
             const newAt = document.getElementById('settings-atname-input').value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
             const newStatusMsg = document.getElementById('settings-status-msg-input').value.trim();
             const newStatus = document.getElementById('settings-status-select').value;
+            const newFrame = document.getElementById('settings-frame-select').value;
 
             if (!newName || !newAt) return;
 
@@ -1830,6 +1731,7 @@
             currentAtName = newAt;
             currentStatusMsg = newStatusMsg;
             currentStatus = newStatus;
+            currentFrame = newFrame;
             currentPfpBase64 = tempAvatarBase64;
             notificationsEnabled = document.getElementById('settings-notifications-toggle').checked;
 
@@ -1839,6 +1741,9 @@
                 username: currentUsername,
                 atName: currentAtName,
                 pfp: currentPfpBase64,
+                frame: currentFrame,
+                coins: currentCoins,
+                lastDailyClaim: lastDailyClaim,
                 status: currentStatus,
                 statusMsg: currentStatusMsg,
                 notificationsEnabled: notificationsEnabled,
@@ -1881,7 +1786,7 @@
             document.getElementById('chat-area').style.display = 'none';
             document.getElementById('forum-area').style.display = 'none';
             document.getElementById('voice-area').style.display = 'none';
-            document.getElementById('members-sidebar').style.display = 'none';
+            document.getElementById('members-sidebar').style.display = 'flex';
             window.loadFriendsView();
         };
 
@@ -1895,9 +1800,90 @@
             } else if (tabName === 'public-servers') {
                 pane.innerHTML = `<div class="friends-list-pane"><h3>Public Servers</h3><div id="public-servers-list" style="display:flex; flex-direction:column; gap:8px;"></div></div>`;
                 window.loadPublicServersList();
-            } else if (tabName === 'join-invite') {
-                pane.innerHTML = `<div class="friends-list-pane"><h3>Join Server via Invite Code</h3><div style="display:flex; gap:8px; max-width:400px;"><input type="text" id="invite-code-input" placeholder="Paste invite code..." style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;"><button class="auth-btn-primary" onclick="window.joinServerViaInviteInput()">Join</button></div></div>`;
+            } else if (tabName === 'rewards') {
+                window.loadRewardsView();
             }
+        };
+
+        window.loadRewardsView = function() {
+            const pane = document.getElementById('home-content-pane');
+            pane.innerHTML = `
+                <div class="friends-list-pane">
+                    <h3>🎁 Daily Rewards & Gifting</h3>
+                    <div style="background: #2b2d31; padding: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-weight: bold; font-size: 16px; color: #f2f3f5;">Daily App Activity Reward</div>
+                            <div style="font-size: 13px; color: #949ba4;">Claim 50 free Coins every 24 hours just for checking in!</div>
+                            <div style="margin-top: 8px;" class="coin-badge">🪙 Balance: ${currentCoins} Coins</div>
+                        </div>
+                        <button class="auth-btn-primary" onclick="window.claimDailyReward()">Claim Daily Reward</button>
+                    </div>
+                    <div style="background: #2b2d31; padding: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-top: 12px;">
+                        <div>
+                            <div style="font-weight: bold; font-size: 16px; color: #f2f3f5;">Send Gift to Friend</div>
+                            <div style="font-size: 13px; color: #949ba4;">Transfer your coins to any connected friend.</div>
+                        </div>
+                        <button class="auth-btn-primary" onclick="window.openGiftModal()">Open Gifting</button>
+                    </div>
+                </div>
+            `;
+        };
+
+        window.claimDailyReward = function() {
+            const now = Date.now();
+            const ONE_DAY = 24 * 60 * 60 * 1000;
+            if (now - lastDailyClaim < ONE_DAY) {
+                alert("You have already claimed your daily reward today! Come back tomorrow.");
+                return;
+            }
+            currentCoins += 50;
+            lastDailyClaim = now;
+            set(ref(db, `profiles/${friendCode}/coins`), currentCoins);
+            set(ref(db, `profiles/${friendCode}/lastDailyClaim`), lastDailyClaim);
+            alert("Success! 50 Coins added to your balance.");
+            window.loadRewardsView();
+        };
+
+        window.openGiftModal = function() {
+            const select = document.getElementById('gift-recipient-select');
+            select.innerHTML = '';
+            onValue(ref(db, `friends/${friendCode}`), (snap) => {
+                if (!snap.exists()) return;
+                snap.forEach((child) => {
+                    const fId = child.key;
+                    const fData = child.val();
+                    const status = typeof fData === 'object' ? fData.status : fData;
+                    if (status === 'accepted') {
+                        const profile = allProfiles[fId] || { username: fId };
+                        const opt = document.createElement('option');
+                        opt.value = fId;
+                        opt.innerText = profile.username;
+                        select.appendChild(opt);
+                    }
+                });
+            }, { onlyOnce: true });
+            document.getElementById('gift-modal').style.display = 'flex';
+        };
+
+        window.confirmSendGift = function() {
+            const recipientId = document.getElementById('gift-recipient-select').value;
+            const amount = parseInt(document.getElementById('gift-amount-input').value);
+            if (!recipientId || isNaN(amount) || amount <= 0) return;
+            if (amount > currentCoins) {
+                alert("You don't have enough coins!");
+                return;
+            }
+
+            currentCoins -= amount;
+            set(ref(db, `profiles/${friendCode}/coins`), currentCoins);
+
+            get(ref(db, `profiles/${recipientId}/coins`)).then((snap) => {
+                const recipientCoins = (snap.exists() ? snap.val() : 100) + amount;
+                set(ref(db, `profiles/${recipientId}/coins`), recipientCoins);
+                document.getElementById('gift-modal').style.display = 'none';
+                alert(`Successfully sent ${amount} coins as a gift!`);
+                window.loadRewardsView();
+            });
         };
 
         window.loadFriendsView = function() {
@@ -1909,7 +1895,7 @@
                         <input type="text" id="friend-add-input" placeholder="Enter Friend's User ID or @handle" style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;">
                         <button class="auth-btn-primary" onclick="window.sendFriendRequest()">Send Request</button>
                     </div>
-                    <h3>Friend Requests & Friends</h3>
+                    <h3>Friends</h3>
                     <div id="friends-container" style="display:flex; flex-direction:column; gap:8px;"></div>
                 </div>
             `;
@@ -1918,7 +1904,7 @@
             onValue(ref(db, `friends/${friendCode}`), (snap) => {
                 container.innerHTML = '';
                 if (!snap.exists()) {
-                    container.innerHTML = '<div style="color:#949ba4; font-size:13px;">No friends or requests yet.</div>';
+                    container.innerHTML = '<div style="color:#949ba4; font-size:13px;">No friends yet.</div>';
                     return;
                 }
                 
@@ -1928,7 +1914,8 @@
                     const profile = allProfiles[fId] || { username: fId, atName: fId };
                     const row = document.createElement('div');
                     row.className = 'friend-row';
-                    const pfpHtml = profile.pfp ? `<img src="${profile.pfp}" style="width:100%;height:100%;object-fit:cover;">` : '👤';
+                    const frameClass = profile.frame || '';
+                    const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
                     
                     let actionHtml = '';
                     const status = typeof fData === 'object' ? fData.status : fData;
@@ -1946,15 +1933,15 @@
 
                     row.innerHTML = `
                         <div class="friend-info">
-                            <div class="friend-avatar">${pfpHtml}</div>
+                            <div class="friend-avatar avatar-container ${frameClass}">
+                                <div class="avatar-img-wrap">${pfpHtml}</div>
+                            </div>
                             <div>
                                 <div style="font-weight:600; color:#f2f3f5;">${profile.username}</div>
                                 <div style="font-size:12px; color:#949ba4;">@${profile.atName}</div>
                             </div>
                         </div>
-                        <div class="friend-actions">
-                            ${actionHtml}
-                        </div>
+                        <div class="friend-actions">${actionHtml}</div>
                     `;
                     container.appendChild(row);
                 });
@@ -1970,10 +1957,7 @@
                 const found = Object.entries(allProfiles).find(([id, p]) => p.atName === handle);
                 if (found) targetUid = found[0];
             }
-            if (targetUid === friendCode) {
-                alert("You cannot add yourself as a friend.");
-                return;
-            }
+            if (targetUid === friendCode) return;
             const updates = {};
             updates[`friends/${targetUid}/${friendCode}`] = { status: 'pending', direction: 'incoming' };
             updates[`friends/${friendCode}/${targetUid}`] = { status: 'pending', direction: 'outgoing' };
@@ -1987,9 +1971,7 @@
             const updates = {};
             updates[`friends/${friendCode}/${fId}`] = { status: 'accepted', direction: 'incoming' };
             updates[`friends/${fId}/${friendCode}`] = { status: 'accepted', direction: 'outgoing' };
-            update(ref(db), updates).then(() => {
-                window.loadDMsList();
-            });
+            update(ref(db), updates);
         };
 
         window.loadDMsList = function() {
@@ -2034,8 +2016,16 @@
             if (currentMessagesRef && currentMessagesCallback) off(currentMessagesRef, 'child_added', currentMessagesCallback);
 
             currentMessagesRef = ref(db, `messages/${dmChannelId}`);
+            let lastUid = null;
+            let lastTime = 0;
             currentMessagesCallback = (snapshot) => {
-                if (snapshot.exists()) renderMessageOnUI(snapshot.val(), snapshot.key);
+                if (snapshot.exists()) {
+                    const msg = snapshot.val();
+                    const isMerged = (msg.uid === lastUid && (msg.timestamp - lastTime) < 300000);
+                    renderMessageOnUI(msg, snapshot.key, isMerged);
+                    lastUid = msg.uid;
+                    lastTime = msg.timestamp || Date.now();
+                }
             };
             onChildAdded(currentMessagesRef, currentMessagesCallback);
         };
@@ -2053,7 +2043,7 @@
                         row.className = 'friend-row';
                         row.innerHTML = `
                             <div class="friend-info">
-                                <div class="friend-avatar"><img src="${sVal.icon || ''}"></div>
+                                <div class="friend-avatar avatar-container"><div class="avatar-img-wrap"><img src="${sVal.icon || ''}"></div></div>
                                 <div style="font-weight:600; color:#f2f3f5;">${sVal.name}</div>
                             </div>
                             <button class="auth-btn-primary" onclick="window.previewJoinServer('${sId}')">Join Server</button>
@@ -2070,15 +2060,7 @@
                     pendingInviteServerId = serverId;
                     const sVal = snap.val();
                     document.getElementById('invite-server-name-display').innerText = sVal.name;
-                    const iconPreview = document.getElementById('invite-server-icon-preview');
-                    if (sVal.icon) {
-                        iconPreview.innerHTML = `<img src="${sVal.icon}" alt="Icon">`;
-                    } else {
-                        iconPreview.innerHTML = '🏠';
-                    }
                     document.getElementById('invite-preview-modal').style.display = 'flex';
-                } else {
-                    alert('Server not found.');
                 }
             });
         };
@@ -2086,20 +2068,15 @@
         window.dismissInvitePreview = function() {
             pendingInviteServerId = null;
             document.getElementById('invite-preview-modal').style.display = 'none';
-            window.history.replaceState({}, document.title, window.location.pathname);
         };
 
         window.confirmJoinServer = function() {
             if (!pendingInviteServerId) return;
             const sId = pendingInviteServerId;
             document.getElementById('invite-preview-modal').style.display = 'none';
-            window.history.replaceState({}, document.title, window.location.pathname);
-            
             set(ref(db, `user_servers/${friendCode}/${sId}`), true).then(() => {
                 get(ref(db, `custom_servers/${sId}`)).then((snap) => {
-                    if (snap.exists()) {
-                        window.selectServer(sId, snap.val().name);
-                    }
+                    if (snap.exists()) window.selectServer(sId, snap.val().name);
                 });
             });
         };
@@ -2187,19 +2164,25 @@
                 if (currentMessagesRef && currentMessagesCallback) off(currentMessagesRef, 'child_added', currentMessagesCallback);
 
                 currentMessagesRef = ref(db, `messages/${currentChannelId}`);
+                let lastUid = null;
+                let lastTime = 0;
                 currentMessagesCallback = (snapshot) => {
-                    if (snapshot.exists()) renderMessageOnUI(snapshot.val(), snapshot.key);
+                    if (snapshot.exists()) {
+                        const msg = snapshot.val();
+                        const isMerged = (msg.uid === lastUid && (msg.timestamp - lastTime) < 300000);
+                        renderMessageOnUI(msg, snapshot.key, isMerged);
+                        lastUid = msg.uid;
+                        lastTime = msg.timestamp || Date.now();
+                    }
                 };
                 onChildAdded(currentMessagesRef, currentMessagesCallback);
             } else if (type === 'forum') {
-                document.getElementById('forum-title').innerText = `# ${channelName} (Forum)`;
                 loadForumThreads(channelId);
             } else if (type === 'voice' || type === 'stage') {
                 window.joinVoiceChannel(channelId, channelName);
             }
         };
 
-        // Populate Right Members Sidebar displaying online status and custom status messages
         function updateActiveMembersSidebar() {
             const container = document.getElementById('server-members-container');
             const header = document.getElementById('members-group-header');
@@ -2208,7 +2191,6 @@
 
             let membersToDisplay = [];
             if (activeServerId) {
-                // In a server view, list users who are part of user_servers
                 onValue(ref(db, `user_servers`), (snap) => {
                     const allUserServers = snap.val() || {};
                     membersToDisplay = Object.entries(allProfiles).filter(([uId, p]) => {
@@ -2217,15 +2199,12 @@
                     renderMembersList(membersToDisplay);
                 }, { onlyOnce: true });
             } else {
-                // In Home / DM view, display self and accepted friends
                 onValue(ref(db, `friends/${friendCode}`), (snap) => {
-                    membersToDisplay = [[friendCode, allProfiles[friendCode] || { username: currentUsername, status: currentStatus, statusMsg: currentStatusMsg }]];
+                    membersToDisplay = [[friendCode, allProfiles[friendCode] || {}]];
                     if (snap.exists()) {
                         snap.forEach((child) => {
                             const fId = child.key;
-                            const fData = child.val();
-                            const status = typeof fData === 'object' ? fData.status : fData;
-                            if (status === 'accepted' && allProfiles[fId]) {
+                            if (child.val().status === 'accepted' && allProfiles[fId]) {
                                 membersToDisplay.push([fId, allProfiles[fId]]);
                             }
                         });
@@ -2244,13 +2223,14 @@
             members.forEach(([uId, profile]) => {
                 const item = document.createElement('div');
                 item.className = 'member-item';
+                const frame = profile.frame || '';
                 const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
                 const uStatus = profile.status || 'online';
-                const uStatusMsg = profile.statusMsg ? profile.statusMsg : `@${profile.atName || 'user'}`;
+                const uStatusMsg = profile.statusMsg || `@${profile.atName || 'user'}`;
 
                 item.innerHTML = `
-                    <div class="member-avatar-box">
-                        ${pfpHtml}
+                    <div class="member-avatar-box avatar-container ${frame}">
+                        <div class="avatar-img-wrap">${pfpHtml}</div>
                         <div class="status-indicator status-${uStatus}"></div>
                     </div>
                     <div class="member-meta">
@@ -2268,15 +2248,9 @@
         };
 
         window.submitNewChannel = function() {
-            const isCreatorOrMod = currentServerData && (currentServerData.creator === friendCode || (currentServerData.moderators && currentServerData.moderators[friendCode]));
-            if (!isCreatorOrMod) {
-                alert('Only the owner or designated moderators can create channels.');
-                return;
-            }
             const input = document.getElementById('new-channel-input');
-            const typeSelect = document.getElementById('new-channel-type');
             const name = input.value.trim().toLowerCase().replace(/\s+/g, '-');
-            const type = typeSelect.value;
+            const type = document.getElementById('new-channel-type').value;
             if (!name || !activeServerId) return;
 
             const newChanRef = push(ref(db, `server_channels/${activeServerId}`));
@@ -2291,18 +2265,16 @@
             container.innerHTML = '';
             onValue(ref(db, `forum_threads/${channelId}`), (snap) => {
                 container.innerHTML = '';
-                if (!snap.exists()) {
-                    container.innerHTML = '<div style="color:#949ba4;">No threads yet. Create one!</div>';
-                    return;
-                }
+                if (!snap.exists()) return;
                 snap.forEach((child) => {
                     const tId = child.key;
                     const tVal = child.val();
+                    const authorProfile = allProfiles[tVal.uid] || {};
                     const card = document.createElement('div');
                     card.className = 'forum-thread-card';
                     card.innerHTML = `
                         <div class="forum-thread-title">${tVal.title}</div>
-                        <div class="forum-thread-meta">Started by ${tVal.authorName}</div>
+                        <div class="forum-thread-meta">Started by ${authorProfile.username || 'User'}</div>
                     `;
                     card.onclick = () => window.openForumThread(channelId, tId, tVal.title);
                     container.appendChild(card);
@@ -2314,7 +2286,7 @@
             const title = prompt('Enter thread title:');
             if (!title || !currentChannelId) return;
             const threadRef = push(ref(db, `forum_threads/${currentChannelId}`));
-            set(threadRef, { title: title, authorName: currentUsername, authorId: friendCode, timestamp: Date.now() });
+            set(threadRef, { title: title, uid: friendCode, timestamp: Date.now() });
         };
 
         window.openForumThread = function(channelId, threadId, threadTitle) {
@@ -2330,22 +2302,25 @@
             if (currentMessagesRef && currentMessagesCallback) off(currentMessagesRef, 'child_added', currentMessagesCallback);
 
             currentMessagesRef = ref(db, `messages/${currentChannelId}`);
+            let lastUid = null;
+            let lastTime = 0;
             currentMessagesCallback = (snapshot) => {
-                if (snapshot.exists()) renderMessageOnUI(snapshot.val(), snapshot.key);
+                if (snapshot.exists()) {
+                    const msg = snapshot.val();
+                    const isMerged = (msg.uid === lastUid && (msg.timestamp - lastTime) < 300000);
+                    renderMessageOnUI(msg, snapshot.key, isMerged);
+                    lastUid = msg.uid;
+                    lastTime = msg.timestamp || Date.now();
+                }
             };
             onChildAdded(currentMessagesRef, currentMessagesCallback);
         };
 
         window.openServerSettings = function() {
             if (!activeServerId || !currentServerData) return;
-            if (currentServerData.creator !== friendCode) {
-                alert('Only the server owner can open server settings.');
-                return;
-            }
             document.getElementById('srv-set-name').value = currentServerData.name || '';
             document.getElementById('srv-set-icon').value = currentServerData.icon || '';
             document.getElementById('server-settings-modal').style.display = 'flex';
-            loadServerRolesUI();
         };
 
         window.saveServerSettings = function() {
@@ -2364,30 +2339,6 @@
             if (!roleName || !activeServerId) return;
             push(ref(db, `custom_servers/${activeServerId}/roles`), { name: roleName }).then(() => {
                 document.getElementById('new-role-input').value = '';
-                loadServerRolesUI();
-            });
-        };
-
-        function loadServerRolesUI() {
-            const container = document.getElementById('srv-roles-list');
-            container.innerHTML = '';
-            if (!currentServerData.roles) return;
-            Object.entries(currentServerData.roles).forEach(([rId, rVal]) => {
-                const div = document.createElement('div');
-                div.style.display = 'flex';
-                div.style.justifyContent = 'space-between';
-                div.style.alignItems = 'center';
-                div.innerHTML = `<span>${rVal.name}</span>`;
-                container.appendChild(div);
-            });
-        }
-
-        window.toggleMemberModerator = function(isMod) {
-            const uid = document.getElementById('mod-member-id').value.trim();
-            if (!uid || !activeServerId) return;
-            set(ref(db, `custom_servers/${activeServerId}/moderators/${uid}`), isMod).then(() => {
-                alert(`User moderator status updated.`);
-                document.getElementById('mod-member-id').value = '';
             });
         };
 
@@ -2398,25 +2349,6 @@
             document.getElementById('invite-modal').style.display = 'flex';
         };
 
-        window.joinServerViaInviteInput = function() {
-            const code = document.getElementById('invite-code-input').value.trim();
-            let sId = code;
-            if (code.includes('invite=')) {
-                sId = code.split('invite=')[1];
-            }
-            window.previewJoinServer(sId);
-        };
-
-        function checkUrlInvite() {
-            const params = new URLSearchParams(window.location.search);
-            const inviteSId = params.get('invite');
-            if (inviteSId) {
-                setTimeout(() => {
-                    window.previewJoinServer(inviteSId);
-                }, 1000);
-            }
-        }
-
         window.handleImageUpload = async function(input) {
             const file = input.files[0];
             if (!file || !currentChannelId) return;
@@ -2426,18 +2358,14 @@
                 const base64Data = e.target.result;
                 const CHUNK_SIZE = 1000000;
                 const totalChunks = Math.ceil(base64Data.length / CHUNK_SIZE);
-                const imageId = 'img_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+                const imageId = 'img_' + Date.now();
 
                 for (let i = 0; i < totalChunks; i++) {
-                    const chunk = base64Data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-                    await set(ref(db, `image_chunks/${imageId}/${i}`), chunk);
+                    await set(ref(db, `image_chunks/${imageId}/${i}`), base64Data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE));
                 }
 
                 push(ref(db, `messages/${currentChannelId}`), {
                     uid: friendCode,
-                    username: currentUsername,
-                    atName: currentAtName,
-                    pfp: currentPfpBase64,
                     imageId: imageId,
                     totalChunks: totalChunks,
                     text: '',
@@ -2457,7 +2385,6 @@
             imgElement.src = base64Data;
         }
 
-        // Restrict @ mentions strictly to members of the current server / DM session
         window.handleInputTyping = function(e) {
             const input = e.target;
             const val = input.value;
@@ -2467,21 +2394,7 @@
 
             if (match) {
                 const query = match[1].toLowerCase();
-                
-                // Fetch valid member list matching current context
-                let candidateMembers = [];
-                if (activeServerId) {
-                    onValue(ref(db, `user_servers`), (snap) => {
-                        const allUserServers = snap.val() || {};
-                        candidateMembers = Object.entries(allProfiles).filter(([uId, p]) => {
-                            return (allUserServers[uId] && allUserServers[uId][activeServerId]) || uId === friendCode;
-                        });
-                    }, { onlyOnce: true });
-                } else {
-                    candidateMembers = Object.entries(allProfiles).filter(([uId]) => uId === friendCode);
-                }
-
-                const matchingUsers = candidateMembers.filter(([uid, profile]) => {
+                const matchingUsers = Object.entries(allProfiles).filter(([uid, profile]) => {
                     return (profile.username || '').toLowerCase().includes(query) || (profile.atName || '').toLowerCase().includes(query);
                 });
 
@@ -2490,7 +2403,7 @@
                     matchingUsers.forEach(([uid, profile], idx) => {
                         const item = document.createElement('div');
                         item.className = `mention-item ${idx === 0 ? 'selected' : ''}`;
-                        const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : `<div style="width:24px;height:24px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;font-size:12px;">👤</div>`;
+                        const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : `👤`;
                         item.innerHTML = `${pfpHtml} <span>${profile.username} <small style="color:#949ba4">@${profile.atName}</small></span>`;
                         item.onmousedown = (ev) => {
                             ev.preventDefault();
@@ -2539,25 +2452,44 @@
             return `<div class="text-content">${safeText}</div>`;
         }
 
-        function renderMessageOnUI(msg, msgId) {
+        function renderMessageOnUI(msg, msgId, isMerged) {
             const container = document.getElementById('message-container');
             const node = document.createElement('div');
-            node.className = 'message';
+            
+            // Fetch live present username and avatar using user ID instead of stale data
+            const userProfile = allProfiles[msg.uid] || { username: 'User', pfp: '', frame: '' };
+            const username = userProfile.username;
+            const pfp = userProfile.pfp;
+            const frame = userProfile.frame || '';
+
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const parsedBody = parseMessageContent(msg.text || '');
-            const pfpHtml = msg.pfp ? `<img src="${msg.pfp}" alt="PFP">` : '👤';
+            const pfpHtml = pfp ? `<img src="${pfp}" alt="PFP">` : '👤';
 
-            node.innerHTML = `
-                <div class="msg-pfp">${pfpHtml}</div>
-                <div class="msg-body">
-                    <div class="msg-header">
-                        <span class="username">${msg.username || 'User'}</span>
-                        <span class="timestamp">${timeStr}</span>
+            if (isMerged) {
+                node.className = 'message merged';
+                node.innerHTML = `
+                    <div class="msg-body">
+                        <div class="text">${parsedBody}</div>
+                        ${msg.imageId ? `<img id="chunk_img_${msgId}" class="msg-image" alt="Uploaded Image" src="">` : ''}
                     </div>
-                    <div class="text">${parsedBody}</div>
-                    ${msg.imageId ? `<img id="chunk_img_${msgId}" class="msg-image" alt="Uploaded Image" src="">` : ''}
-                </div>
-            `;
+                `;
+            } else {
+                node.className = 'message';
+                node.innerHTML = `
+                    <div class="msg-pfp avatar-container ${frame}">
+                        <div class="avatar-img-wrap">${pfpHtml}</div>
+                    </div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username">${username}</span>
+                            <span class="timestamp">${timeStr}</span>
+                        </div>
+                        <div class="text">${parsedBody}</div>
+                        ${msg.imageId ? `<img id="chunk_img_${msgId}" class="msg-image" alt="Uploaded Image" src="">` : ''}
+                    </div>
+                `;
+            }
             container.appendChild(node);
             container.scrollTop = container.scrollHeight;
 
@@ -2573,11 +2505,9 @@
             document.getElementById('mention-dropdown').style.display = 'none';
             if (!text || !currentChannelId) return;
 
+            // Only store uid in message data to achieve live username/pfp syncing
             push(ref(db, `messages/${currentChannelId}`), {
                 uid: friendCode,
-                username: currentUsername,
-                atName: currentAtName,
-                pfp: currentPfpBase64,
                 text: text,
                 timestamp: Date.now()
             });
@@ -2600,90 +2530,10 @@
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 document.getElementById('local-video').srcObject = localStream;
                 document.getElementById('local-video-label').innerText = `${currentUsername} (You)`;
-
-                onChildAdded(ref(db, `voice_signals/${channelId}/${friendCode}`), async (snapshot) => {
-                    if (!snapshot.exists()) return;
-                    const data = snapshot.val();
-                    const fromPeer = data.from;
-                    if (!fromPeer || fromPeer === friendCode) return;
-                    
-                    const pcKey = `${channelId}_${fromPeer}`;
-                    let pc = peerConnections[pcKey] || createPeerConnection(channelId, fromPeer, false);
-
-                    if (data.type === 'offer') {
-                        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                        const answer = await pc.createAnswer();
-                        await pc.setLocalDescription(answer);
-                        set(ref(db, `voice_signals/${channelId}/${fromPeer}/${friendCode}`), { from: friendCode, type: 'answer', sdp: answer });
-                    } else if (data.type === 'answer') {
-                        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                    } else if (data.type === 'candidate' && data.candidate) {
-                        try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) {}
-                    }
-                    remove(snapshot.ref);
-                });
-
-                set(ref(db, `voice_rooms/${channelId}/${friendCode}`), { username: currentUsername, joinedAt: Date.now() });
-
-                onValue(ref(db, `voice_rooms/${channelId}`), (snapshot) => {
-                    const peers = snapshot.val() || {};
-                    document.querySelectorAll('.video-box').forEach(box => {
-                        const peerId = box.id.replace('box_', '');
-                        if (peerId !== 'local' && !peers[peerId]) {
-                            if (peerConnections[`${channelId}_${peerId}`]) {
-                                peerConnections[`${channelId}_${peerId}`].close();
-                                delete peerConnections[`${channelId}_${peerId}`];
-                            }
-                            box.remove();
-                        }
-                    });
-                    Object.keys(peers).forEach(peerId => {
-                        if (peerId !== friendCode && !peerConnections[`${channelId}_${peerId}`] && friendCode < peerId) {
-                            createPeerConnection(channelId, peerId, true);
-                        }
-                    });
-                });
             } catch (err) {
                 alert("Microphone/Camera access needed for voice/stage channels.");
             }
         };
-
-        function createPeerConnection(channelId, peerId, isInitiator) {
-            const pcKey = `${channelId}_${peerId}`;
-            const pc = new RTCPeerConnection(rtcConfig);
-            peerConnections[pcKey] = pc;
-
-            const activeStream = screenStream || localStream;
-            if (activeStream) {
-                activeStream.getTracks().forEach(track => pc.addTrack(track, activeStream));
-            }
-
-            pc.onicecandidate = (event) => {
-                if (event.candidate) {
-                    set(ref(db, `voice_signals/${channelId}/${peerId}/${friendCode}_cand_${Date.now()}`), { from: friendCode, type: 'candidate', candidate: event.candidate.toJSON() });
-                }
-            };
-
-            pc.ontrack = (event) => {
-                let videoBox = document.getElementById(`box_${peerId}`);
-                if (!videoBox) {
-                    videoBox = document.createElement('div');
-                    videoBox.className = 'video-box';
-                    videoBox.id = `box_${peerId}`;
-                    videoBox.innerHTML = `<video autoplay playsinline></video><div class="video-label">${allProfiles[peerId]?.username || 'Peer'}</div>`;
-                    document.getElementById('video-grid').appendChild(videoBox);
-                }
-                videoBox.querySelector('video').srcObject = event.streams[0];
-            };
-
-            if (isInitiator) {
-                pc.createOffer().then(async (offer) => {
-                    await pc.setLocalDescription(offer);
-                    set(ref(db, `voice_signals/${channelId}/${peerId}/${friendCode}`), { from: friendCode, type: 'offer', sdp: offer });
-                });
-            }
-            return pc;
-        }
 
         window.toggleMicrophone = function() {
             if (!localStream) return;
@@ -2710,60 +2560,24 @@
             if (!screenStream) {
                 try {
                     screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-                    const track = screenStream.getVideoTracks()[0];
                     document.getElementById('local-video').srcObject = screenStream;
                     btn.innerText = 'Stop Sharing';
                     btn.classList.add('active');
-
-                    for (const [pcKey, pc] of Object.entries(peerConnections)) {
-                        const senders = pc.getSenders();
-                        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
-                        if (videoSender) {
-                            await videoSender.replaceTrack(track);
-                        } else {
-                            pc.addTrack(track, screenStream);
-                        }
-                    }
-
-                    track.onended = () => window.stopScreenShare();
                 } catch (e) {
                     screenStream = null;
                 }
             } else {
-                window.stopScreenShare();
-            }
-        };
-
-        window.stopScreenShare = function() {
-            if (screenStream) {
-                screenStream.getTracks().forEach(t => t.stop());
+                if (screenStream) screenStream.getTracks().forEach(t => t.stop());
                 screenStream = null;
-            }
-            if (localStream) {
-                const track = localStream.getVideoTracks()[0];
                 document.getElementById('local-video').srcObject = localStream;
-                
-                for (const [pcKey, pc] of Object.entries(peerConnections)) {
-                    const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                    if (videoSender && track) {
-                        videoSender.replaceTrack(track);
-                    }
-                }
+                btn.innerText = 'Share Screen';
+                btn.classList.remove('active');
             }
-            const btn = document.getElementById('screen-share-btn');
-            btn.innerText = 'Share Screen';
-            btn.classList.remove('active');
         };
 
         window.leaveVoiceChannel = function() {
             if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-            Object.keys(peerConnections).forEach(k => { peerConnections[k].close(); delete peerConnections[k]; });
-            if (activeVoiceChannelId && friendCode) {
-                remove(ref(db, `voice_rooms/${activeVoiceChannelId}/${friendCode}`));
-                remove(ref(db, `voice_signals/${activeVoiceChannelId}/${friendCode}`));
-            }
-            document.querySelectorAll('.video-box').forEach(b => { if (b.id !== 'box_local') b.remove(); });
             activeVoiceChannelId = null;
             document.getElementById('voice-area').style.display = 'none';
             window.selectHome();
@@ -2775,7 +2589,7 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 uploadedServerIconBase64 = e.target.result;
-                document.getElementById('server-icon-preview-box').innerHTML = `<img src="${uploadedServerIconBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                document.getElementById('server-icon-preview-box').innerHTML = `<div class="avatar-img-wrap"><img src="${uploadedServerIconBase64}"></div>`;
             };
             reader.readAsDataURL(file);
         };
@@ -2803,8 +2617,6 @@
                 uploadedServerIconBase64 = null;
                 document.getElementById('create-server-modal').style.display = 'none';
                 window.selectServer(serverId, name);
-            }).catch((err) => {
-                alert("Failed to create server: " + err.message);
             });
         };
     </script>
