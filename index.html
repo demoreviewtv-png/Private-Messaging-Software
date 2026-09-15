@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+d<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -152,7 +152,7 @@
             line-height: 1.4;
         }
 
-        #settings-modal, #server-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal {
+        #settings-modal, #server-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal, #admin-console-modal {
             position: fixed;
             top: 0;
             left: 0;
@@ -1079,6 +1079,21 @@
         </div>
     </div>
 
+    <!-- Admin Console Modal -->
+    <div id="admin-console-modal">
+        <div class="settings-box" style="border: 2px solid #5865f2;">
+            <h3 style="color: #f2f3f5;">🔒 Admin Console</h3>
+            <p style="font-size: 13px; color: #949ba4;">Manage global settings and view registered system users.</p>
+            <div class="auth-field">
+                <label>System Users & Admin Status</label>
+                <div id="admin-users-list" style="max-height: 150px; overflow-y: auto; background: #1e1f22; padding: 8px; border-radius: 4px; display: flex; flex-direction: column; gap: 6px;"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" type="button" onclick="document.getElementById('admin-console-modal').style.display='none'">Close Console</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Redesigned Create Server Modal -->
     <div id="create-server-modal">
         <div class="modal-box" style="background: #2b2d31; border: 1px solid #3f4147;">
@@ -1219,7 +1234,10 @@
                     <div class="dock-subtext" id="dock-atname-display">@user</div>
                 </div>
             </div>
-            <button onclick="window.logOutUser()" style="background:none; border:none; color:#da373c; cursor:pointer; font-size:12px; font-weight:bold; padding:4px;">Log Out</button>
+            <div style="display: flex; gap: 4px; align-items: center;">
+                <button id="open-admin-btn" onclick="window.openAdminConsole()" style="background:none; border:none; color:#5865f2; cursor:pointer; font-size:12px; font-weight:bold; padding:4px; display:none;">Admin</button>
+                <button onclick="window.logOutUser()" style="background:none; border:none; color:#da373c; cursor:pointer; font-size:12px; font-weight:bold; padding:4px;">Log Out</button>
+            </div>
         </div>
     </div>
 
@@ -1329,6 +1347,7 @@
         let authMode = 'login';
         let uploadedServerIconBase64 = null;
         let tempAvatarBase64 = '';
+        let isAdminUser = false;
         
         let allProfiles = {};
         let currentServerData = null;
@@ -1495,6 +1514,13 @@
                         currentPfpBase64 = allProfiles[friendCode].pfp || '';
                         notificationsEnabled = !!allProfiles[friendCode].notificationsEnabled;
 
+                        if (allProfiles[friendCode].admin === undefined) {
+                            set(ref(db, `profiles/${friendCode}/admin`), "false");
+                            isAdminUser = false;
+                        } else {
+                            isAdminUser = allProfiles[friendCode].admin === "true";
+                        }
+
                         if (allProfiles[friendCode].newAccount) {
                             window.startTutorial();
                         }
@@ -1503,12 +1529,15 @@
                         currentAtName = defaultName.toLowerCase();
                         currentPfpBase64 = '';
                         notificationsEnabled = false;
+                        isAdminUser = false;
+
                         set(ref(db, `profiles/${friendCode}`), {
                             username: currentUsername,
                             atName: currentAtName,
                             pfp: currentPfpBase64,
                             notificationsEnabled: false,
-                            newAccount: true
+                            newAccount: true,
+                            admin: "false"
                         });
                         window.startTutorial();
                     }
@@ -1593,7 +1622,39 @@
             } else {
                 avatarDock.innerHTML = '👤';
             }
+
+            const adminBtn = document.getElementById('open-admin-btn');
+            if (adminBtn) {
+                adminBtn.style.display = isAdminUser ? 'inline-block' : 'none';
+            }
         }
+
+        window.openAdminConsole = function() {
+            if (!isAdminUser) {
+                alert("Access Denied: You do not have administrator permissions.");
+                return;
+            }
+            const container = document.getElementById('admin-users-list');
+            container.innerHTML = '';
+            
+            Object.entries(allProfiles).forEach(([uId, profile]) => {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.padding = '4px 0';
+                row.style.borderBottom = '1px solid #2b2d31';
+                
+                const isUserAdmin = profile.admin === "true";
+                row.innerHTML = `
+                    <span style="font-size: 13px; color: #dbdee1;">${profile.username} (@${profile.atName})</span>
+                    <span style="font-size: 11px; color: ${isUserAdmin ? '#23a55a' : '#949ba4'};">Admin: ${profile.admin || "false"}</span>
+                `;
+                container.appendChild(row);
+            });
+
+            document.getElementById('admin-console-modal').style.display = 'flex';
+        };
 
         window.openSettingsModal = function() {
             document.getElementById('settings-username-input').value = currentUsername;
@@ -1631,12 +1692,15 @@
             currentPfpBase64 = tempAvatarBase64;
             notificationsEnabled = document.getElementById('settings-notifications-toggle').checked;
 
+            const existingAdminValue = allProfiles[friendCode]?.admin || "false";
+
             set(ref(db, `profiles/${friendCode}`), {
                 username: currentUsername,
                 atName: currentAtName,
                 pfp: currentPfpBase64,
                 notificationsEnabled: notificationsEnabled,
-                newAccount: false
+                newAccount: false,
+                admin: existingAdminValue
             }).then(() => {
                 document.getElementById('settings-modal').style.display = 'none';
                 updateProfileUI();
