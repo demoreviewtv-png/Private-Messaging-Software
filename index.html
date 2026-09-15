@@ -116,7 +116,7 @@
             display: none;
         }
 
-        #settings-modal, #server-settings-modal, #create-server-modal, #invite-modal {
+        #settings-modal, #server-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal {
             position: fixed;
             top: 0;
             left: 0;
@@ -1123,6 +1123,20 @@
         </div>
     </div>
 
+    <!-- Invite Preview Modal (Prevent Auto-Join) -->
+    <div id="invite-preview-modal">
+        <div class="modal-box" style="text-align: center; align-items: center;">
+            <h3>You've been invited to join a server!</h3>
+            <div class="preview-avatar" id="invite-server-icon-preview" style="margin: 12px 0;">🏠</div>
+            <div id="invite-server-name-display" style="font-size: 18px; font-weight: bold; color: #f2f3f5; margin-bottom: 8px;">Server Name</div>
+            <div style="font-size: 13px; color: #949ba4; margin-bottom: 16px;">Would you like to join this server?</div>
+            <div class="modal-actions" style="width: 100%; justify-content: center;">
+                <button class="btn-cancel" type="button" onclick="window.dismissInvitePreview()">No Thanks</button>
+                <button class="auth-btn-primary" type="button" onclick="window.confirmJoinServer()">Join Server</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 1. Left Server Rail -->
     <div id="server-rail">
         <div class="rail-item" id="rail-home" title="Direct Messages / Home" onclick="window.selectHome()">
@@ -1279,6 +1293,7 @@
         
         let allProfiles = {};
         let currentServerData = null;
+        let pendingInviteServerId = null;
 
         let currentMessagesRef = null;
         let currentMessagesCallback = null;
@@ -1382,14 +1397,19 @@
                 return;
             }
 
-            const promise = authMode === 'login' 
-                ? signInWithEmailAndPassword(auth, email, password)
-                : createUserWithEmailAndPassword(auth, email, password);
-
-            promise.catch(() => {
-                const fallbackUid = 'usr_' + Math.random().toString(36).substring(2, 9);
-                initializeSession(fallbackUid, email.split('@')[0]);
-            });
+            if (authMode === 'login') {
+                signInWithEmailAndPassword(auth, email, password)
+                    .catch((error) => {
+                        errBox.innerText = error.message || 'Failed to log in. Check your credentials or register an account first.';
+                        errBox.style.display = 'block';
+                    });
+            } else {
+                createUserWithEmailAndPassword(auth, email, password)
+                    .catch((error) => {
+                        errBox.innerText = error.message || 'Failed to register account.';
+                        errBox.style.display = 'block';
+                    });
+            }
         };
 
         function initializeSession(uid, defaultName) {
@@ -1420,26 +1440,34 @@
                 }
             });
 
-            onValue(ref(db, 'custom_servers'), (snapshot) => {
-                const rail = document.getElementById('custom-servers-rail');
-                rail.innerHTML = '';
-                if (snapshot.exists()) {
-                    snapshot.forEach((childSnap) => {
-                        const sKey = childSnap.key;
-                        const sVal = childSnap.val();
-                        const icon = document.createElement('div');
-                        icon.className = 'rail-item';
-                        icon.id = `rail-${sKey}`;
-                        icon.title = sVal.name;
-                        const iconUrl = sVal.icon || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(sVal.name)}`;
-                        icon.innerHTML = `<img src="${iconUrl}" alt="${sVal.name}">`;
-                        icon.onclick = () => window.selectServer(sKey, sVal.name);
-                        rail.appendChild(icon);
-                    });
-                }
+            // Load only servers the user belongs to from Firebase
+            onValue(ref(db, `user_servers/${friendCode}`), (userServersSnap) => {
+                const userServers = userServersSnap.val() || {};
+                onValue(ref(db, 'custom_servers'), (snapshot) => {
+                    const rail = document.getElementById('custom-servers-rail');
+                    rail.innerHTML = '';
+                    if (snapshot.exists()) {
+                        snapshot.forEach((childSnap) => {
+                            const sKey = childSnap.key;
+                            const sVal = childSnap.val();
+                            // Render only if the user is a member/creator of this server
+                            if (userServers[sKey] || sVal.creator === friendCode) {
+                                const icon = document.createElement('div');
+                                icon.className = 'rail-item';
+                                icon.id = `rail-${sKey}`;
+                                icon.title = sVal.name;
+                                const iconUrl = sVal.icon || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(sVal.name)}`;
+                                icon.innerHTML = `<img src="${iconUrl}" alt="${sVal.name}">`;
+                                icon.onclick = () => window.selectServer(sKey, sVal.name);
+                                rail.appendChild(icon);
+                            }
+                        });
+                    }
+                });
             });
 
             window.selectHome();
+            checkUrlInvite();
         }
 
         function updateProfileUI() {
@@ -1544,7 +1572,7 @@
                 pane.innerHTML = `<div class="friends-list-pane"><h3>Public Servers</h3><div id="public-servers-list" style="display:flex; flex-direction:column; gap:8px;"></div></div>`;
                 window.loadPublicServersList();
             } else if (tabName === 'join-invite') {
-                pane.innerHTML = `<div class="friends-list-pane"><h3>Join Server via Invite Code</h3><div style="display:flex; gap:8px; max-width:400px;"><input type="text" id="invite-code-input" placeholder="Paste invite code..." style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;"><button class="auth-btn-primary" onclick="window.joinServerViaInvite()">Join</button></div></div>`;
+                pane.innerHTML = `<div class="friends-list-pane"><h3>Join Server via Invite Code</h3><div style="display:flex; gap:8px; max-width:400px;"><input type="text" id="invite-code-input" placeholder="Paste invite code..." style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;"><button class="auth-btn-primary" onclick="window.joinServerViaInviteInput()">Join</button></div></div>`;
             }
         };
 
@@ -1572,19 +1600,25 @@
                 
                 snap.forEach((child) => {
                     const fId = child.key;
-                    const fStatus = child.val();
+                    const fData = child.val();
                     const profile = allProfiles[fId] || { username: fId, atName: fId };
                     const row = document.createElement('div');
                     row.className = 'friend-row';
                     const pfpHtml = profile.pfp ? `<img src="${profile.pfp}" style="width:100%;height:100%;object-fit:cover;">` : '👤';
                     
                     let actionHtml = '';
-                    if (fStatus === 'pending') {
-                        actionHtml = `<button class="auth-btn-primary" style="padding:4px 12px; font-size:12px; background-color:#23a55a;" onclick="window.acceptFriend('${fId}')">Accept</button>`;
-                    } else if (fStatus === 'accepted') {
+                    // fData can be an object or a string depending on legacy structure, let's check status safely
+                    const status = typeof fData === 'object' ? fData.status : fData;
+                    const direction = typeof fData === 'object' ? fData.direction : '';
+
+                    if (status === 'pending') {
+                        if (direction === 'incoming') {
+                            actionHtml = `<button class="auth-btn-primary" style="padding:4px 12px; font-size:12px; background-color:#23a55a;" onclick="window.acceptFriend('${fId}')">Accept</button>`;
+                        } else {
+                            actionHtml = `<span style="font-size:12px; color:#949ba4;">Request Sent</span>`;
+                        }
+                    } else if (status === 'accepted') {
                         actionHtml = `<button class="action-icon-btn" onclick="window.openDM('${fId}', '${profile.username}')" title="Message">💬</button>`;
-                    } else {
-                        actionHtml = `<span style="font-size:12px; color:#949ba4;">Request Sent</span>`;
                     }
 
                     row.innerHTML = `
@@ -1613,7 +1647,14 @@
                 const found = Object.entries(allProfiles).find(([id, p]) => p.atName === handle);
                 if (found) targetUid = found[0];
             }
-            set(ref(db, `friends/${targetUid}/${friendCode}`), 'pending').then(() => {
+            if (targetUid === friendCode) {
+                alert("You cannot add yourself as a friend.");
+                return;
+            }
+            const updates = {};
+            updates[`friends/${targetUid}/${friendCode}`] = { status: 'pending', direction: 'incoming' };
+            updates[`friends/${friendCode}/${targetUid}`] = { status: 'pending', direction: 'outgoing' };
+            set(ref(db), updates).then(() => {
                 alert('Friend request sent!');
                 document.getElementById('friend-add-input').value = '';
             });
@@ -1621,8 +1662,8 @@
 
         window.acceptFriend = function(fId) {
             const updates = {};
-            updates[`friends/${friendCode}/${fId}`] = 'accepted';
-            updates[`friends/${fId}/${friendCode}`] = 'accepted';
+            updates[`friends/${friendCode}/${fId}`] = { status: 'accepted', direction: 'incoming' };
+            updates[`friends/${fId}/${friendCode}`] = { status: 'accepted', direction: 'outgoing' };
             set(ref(db), updates).then(() => {
                 window.loadDMsList();
             });
@@ -1635,7 +1676,9 @@
                 container.innerHTML = '';
                 if (!snap.exists()) return;
                 snap.forEach((child) => {
-                    if (child.val() === 'accepted') {
+                    const fData = child.val();
+                    const status = typeof fData === 'object' ? fData.status : fData;
+                    if (status === 'accepted') {
                         const fId = child.key;
                         const profile = allProfiles[fId] || { username: fId };
                         const btn = document.createElement('button');
@@ -1687,12 +1730,53 @@
                                 <div class="friend-avatar"><img src="${sVal.icon || ''}"></div>
                                 <div style="font-weight:600; color:#f2f3f5;">${sVal.name}</div>
                             </div>
-                            <button class="auth-btn-primary" onclick="window.selectServer('${sId}', '${sVal.name}')">Join Server</button>
+                            <button class="auth-btn-primary" onclick="window.previewJoinServer('${sId}')">Join Server</button>
                         `;
                         container.appendChild(row);
                     }
                 });
             }, { onlyOnce: true });
+        };
+
+        window.previewJoinServer = function(serverId) {
+            get(ref(db, `custom_servers/${serverId}`)).then((snap) => {
+                if (snap.exists()) {
+                    pendingInviteServerId = serverId;
+                    const sVal = snap.val();
+                    document.getElementById('invite-server-name-display').innerText = sVal.name;
+                    const iconPreview = document.getElementById('invite-server-icon-preview');
+                    if (sVal.icon) {
+                        iconPreview.innerHTML = `<img src="${sVal.icon}" alt="Icon">`;
+                    } else {
+                        iconPreview.innerHTML = '🏠';
+                    }
+                    document.getElementById('invite-preview-modal').style.display = 'flex';
+                } else {
+                    alert('Server not found.');
+                }
+            });
+        };
+
+        window.dismissInvitePreview = function() {
+            pendingInviteServerId = null;
+            document.getElementById('invite-preview-modal').style.display = 'none';
+            window.history.replaceState({}, document.title, window.location.pathname);
+        };
+
+        window.confirmJoinServer = function() {
+            if (!pendingInviteServerId) return;
+            const sId = pendingInviteServerId;
+            document.getElementById('invite-preview-modal').style.display = 'none';
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Add server to user's server list in Firebase
+            set(ref(db, `user_servers/${friendCode}/${sId}`), true).then(() => {
+                get(ref(db, `custom_servers/${sId}`)).then((snap) => {
+                    if (snap.exists()) {
+                        window.selectServer(sId, snap.val().name);
+                    }
+                });
+            });
         };
 
         window.selectServer = function(serverId, serverName) {
@@ -1924,32 +2008,24 @@
             document.getElementById('invite-modal').style.display = 'flex';
         };
 
-        window.joinServerViaInvite = function() {
+        window.joinServerViaInviteInput = function() {
             const code = document.getElementById('invite-code-input').value.trim();
             let sId = code;
             if (code.includes('invite=')) {
                 sId = code.split('invite=')[1];
             }
-            get(ref(db, `custom_servers/${sId}`)).then((snap) => {
-                if (snap.exists()) {
-                    window.selectServer(sId, snap.val().name);
-                } else {
-                    alert('Invalid invite code or server not found.');
-                }
-            });
+            window.previewJoinServer(sId);
         };
 
-        window.addEventListener('DOMContentLoaded', () => {
+        function checkUrlInvite() {
             const params = new URLSearchParams(window.location.search);
             const inviteSId = params.get('invite');
             if (inviteSId) {
                 setTimeout(() => {
-                    get(ref(db, `custom_servers/${inviteSId}`)).then((snap) => {
-                        if (snap.exists()) window.selectServer(inviteSId, snap.val().name);
-                    });
-                }, 1500);
+                    window.previewJoinServer(inviteSId);
+                }, 1000);
             }
-        });
+        }
 
         /* --- MESSAGING & CHUNKING --- */
         window.handleImageUpload = async function(input) {
@@ -2307,13 +2383,18 @@
             const serverRef = push(ref(db, 'custom_servers'));
             const serverId = 'custom-' + serverRef.key;
 
-            set(serverRef, { name, icon: iconSrc, creator: friendCode, visibility: visibility }).then(() => {
-                set(ref(db, `server_channels/${serverId}`), {
-                    chan1: { name: 'general', type: 'text' },
-                    chan2: { name: 'general-voice', type: 'voice' },
-                    chan3: { name: 'discussions', type: 'forum' },
-                    chan4: { name: 'main-stage', type: 'stage' }
-                });
+            const updates = {};
+            updates[`custom_servers/${serverId}`] = { name, icon: iconSrc, creator: friendCode, visibility: visibility };
+            updates[`server_channels/${serverId}`] = {
+                chan1: { name: 'general', type: 'text' },
+                chan2: { name: 'general-voice', type: 'voice' },
+                chan3: { name: 'discussions', type: 'forum' },
+                chan4: { name: 'main-stage', type: 'stage' }
+            };
+            // Automatically add creator to their own server list
+            updates[`user_servers/${friendCode}/${serverId}`] = true;
+
+            set(ref(db), updates).then(() => {
                 uploadedServerIconBase64 = null;
                 document.getElementById('create-server-modal').style.display = 'none';
                 window.selectServer(serverId, name);
