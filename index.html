@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PrivacyChat</title>
+    <title>MMS PrivacyChat - School Hub</title>
     
-    <link rel="icon" type="image/svg+xml" href="https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChat">
+    <link rel="icon" type="image/svg+xml" href="https://api.dicebear.com/7.x/identicon/svg?seed=MMSSchoolHub">
 
     <style>
         * {
@@ -116,13 +116,14 @@
             display: none;
         }
 
-        /* Avatar Frames */
+        /* Avatar Frames Fixed & Enhanced */
         .avatar-container {
             position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            border-radius: 50%;
         }
 
         .avatar-img-wrap {
@@ -155,7 +156,7 @@
             box-shadow: 0 0 0 3px #e74c3c, 0 0 12px rgba(231,76,60,0.8);
         }
 
-        #tutorial-modal, #settings-modal, #server-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal, #admin-console-modal, #gift-modal {
+        #tutorial-modal, #settings-modal, #server-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal, #admin-console-modal, #gift-modal, #soundboard-modal {
             position: fixed;
             top: 0;
             left: 0;
@@ -645,6 +646,15 @@
             text-overflow: ellipsis;
         }
 
+        .member-vc-tag {
+            font-size: 10px;
+            color: #23a55a;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
         #chat-area {
             flex: 1;
             display: flex;
@@ -1080,6 +1090,29 @@
             align-items: center;
             gap: 4px;
         }
+
+        /* Soundboard Grid Styling */
+        .soundboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .sound-btn {
+            background-color: #2b2d31;
+            border: 1px solid #3f4147;
+            color: #f2f3f5;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .sound-btn:hover {
+            background-color: #35373c;
+            border-color: #5865f2;
+        }
     </style>
 </head>
 <body>
@@ -1087,12 +1120,12 @@
     <!-- Auth Overlay -->
     <div id="auth-overlay">
         <form class="auth-card" id="auth-form" onsubmit="window.handleAuthAction(event)">
-            <h2 id="auth-title">Welcome Back!</h2>
+            <h2 id="auth-title">MMS School Hub Login</h2>
             <div class="auth-error" id="auth-error-msg"></div>
             
             <div class="auth-field">
-                <label for="auth-email">Email</label>
-                <input type="email" id="auth-email" required placeholder="user@domain.com">
+                <label for="auth-email">School Email</label>
+                <input type="email" id="auth-email" required placeholder="student@mms.edu">
             </div>
             
             <div class="auth-field">
@@ -1108,8 +1141,8 @@
     <!-- Onboarding Tutorial Modal -->
     <div id="tutorial-modal">
         <div class="tutorial-box" style="background-color: #313338; padding: 32px; border-radius: 8px; width: 480px; display: flex; flex-direction: column; gap: 16px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
-            <h3 id="tutorial-title" style="color: #f2f3f5; font-size: 22px;">Welcome to PrivacyChat!</h3>
-            <p id="tutorial-desc" style="color: #b5bac1; font-size: 14px; line-height: 1.4;">This quick guide will walk you through app features.</p>
+            <h3 id="tutorial-title" style="color: #f2f3f5; font-size: 22px;">Welcome to MMS School Hub!</h3>
+            <p id="tutorial-desc" style="color: #b5bac1; font-size: 14px; line-height: 1.4;">Hang out with your classmates, chat in servers, check out voice channels, and use soundboards!</p>
             <div class="modal-actions" style="justify-content: space-between; width: 100%;">
                 <button class="btn-cancel" type="button" id="tutorial-prev-btn" style="display:none;" onclick="window.prevTutorialStep()">Back</button>
                 <button class="auth-btn-primary" type="button" id="tutorial-next-btn" onclick="window.nextTutorialStep()">Next</button>
@@ -1175,11 +1208,28 @@
         </div>
     </div>
 
+    <!-- Soundboard Modal -->
+    <div id="soundboard-modal">
+        <div class="settings-box">
+            <h3>🔊 Server Soundboard</h3>
+            <p style="font-size: 13px; color: #b5bac1;">Trigger sounds for everyone in the voice channel!</p>
+            <div class="soundboard-grid">
+                <button class="sound-btn" onclick="window.playSoundEffect('airhorn')">📢 Airhorn</button>
+                <button class="sound-btn" onclick="window.playSoundEffect('bruh')">🗿 Bruh</button>
+                <button class="sound-btn" onclick="window.playSoundEffect('gg')">🎉 GG</button>
+                <button class="sound-btn" onclick="window.playSoundEffect('applause')">👏 Applause</button>
+            </div>
+            <div class="modal-actions" style="margin-top: 16px;">
+                <button class="auth-btn-primary" type="button" onclick="document.getElementById('soundboard-modal').style.display='none'">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Gifting Currency Modal -->
     <div id="gift-modal">
         <div class="settings-box">
             <h3>🎁 Send Coin Gift</h3>
-            <p style="font-size: 13px; color: #b5bac1;">Transfer your daily earned coins to a friend!</p>
+            <p style="font-size: 13px; color: #b5bac1;">Transfer your daily earned coins to a classmate!</p>
             <div class="auth-field">
                 <label>Recipient Friend</label>
                 <select id="gift-recipient-select"></select>
@@ -1199,11 +1249,11 @@
     <div id="admin-console-modal">
         <div class="settings-box" style="border: 2px solid #5865f2; background: linear-gradient(145deg, #313338, #232428);">
             <div style="display: flex; align-items: center; justify-content: space-between;">
-                <h3 style="color: #f2f3f5; display: flex; align-items: center; gap: 8px;">🛡️ Admin Dashboard</h3>
+                <h3 style="color: #f2f3f5; display: flex; align-items: center; gap: 8px;">🛡️ MMS Admin Dashboard</h3>
                 <span style="font-size: 11px; background: #5865f2; color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: bold;">SECURE ACCESS</span>
             </div>
             <div class="auth-field">
-                <label>Registered Platform Users & Privileges</label>
+                <label>Registered School Users & Privileges</label>
                 <div id="admin-users-list" style="max-height: 200px; overflow-y: auto; background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3f4147;"></div>
             </div>
             <div class="modal-actions">
@@ -1215,23 +1265,23 @@
     <!-- Create Server Modal -->
     <div id="create-server-modal">
         <div class="modal-box" style="background: #2b2d31; border: 1px solid #3f4147;">
-            <h3 style="text-align: center; font-size: 20px;">Create Your Server</h3>
+            <h3 style="text-align: center; font-size: 20px;">Create Your School Club Server</h3>
             <div class="auth-field" style="align-items: center; margin: 8px 0;">
                 <div class="preview-avatar avatar-container" id="server-icon-preview-box" style="cursor:pointer;" onclick="document.getElementById('custom-server-icon-file').click()" title="Click to upload icon">
-                    <div class="avatar-img-wrap">🏠</div>
+                    <div class="avatar-img-wrap">🏫</div>
                 </div>
                 <input type="file" id="custom-server-icon-file" accept="image/*" style="display:none;" onchange="window.handleServerIconUpload(this)">
                 <span style="font-size: 11px; color: #949ba4; margin-top: 4px;">Upload Server Icon</span>
             </div>
             <div class="auth-field">
                 <label>Server Name</label>
-                <input type="text" id="custom-server-input" placeholder="e.g. My Awesome Hangout">
+                <input type="text" id="custom-server-input" placeholder="e.g. MMS Gaming Club">
             </div>
             <div class="auth-field">
                 <label>Visibility Setting</label>
                 <select id="custom-server-visibility">
                     <option value="private">Private (Invite Only)</option>
-                    <option value="public">Public (Visible in Server Discovery)</option>
+                    <option value="public">Public (Visible in MMS Discovery)</option>
                 </select>
             </div>
             <div class="modal-actions" style="justify-content: space-between; margin-top: 16px;">
@@ -1274,7 +1324,7 @@
     <!-- Invite Link Modal -->
     <div id="invite-modal">
         <div class="modal-box">
-            <h3>Invite Friends</h3>
+            <h3>Invite Classmates</h3>
             <div class="auth-field">
                 <label>Share this link</label>
                 <input type="text" id="invite-link-display" readonly>
@@ -1288,9 +1338,9 @@
     <!-- Invite Preview Modal -->
     <div id="invite-preview-modal">
         <div class="modal-box" style="text-align: center; align-items: center;">
-            <h3>You've been invited to join a server!</h3>
+            <h3>You've been invited to join an MMS server!</h3>
             <div class="preview-avatar avatar-container" id="invite-server-icon-preview" style="margin: 12px 0;">
-                <div class="avatar-img-wrap">🏠</div>
+                <div class="avatar-img-wrap">🏫</div>
             </div>
             <div id="invite-server-name-display" style="font-size: 18px; font-weight: bold; color: #f2f3f5; margin-bottom: 8px;">Server Name</div>
             <div class="modal-actions" style="width: 100%; justify-content: center;">
@@ -1303,17 +1353,17 @@
     <!-- 1. Left Server Rail -->
     <div id="server-rail">
         <div class="rail-item" id="rail-home" title="Direct Messages / Home" onclick="window.selectHome()">
-            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChatHome" alt="Home">
+            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=MMSSchoolHub" alt="Home">
         </div>
         <div class="rail-separator"></div>
         <div id="custom-servers-rail" style="display:flex; flex-direction:column; gap:8px;"></div>
-        <div class="rail-item" style="color: #23a55a;" title="Add a Server" onclick="document.getElementById('create-server-modal').style.display='flex'">+</div>
+        <div class="rail-item" style="color: #23a55a;" title="Create a Server" onclick="document.getElementById('create-server-modal').style.display='flex'">+</div>
     </div>
 
     <!-- 2. Channels Sidebar -->
     <div id="sidebar">
         <div class="sidebar-resize-handle" id="sidebar-resizer"></div>
-        <div class="server-header" id="current-server-title" onclick="window.openServerSettings()">Home</div>
+        <div class="server-header" id="current-server-title" onclick="window.openServerSettings()">MMS Hub</div>
         
         <div class="sidebar-scrollable">
             <div class="category-header">
@@ -1342,8 +1392,8 @@
                     <div class="status-indicator status-online" id="dock-status-dot"></div>
                 </div>
                 <div class="dock-text">
-                    <div class="dock-username" id="dock-username-display">User</div>
-                    <div class="dock-subtext" id="dock-atname-display">@user</div>
+                    <div class="dock-username" id="dock-username-display">Student</div>
+                    <div class="dock-subtext" id="dock-atname-display">@student</div>
                 </div>
             </div>
             <div style="display: flex; gap: 4px; align-items: center;">
@@ -1356,7 +1406,7 @@
     <!-- 3. Main View Area (Home / DMs / Friends) -->
     <div id="home-dashboard">
         <div class="home-tabs">
-            <button class="home-tab-btn active" onclick="window.switchHomeTab('friends')">Friends</button>
+            <button class="home-tab-btn active" onclick="window.switchHomeTab('friends')">Classmates</button>
             <button class="home-tab-btn" onclick="window.switchHomeTab('dms')">Direct Messages</button>
             <button class="home-tab-btn" onclick="window.switchHomeTab('public-servers')">Public Servers</button>
             <button class="home-tab-btn" onclick="window.switchHomeTab('rewards')">Daily Rewards & Gifts</button>
@@ -1389,7 +1439,7 @@
     <!-- Forum View Area -->
     <div id="forum-area">
         <div class="forum-header-row">
-            <h2 id="forum-title">Forum Channels</h2>
+            <h2 id="forum-title">Study & Club Forums</h2>
             <button class="auth-btn-primary" onclick="window.createForumThreadPrompt()">Create Thread</button>
         </div>
         <div class="forum-threads-list" id="forum-threads-container"></div>
@@ -1398,8 +1448,11 @@
     <!-- Voice / Stage Area -->
     <div id="voice-area">
         <div class="voice-top-bar">
-            <div class="voice-channel-title" id="voice-channel-title-display">🔊 Voice / Stage Channel</div>
-            <button class="call-end-btn" onclick="window.leaveVoiceChannel()">Disconnect</button>
+            <div class="voice-channel-title" id="voice-channel-title-display">🔊 Voice Channel</div>
+            <div style="display: flex; gap: 8px;">
+                <button class="auth-btn-primary" onclick="document.getElementById('soundboard-modal').style.display='flex'">Soundboard</button>
+                <button class="call-end-btn" onclick="window.leaveVoiceChannel()">Disconnect</button>
+            </div>
         </div>
         <div class="video-grid" id="video-grid">
             <div class="video-box" id="box_local">
@@ -1448,11 +1501,11 @@
         let currentChannelId = null;
         let currentChannelType = 'text';
         let friendCode = '';
-        let currentUsername = 'User';
-        let currentAtName = 'user';
+        let currentUsername = 'Student';
+        let currentAtName = 'student';
         let currentPfpBase64 = '';
         let currentFrame = '';
-        let currentCoins = 0;
+        let currentCoins = 100;
         let lastDailyClaim = 0;
         let currentStatus = 'online';
         let currentStatusMsg = '';
@@ -1465,6 +1518,7 @@
         let allProfiles = {};
         let currentServerData = null;
         let pendingInviteServerId = null;
+        let activeVoiceChannelName = null;
 
         let currentMessagesRef = null;
         let currentMessagesCallback = null;
@@ -1473,13 +1527,11 @@
         let localStream = null;
         let screenStream = null;
         let activeVoiceChannelId = null;
-        const peerConnections = {};
-        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
         let currentTutorialStep = 0;
         const tutorialSteps = [
-            { title: "Welcome to PrivacyChat!", desc: "Experience secure communication with Discord-like features, daily rewards, and avatar frames." },
-            { title: "Daily Rewards & Gifting", desc: "Open the app daily to claim free Coins. Send coin gifts to your friends anytime!" }
+            { title: "Welcome to MMS School Hub!", desc: "Connect with classmates, join server voice channels, and use live soundboards!" },
+            { title: "Daily Rewards & Gifting", desc: "Open the app daily to claim free Coins and send gifts to your school friends!" }
         ];
 
         const resizer = document.getElementById('sidebar-resizer');
@@ -1506,6 +1558,62 @@
                 resizer.classList.remove('resizing');
             }
         });
+
+        // Built-in Web Audio API Soundboard Synthesizer
+        window.playSoundEffect = function(type) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'airhorn') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(450, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                } else if (type === 'bruh') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(110, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(80, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                } else if (type === 'gg') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(554.37, audioCtx.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.35);
+                } else if (type === 'applause') {
+                    // White noise burst for applause imitation
+                    const bufferSize = audioCtx.sampleRate * 0.5;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const output = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                    const whiteNoise = audioCtx.createBufferSource();
+                    whiteNoise.buffer = buffer;
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.value = 1000;
+                    whiteNoise.connect(filter);
+                    filter.connect(audioCtx.destination);
+                    whiteNoise.start();
+                }
+
+                // Push sound notification to Firebase to update peer awareness
+                if (activeVoiceChannelId) {
+                    push(ref(db, `voice_states/${friendCode}`), { channelId: activeVoiceChannelId, sound: type, timestamp: Date.now() });
+                }
+            } catch (err) {}
+        };
 
         async function requestNotificationPermission() {
             if (!("Notification" in window)) return false;
@@ -1541,12 +1649,12 @@
             errBox.style.display = 'none';
             if (authMode === 'login') {
                 authMode = 'register';
-                document.getElementById('auth-title').innerText = 'Create an account';
+                document.getElementById('auth-title').innerText = 'Create MMS Account';
                 document.getElementById('submit-auth-btn').innerText = 'Register';
                 document.getElementById('toggle-auth-mode').innerText = 'Already have an account? Log In';
             } else {
                 authMode = 'login';
-                document.getElementById('auth-title').innerText = 'Welcome Back!';
+                document.getElementById('auth-title').innerText = 'MMS School Hub Login';
                 document.getElementById('submit-auth-btn').innerText = 'Log In';
                 document.getElementById('toggle-auth-mode').innerText = 'Need an account? Register';
             }
@@ -1560,7 +1668,7 @@
             errBox.style.display = 'none';
 
             if (!email || !password) {
-                errBox.innerText = 'Please enter both email and password.';
+                errBox.innerText = 'Please enter both school email and password.';
                 errBox.style.display = 'block';
                 return;
             }
@@ -1758,7 +1866,7 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                initializeSession(user.uid, user.email ? user.email.split('@')[0] : 'User');
+                initializeSession(user.uid, user.email ? user.email.split('@')[0] : 'Student');
             } else {
                 document.getElementById('auth-overlay').style.display = 'flex';
             }
@@ -1774,14 +1882,14 @@
             activeServerId = null;
             currentChannelId = null;
             currentServerData = null;
-            document.getElementById('current-server-title').innerText = 'Home';
+            document.getElementById('current-server-title').innerText = 'MMS Hub';
             document.getElementById('add-channel-toggle-btn').style.display = 'none';
             document.getElementById('invite-btn-header').style.display = 'none';
 
             document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
             document.getElementById('rail-home').classList.add('active');
 
-            document.getElementById('channel-list').innerHTML = '<div style="padding: 8px; color: #949ba4; font-size: 13px;">Direct Messages & Friends</div>';
+            document.getElementById('channel-list').innerHTML = '<div style="padding: 8px; color: #949ba4; font-size: 13px;">Direct Messages & Classmates</div>';
             document.getElementById('home-dashboard').style.display = 'flex';
             document.getElementById('chat-area').style.display = 'none';
             document.getElementById('forum-area').style.display = 'none';
@@ -1798,7 +1906,7 @@
                 pane.innerHTML = `<div class="friends-list-pane"><h3>Direct Messages</h3><div id="dms-list-container"></div></div>`;
                 window.loadDMsList();
             } else if (tabName === 'public-servers') {
-                pane.innerHTML = `<div class="friends-list-pane"><h3>Public Servers</h3><div id="public-servers-list" style="display:flex; flex-direction:column; gap:8px;"></div></div>`;
+                pane.innerHTML = `<div class="friends-list-pane"><h3>Public MMS Servers</h3><div id="public-servers-list" style="display:flex; flex-direction:column; gap:8px;"></div></div>`;
                 window.loadPublicServersList();
             } else if (tabName === 'rewards') {
                 window.loadRewardsView();
@@ -1812,16 +1920,16 @@
                     <h3>🎁 Daily Rewards & Gifting</h3>
                     <div style="background: #2b2d31; padding: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
                         <div>
-                            <div style="font-weight: bold; font-size: 16px; color: #f2f3f5;">Daily App Activity Reward</div>
-                            <div style="font-size: 13px; color: #949ba4;">Claim 50 free Coins every 24 hours just for checking in!</div>
+                            <div style="font-weight: bold; font-size: 16px; color: #f2f3f5;">Daily Check-in Reward</div>
+                            <div style="font-size: 13px; color: #949ba4;">Claim 50 free Coins every 24 hours!</div>
                             <div style="margin-top: 8px;" class="coin-badge">🪙 Balance: ${currentCoins} Coins</div>
                         </div>
                         <button class="auth-btn-primary" onclick="window.claimDailyReward()">Claim Daily Reward</button>
                     </div>
                     <div style="background: #2b2d31; padding: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-top: 12px;">
                         <div>
-                            <div style="font-weight: bold; font-size: 16px; color: #f2f3f5;">Send Gift to Friend</div>
-                            <div style="font-size: 13px; color: #949ba4;">Transfer your coins to any connected friend.</div>
+                            <div style="font-weight: bold; font-size: 16px; color: #f2f3f5;">Send Gift to Classmate</div>
+                            <div style="font-size: 13px; color: #949ba4;">Transfer your coins to any connected classmate.</div>
                         </div>
                         <button class="auth-btn-primary" onclick="window.openGiftModal()">Open Gifting</button>
                     </div>
@@ -1890,12 +1998,12 @@
             const pane = document.getElementById('home-content-pane');
             pane.innerHTML = `
                 <div class="friends-list-pane">
-                    <h3>Add Friend</h3>
+                    <h3>Add Classmate</h3>
                     <div style="display:flex; gap:8px; max-width:400px;">
-                        <input type="text" id="friend-add-input" placeholder="Enter Friend's User ID or @handle" style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;">
+                        <input type="text" id="friend-add-input" placeholder="Enter User ID or @handle" style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;">
                         <button class="auth-btn-primary" onclick="window.sendFriendRequest()">Send Request</button>
                     </div>
-                    <h3>Friends</h3>
+                    <h3>Classmates</h3>
                     <div id="friends-container" style="display:flex; flex-direction:column; gap:8px;"></div>
                 </div>
             `;
@@ -1904,7 +2012,7 @@
             onValue(ref(db, `friends/${friendCode}`), (snap) => {
                 container.innerHTML = '';
                 if (!snap.exists()) {
-                    container.innerHTML = '<div style="color:#949ba4; font-size:13px;">No friends yet.</div>';
+                    container.innerHTML = '<div style="color:#949ba4; font-size:13px;">No classmates added yet.</div>';
                     return;
                 }
                 
@@ -2189,32 +2297,37 @@
             if (!container || !header) return;
             container.innerHTML = '';
 
-            let membersToDisplay = [];
-            if (activeServerId) {
-                onValue(ref(db, `user_servers`), (snap) => {
-                    const allUserServers = snap.val() || {};
-                    membersToDisplay = Object.entries(allProfiles).filter(([uId, p]) => {
-                        return (allUserServers[uId] && allUserServers[uId][activeServerId]) || uId === friendCode;
-                    });
-                    renderMembersList(membersToDisplay);
-                }, { onlyOnce: true });
-            } else {
-                onValue(ref(db, `friends/${friendCode}`), (snap) => {
-                    membersToDisplay = [[friendCode, allProfiles[friendCode] || {}]];
-                    if (snap.exists()) {
-                        snap.forEach((child) => {
-                            const fId = child.key;
-                            if (child.val().status === 'accepted' && allProfiles[fId]) {
-                                membersToDisplay.push([fId, allProfiles[fId]]);
-                            }
+            // Listen to active voice states to show what VC users are in
+            onValue(ref(db, 'voice_states'), (voiceSnap) => {
+                const voiceStates = voiceSnap.val() || {};
+                
+                let membersToDisplay = [];
+                if (activeServerId) {
+                    onValue(ref(db, `user_servers`), (snap) => {
+                        const allUserServers = snap.val() || {};
+                        membersToDisplay = Object.entries(allProfiles).filter(([uId, p]) => {
+                            return (allUserServers[uId] && allUserServers[uId][activeServerId]) || uId === friendCode;
                         });
-                    }
-                    renderMembersList(membersToDisplay);
-                }, { onlyOnce: true });
-            }
+                        renderMembersList(membersToDisplay, voiceStates);
+                    }, { onlyOnce: true });
+                } else {
+                    onValue(ref(db, `friends/${friendCode}`), (snap) => {
+                        membersToDisplay = [[friendCode, allProfiles[friendCode] || {}]];
+                        if (snap.exists()) {
+                            snap.forEach((child) => {
+                                const fId = child.key;
+                                if (child.val().status === 'accepted' && allProfiles[fId]) {
+                                    membersToDisplay.push([fId, allProfiles[fId]]);
+                                }
+                            });
+                        }
+                        renderMembersList(membersToDisplay, voiceStates);
+                    }, { onlyOnce: true });
+                }
+            }, { onlyOnce: true });
         }
 
-        function renderMembersList(members) {
+        function renderMembersList(members, voiceStates) {
             const container = document.getElementById('server-members-container');
             const header = document.getElementById('members-group-header');
             container.innerHTML = '';
@@ -2226,7 +2339,16 @@
                 const frame = profile.frame || '';
                 const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
                 const uStatus = profile.status || 'online';
-                const uStatusMsg = profile.statusMsg || `@${profile.atName || 'user'}`;
+                const uStatusMsg = profile.statusMsg || `@${profile.atName || 'student'}`;
+
+                // Check active voice channel for user
+                let vcHtml = '';
+                const userVoice = voiceStates[uId];
+                if (userVoice && uId === friendCode && activeVoiceChannelName) {
+                    vcHtml = `<div class="member-vc-tag">🔊 In ${activeVoiceChannelName}</div>`;
+                } else if (userVoice && userVoice.channelId === activeVoiceChannelId) {
+                    vcHtml = `<div class="member-vc-tag">🔊 In Voice</div>`;
+                }
 
                 item.innerHTML = `
                     <div class="member-avatar-box avatar-container ${frame}">
@@ -2234,8 +2356,9 @@
                         <div class="status-indicator status-${uStatus}"></div>
                     </div>
                     <div class="member-meta">
-                        <div class="member-name">${profile.username || 'User'}</div>
+                        <div class="member-name">${profile.username || 'Student'}</div>
                         <div class="member-status-text">${uStatusMsg}</div>
+                        ${vcHtml}
                     </div>
                 `;
                 container.appendChild(item);
@@ -2274,7 +2397,7 @@
                     card.className = 'forum-thread-card';
                     card.innerHTML = `
                         <div class="forum-thread-title">${tVal.title}</div>
-                        <div class="forum-thread-meta">Started by ${authorProfile.username || 'User'}</div>
+                        <div class="forum-thread-meta">Started by ${authorProfile.username || 'Student'}</div>
                     `;
                     card.onclick = () => window.openForumThread(channelId, tId, tVal.title);
                     container.appendChild(card);
@@ -2456,8 +2579,7 @@
             const container = document.getElementById('message-container');
             const node = document.createElement('div');
             
-            // Fetch live present username and avatar using user ID instead of stale data
-            const userProfile = allProfiles[msg.uid] || { username: 'User', pfp: '', frame: '' };
+            const userProfile = allProfiles[msg.uid] || { username: 'Student', pfp: '', frame: '' };
             const username = userProfile.username;
             const pfp = userProfile.pfp;
             const frame = userProfile.frame || '';
@@ -2505,7 +2627,6 @@
             document.getElementById('mention-dropdown').style.display = 'none';
             if (!text || !currentChannelId) return;
 
-            // Only store uid in message data to achieve live username/pfp syncing
             push(ref(db, `messages/${currentChannelId}`), {
                 uid: friendCode,
                 text: text,
@@ -2519,12 +2640,19 @@
             if (activeVoiceChannelId) window.leaveVoiceChannel();
 
             activeVoiceChannelId = channelId;
+            activeVoiceChannelName = channelName;
+            
+            // Set voice state in database
+            set(ref(db, `voice_states/${friendCode}`), { channelId: channelId, channelName: channelName });
+
             document.getElementById('home-dashboard').style.display = 'none';
             document.getElementById('chat-area').style.display = 'none';
             document.getElementById('forum-area').style.display = 'none';
             document.getElementById('voice-area').style.display = 'flex';
             document.getElementById('members-sidebar').style.display = 'flex';
             document.getElementById('voice-channel-title-display').innerText = `🔊 ${channelName}`;
+
+            updateActiveMembersSidebar();
 
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -2578,7 +2706,11 @@
         window.leaveVoiceChannel = function() {
             if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+            
+            remove(ref(db, `voice_states/${friendCode}`));
             activeVoiceChannelId = null;
+            activeVoiceChannelName = null;
+            
             document.getElementById('voice-area').style.display = 'none';
             window.selectHome();
         };
@@ -2608,8 +2740,8 @@
             updates[`server_channels/${serverId}`] = {
                 chan1: { name: 'general', type: 'text' },
                 chan2: { name: 'general-voice', type: 'voice' },
-                chan3: { name: 'discussions', type: 'forum' },
-                chan4: { name: 'main-stage', type: 'stage' }
+                chan3: { name: 'study-group', type: 'forum' },
+                chan4: { name: 'assembly-stage', type: 'stage' }
             };
             updates[`user_servers/${friendCode}/${serverId}`] = true;
 
