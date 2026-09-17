@@ -131,6 +131,7 @@
             justify-content: center;
             flex-shrink: 0;
             cursor: pointer;
+            border-radius: 50%;
         }
 
         .avatar-img-wrap {
@@ -150,10 +151,13 @@
             object-fit: cover;
         }
 
-        .frame-gold { box-shadow: 0 0 0 3px #f0b232, 0 0 10px rgba(240,178,50,0.6); }
-        .frame-neon { box-shadow: 0 0 0 3px #00a8fc, 0 0 12px rgba(0,168,252,0.8); }
-        .frame-purple { box-shadow: 0 0 0 3px #9b59b6, 0 0 16px rgba(155,89,182,0.9); }
-        .frame-fire { box-shadow: 0 0 0 3px #e74c3c, 0 0 12px rgba(231,76,60,0.8); }
+        /* Profile Frames Styles */
+        .frame-gold { box-shadow: 0 0 0 3px #f0b232, 0 0 10px rgba(240,178,50,0.8); }
+        .frame-neon { box-shadow: 0 0 0 3px #00a8fc, 0 0 12px rgba(0,168,252,0.9); }
+        .frame-purple { box-shadow: 0 0 0 3px #9b59b6, 0 0 12px rgba(155,89,182,0.9); }
+        .frame-fire { box-shadow: 0 0 0 3px #e74c3c, 0 0 12px rgba(231,76,60,0.9); }
+        .frame-galaxy { box-shadow: 0 0 0 3px #8e44ad, 0 0 14px rgba(41, 128, 185, 0.9); }
+        .frame-emerald { box-shadow: 0 0 0 3px #2ecc71, 0 0 12px rgba(46, 204, 113, 0.9); }
 
         #tutorial-modal, #settings-modal, #customizer-modal, #server-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal, #admin-console-modal, #gift-modal, #user-profile-modal {
             position: fixed;
@@ -253,48 +257,6 @@
 
         input:checked + .slider { background-color: #23a55a; }
         input:checked + .slider:before { transform: translateX(20px); }
-
-        #mention-dropdown {
-            position: absolute;
-            bottom: 80px;
-            left: 16px;
-            background-color: #2b2d31;
-            border-radius: 8px;
-            width: 260px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            display: none;
-            flex-direction: column;
-            z-index: 500;
-            overflow: hidden;
-            border: 1px solid #1f2023;
-        }
-
-        .mention-item {
-            padding: 10px 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            color: #dbdee1;
-            font-size: 14px;
-        }
-
-        .mention-item:hover, .mention-item.selected {
-            background-color: #404249;
-            color: #fff;
-        }
-
-        .mention-item img {
-            width: 24px; height: 24px; border-radius: 50%; object-fit: cover;
-        }
-
-        .mention-highlight {
-            background-color: rgba(88, 101, 242, 0.3);
-            color: #dee0fc;
-            padding: 0 4px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
 
         #server-rail {
             width: 72px;
@@ -560,11 +522,13 @@
             <div class="auth-field">
                 <label>Profile Picture Frame</label>
                 <select id="settings-frame-select">
-                    <option value="">None</option>
+                    <option value="">None (Default)</option>
                     <option value="frame-gold">Gold Ring</option>
                     <option value="frame-neon">Cyber Neon</option>
-                    <option value="frame-purple">Royal Purple (Default / Unlocked)</option>
+                    <option value="frame-purple">Royal Purple</option>
                     <option value="frame-fire">Fire Glow</option>
+                    <option value="frame-galaxy">Galaxy Violet</option>
+                    <option value="frame-emerald">Emerald Shine</option>
                 </select>
             </div>
             <div class="auth-field">
@@ -602,6 +566,7 @@
             <h3 id="modal-profile-name" style="font-size: 20px; color: #f2f3f5;">Username</h3>
             <div id="modal-profile-handle" style="font-size: 13px; color: #b5bac1; margin-bottom: 8px;">@handle</div>
             <div id="modal-profile-statusmsg" style="background: #1e1f22; padding: 10px; border-radius: 6px; width: 100%; font-size: 14px; color: #dbdee1; margin-bottom: 12px;">No status message set.</div>
+            <div id="modal-profile-coins" class="coin-badge" style="margin-bottom: 12px;">🪙 Coins: 0</div>
             <div id="modal-profile-extrainfo" style="font-size: 12px; color: #949ba4; margin-bottom: 16px;">Status: Online</div>
             <div class="modal-actions" style="width: 100%; justify-content: center;">
                 <button class="auth-btn-primary" type="button" onclick="document.getElementById('user-profile-modal').style.display='none'">Close</button>
@@ -652,7 +617,7 @@
     <div id="gift-modal">
         <div class="settings-box">
             <h3>🎁 Send Coin Gift</h3>
-            <p style="font-size: 13px; color: #b5bac1;">Transfer your daily earned coins to a friend!</p>
+            <p style="font-size: 13px; color: #b5bac1;">Transfer your earned coins to a friend!</p>
             <div class="auth-field">
                 <label>Recipient Friend</label>
                 <select id="gift-recipient-select"></select>
@@ -810,7 +775,7 @@
 
         <div class="user-profile-dock">
             <div class="dock-user-info" onclick="window.openSettingsModal()" title="User Settings">
-                <div class="dock-avatar avatar-container frame-purple" id="dock-avatar-display" onclick="event.stopPropagation(); window.openUserProfileModal(friendCode)">
+                <div class="dock-avatar avatar-container" id="dock-avatar-display" onclick="event.stopPropagation(); window.openUserProfileModal(friendCode)">
                     <div class="avatar-img-wrap">👤</div>
                     <div class="status-indicator status-online" id="dock-status-dot"></div>
                 </div>
@@ -833,7 +798,7 @@
             <button class="home-tab-btn" onclick="window.switchHomeTab('dms')">Direct Messages</button>
             <button class="home-tab-btn" onclick="window.switchHomeTab('public-servers')">Public Servers</button>
             <button class="home-tab-btn" onclick="window.switchHomeTab('rewards')">Daily Rewards & Gifts</button>
-            <button class="home-tab-btn" onclick="window.switchHomeTab('shop')">Shop (Frames)</button>
+            <button class="home-tab-btn" onclick="window.switchHomeTab('shop')">🛍️ Shop</button>
             <button class="home-tab-btn" onclick="window.switchHomeTab('game')">🎮 Arcade Game</button>
         </div>
         <div class="home-content" id="home-content-pane"></div>
@@ -926,7 +891,7 @@
         let currentUsername = 'User';
         let currentAtName = 'user';
         let currentPfpBase64 = '';
-        let currentFrame = 'frame-purple'; // Purple frame by default
+        let currentFrame = ''; // Default to none
         let currentCoins = 100;
         let lastDailyClaim = 0;
         let currentStatus = 'online';
@@ -954,8 +919,8 @@
 
         let currentTutorialStep = 0;
         const tutorialSteps = [
-            { title: "Welcome to PrivacyChat!", desc: "Experience secure communication with Discord-like features, Royal Purple frame, daily rewards, and custom games." },
-            { title: "Shop & Arcade Game", desc: "Play the Coin Clicker arcade game to earn credits, and spend them in the Shop on exclusive profile frames!" }
+            { title: "Welcome to PrivacyChat!", desc: "Experience secure communication with customizable features, profile frames, daily rewards, and arcade mini-games." },
+            { title: "Shop & Arcade Game", desc: "Play the Coin Clicker game to earn credits, and spend them in the Shop on exclusive profile frames!" }
         ];
 
         const resizer = document.getElementById('sidebar-resizer');
@@ -1027,7 +992,7 @@
             document.getElementById('customizer-modal').style.display = 'none';
         };
 
-        // Clickable Profile Modal implementation
+        // Clickable Profile Modal implementation with Coins
         window.openUserProfileModal = function(userId) {
             const profile = allProfiles[userId];
             if (!profile) return;
@@ -1040,7 +1005,8 @@
             document.getElementById('modal-profile-name').innerText = profile.username || 'User';
             document.getElementById('modal-profile-handle').innerText = `@${profile.atName || 'user'}`;
             document.getElementById('modal-profile-statusmsg').innerText = profile.statusMsg || 'No status message set.';
-            document.getElementById('modal-profile-extrainfo').innerText = `Online Status: ${(profile.status || 'online').toUpperCase()} | Balance: ${profile.coins || 0} Coins`;
+            document.getElementById('modal-profile-coins').innerText = `🪙 Coins: ${profile.coins ?? 0}`;
+            document.getElementById('modal-profile-extrainfo').innerText = `Status: ${(profile.status || 'online').toUpperCase()}`;
             document.getElementById('user-profile-modal').style.display = 'flex';
         };
 
@@ -1132,7 +1098,7 @@
                         currentUsername = p.username || defaultName;
                         currentAtName = p.atName || defaultName.toLowerCase();
                         currentPfpBase64 = p.pfp || '';
-                        currentFrame = p.frame || 'frame-purple';
+                        currentFrame = p.frame || '';
                         currentCoins = p.coins ?? 100;
                         lastDailyClaim = p.lastDailyClaim || 0;
                         currentStatus = p.status || 'online';
@@ -1145,7 +1111,7 @@
                         currentUsername = defaultName;
                         currentAtName = defaultName.toLowerCase();
                         currentPfpBase64 = '';
-                        currentFrame = 'frame-purple';
+                        currentFrame = '';
                         currentCoins = 100;
                         lastDailyClaim = 0;
                         currentStatus = 'online';
@@ -1157,7 +1123,7 @@
                             username: currentUsername,
                             atName: currentAtName,
                             pfp: '',
-                            frame: 'frame-purple',
+                            frame: '',
                             coins: 100,
                             lastDailyClaim: 0,
                             status: 'online',
@@ -1372,7 +1338,7 @@
             `;
         };
 
-        // Shop View for buying frames (including Purple frame)
+        // Fully functional Shop View with multiple profile frames
         window.loadShopView = function() {
             const pane = document.getElementById('home-content-pane');
             pane.innerHTML = `
@@ -1384,10 +1350,10 @@
                     <p style="font-size:13px; color:#b5bac1;">Spend your earned coins to unlock special profile picture frames!</p>
                     <div class="shop-grid">
                         <div class="shop-card">
-                            <div class="avatar-container frame-purple" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
-                            <div style="font-weight:bold; color:#f2f3f5;">Royal Purple Frame</div>
-                            <div style="font-size:12px; color:#949ba4;">Price: 0 Coins (Free Default)</div>
-                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.equipFrame('frame-purple')">Equip</button>
+                            <div class="avatar-container" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div style="font-weight:bold; color:#f2f3f5;">None (No Frame)</div>
+                            <div style="font-size:12px; color:#949ba4;">Free</div>
+                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.equipFrame('')">Equip</button>
                         </div>
                         <div class="shop-card">
                             <div class="avatar-container frame-gold" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
@@ -1402,10 +1368,28 @@
                             <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-neon', 200)">Buy & Equip</button>
                         </div>
                         <div class="shop-card">
+                            <div class="avatar-container frame-purple" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div style="font-weight:bold; color:#f2f3f5;">Royal Purple Frame</div>
+                            <div style="font-size:12px; color:#949ba4;">Price: 175 Coins</div>
+                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-purple', 175)">Buy & Equip</button>
+                        </div>
+                        <div class="shop-card">
                             <div class="avatar-container frame-fire" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
                             <div style="font-weight:bold; color:#f2f3f5;">Fire Glow Frame</div>
                             <div style="font-size:12px; color:#949ba4;">Price: 250 Coins</div>
                             <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-fire', 250)">Buy & Equip</button>
+                        </div>
+                        <div class="shop-card">
+                            <div class="avatar-container frame-galaxy" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div style="font-weight:bold; color:#f2f3f5;">Galaxy Violet Frame</div>
+                            <div style="font-size:12px; color:#949ba4;">Price: 300 Coins</div>
+                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-galaxy', 300)">Buy & Equip</button>
+                        </div>
+                        <div class="shop-card">
+                            <div class="avatar-container frame-emerald" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div style="font-weight:bold; color:#f2f3f5;">Emerald Shine Frame</div>
+                            <div style="font-size:12px; color:#949ba4;">Price: 250 Coins</div>
+                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-emerald', 250)">Buy & Equip</button>
                         </div>
                     </div>
                 </div>
@@ -1546,7 +1530,7 @@
                     const profile = allProfiles[fId] || { username: fId, atName: fId };
                     const row = document.createElement('div');
                     row.className = 'friend-row';
-                    const frameClass = profile.frame || 'frame-purple';
+                    const frameClass = profile.frame || '';
                     const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
                     
                     let actionHtml = '';
@@ -2050,7 +2034,7 @@
                 const item = document.createElement('div');
                 item.className = 'member-item';
                 item.onclick = () => window.openUserProfileModal(uId);
-                const frame = profile.frame || 'frame-purple';
+                const frame = profile.frame || '';
                 const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
                 const uStatus = profile.status || 'online';
                 const uStatusMsg = profile.statusMsg || `@${profile.atName || 'user'}`;
@@ -2179,151 +2163,18 @@
         window.handleImageUpload = async function(input) {
             const file = input.files[0];
             if (!file || !currentChannelId) return;
-
             const reader = new FileReader();
-            reader.onload = async function(e) {
-                const base64Data = e.target.result;
-                const CHUNK_SIZE = 1000000;
-                const totalChunks = Math.ceil(base64Data.length / CHUNK_SIZE);
-                const imageId = 'img_' + Date.now();
-
-                for (let i = 0; i < totalChunks; i++) {
-                    await set(ref(db, `image_chunks/${imageId}/${i}`), base64Data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE));
-                }
-
+            reader.onload = function(e) {
+                const base64Img = e.target.result;
                 push(ref(db, `messages/${currentChannelId}`), {
                     uid: friendCode,
-                    imageId: imageId,
-                    totalChunks: totalChunks,
-                    text: '',
+                    username: currentUsername,
+                    image: base64Img,
                     timestamp: Date.now()
                 });
-                input.value = '';
             };
             reader.readAsDataURL(file);
         };
-
-        async function reassembleImage(imageId, totalChunks, imgElement) {
-            let base64Data = '';
-            for (let i = 0; i < totalChunks; i++) {
-                const snap = await get(ref(db, `image_chunks/${imageId}/${i}`));
-                if (snap.exists()) base64Data += snap.val();
-            }
-            imgElement.src = base64Data;
-        }
-
-        window.handleInputTyping = function(e) {
-            const input = e.target;
-            const val = input.value;
-            const cursorPos = input.selectionStart;
-            const dropdown = document.getElementById('mention-dropdown');
-            const match = val.substring(0, cursorPos).match(/@([a-zA-Z0-9_]*)$/);
-
-            if (match) {
-                const query = match[1].toLowerCase();
-                const matchingUsers = Object.entries(allProfiles).filter(([uid, profile]) => {
-                    return (profile.username || '').toLowerCase().includes(query) || (profile.atName || '').toLowerCase().includes(query);
-                });
-
-                if (matchingUsers.length > 0) {
-                    dropdown.innerHTML = '';
-                    matchingUsers.forEach(([uid, profile], idx) => {
-                        const item = document.createElement('div');
-                        item.className = `mention-item ${idx === 0 ? 'selected' : ''}`;
-                        const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : `👤`;
-                        item.innerHTML = `${pfpHtml} <span>${profile.username} <small style="color:#949ba4">@${profile.atName}</small></span>`;
-                        item.onmousedown = (ev) => {
-                            ev.preventDefault();
-                            insertMention(profile.atName);
-                        };
-                        dropdown.appendChild(item);
-                    });
-                    dropdown.style.display = 'flex';
-                    return;
-                }
-            }
-            dropdown.style.display = 'none';
-        };
-
-        window.handleInputKeyDown = function(e) {
-            const dropdown = document.getElementById('mention-dropdown');
-            if (dropdown.style.display === 'flex') {
-                const items = dropdown.querySelectorAll('.mention-item');
-                let selectedIdx = Array.from(items).findIndex(i => i.classList.contains('selected'));
-                if (e.key === 'ArrowDown' && selectedIdx < items.length - 1) {
-                    e.preventDefault();
-                    items[selectedIdx].classList.remove('selected');
-                    items[selectedIdx + 1].classList.add('selected');
-                } else if (e.key === 'ArrowUp' && selectedIdx > 0) {
-                    e.preventDefault();
-                    items[selectedIdx].classList.remove('selected');
-                    items[selectedIdx - 1].classList.add('selected');
-                } else if ((e.key === 'Enter' || e.key === 'Tab') && selectedIdx >= 0) {
-                    e.preventDefault();
-                    insertMention(items[selectedIdx].querySelector('small').innerText.replace('@', ''));
-                }
-            }
-        };
-
-        function insertMention(atName) {
-            const input = document.getElementById('message-input');
-            const val = input.value;
-            const cursorPos = input.selectionStart;
-            input.value = val.substring(0, cursorPos).replace(/@([a-zA-Z0-9_]*)$/, `@${atName} `) + val.substring(cursorPos);
-            document.getElementById('mention-dropdown').style.display = 'none';
-        }
-
-        function parseMessageContent(text) {
-            let safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            safeText = safeText.replace(/@([a-zA-Z0-9_]+)/g, '<span class="mention-highlight">@$1</span>');
-            return `<div class="text-content">${safeText}</div>`;
-        }
-
-        function renderMessageOnUI(msg, msgId, isMerged) {
-            const container = document.getElementById('message-container');
-            const node = document.createElement('div');
-            
-            const userProfile = allProfiles[msg.uid] || { username: 'User', pfp: '', frame: 'frame-purple' };
-            const username = userProfile.username;
-            const pfp = userProfile.pfp ? `<img src="${userProfile.pfp}">` : '👤';
-            const frame = userProfile.frame || 'frame-purple';
-            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            node.className = `message ${isMerged ? 'merged' : ''}`;
-            node.id = `msg_${msgId}`;
-
-            let bodyContent = parseMessageContent(msg.text || '');
-            if (msg.imageId) {
-                bodyContent += `<img class="msg-image" src="" alt="uploaded image" id="img_el_${msgId}">`;
-                setTimeout(() => {
-                    const imgEl = document.getElementById(`img_el_${msgId}`);
-                    if (imgEl) reassembleImage(msg.imageId, msg.totalChunks, imgEl);
-                }, 50);
-            }
-
-            if (isMerged) {
-                node.innerHTML = `
-                    <div class="msg-body">
-                        <div class="text">${bodyContent}</div>
-                    </div>
-                `;
-            } else {
-                node.innerHTML = `
-                    <div class="msg-pfp avatar-container ${frame}" onclick="window.openUserProfileModal('${msg.uid}')">
-                        <div class="avatar-img-wrap">${pfp}</div>
-                    </div>
-                    <div class="msg-body">
-                        <div class="msg-header">
-                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${username}</span>
-                            <span class="timestamp">${timeStr}</span>
-                        </div>
-                        <div class="text">${bodyContent}</div>
-                    </div>
-                `;
-            }
-            container.appendChild(node);
-            container.scrollTop = container.scrollHeight;
-        }
 
         window.handleMessageSubmit = function(e) {
             e.preventDefault();
@@ -2333,10 +2184,100 @@
 
             push(ref(db, `messages/${currentChannelId}`), {
                 uid: friendCode,
+                username: currentUsername,
                 text: text,
                 timestamp: Date.now()
             });
             input.value = '';
+        };
+
+        function renderMessageOnUI(msg, msgKey, isMerged) {
+            const container = document.getElementById('message-container');
+            const profile = allProfiles[msg.uid] || {};
+            const frame = profile.frame || '';
+            const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const div = document.createElement('div');
+            div.className = `message ${isMerged ? 'merged' : ''}`;
+
+            if (!isMerged) {
+                div.innerHTML = `
+                    <div class="msg-pfp avatar-container ${frame}" style="width:40px; height:40px;" onclick="window.openUserProfileModal('${msg.uid}')">
+                        <div class="avatar-img-wrap">${pfpHtml}</div>
+                    </div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${msg.username || 'User'}</span>
+                            <span class="timestamp">${timeStr}</span>
+                        </div>
+                        <div class="text">${msg.text ? escapeHtml(msg.text) : ''} ${msg.image ? `<img src="${msg.image}" class="msg-image">` : ''}</div>
+                    </div>
+                `;
+            } else {
+                div.innerHTML = `
+                    <div class="msg-body">
+                        <div class="text">${msg.text ? escapeHtml(msg.text) : ''} ${msg.image ? `<img src="${msg.image}" class="msg-image">` : ''}</div>
+                    </div>
+                `;
+            }
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        window.openAdminConsole = function() {
+            if (!isAdminUser) return;
+            const listContainer = document.getElementById('admin-users-list');
+            listContainer.innerHTML = '';
+            Object.entries(allProfiles).forEach(([uId, p]) => {
+                const row = document.createElement('div');
+                row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:#2b2d31; padding:8px; border-radius:4px;";
+                row.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold; color:#f2f3f5;">${p.username} (@${p.atName})</div>
+                        <div style="font-size:11px; color:#949ba4;">ID: ${uId} | Admin: ${p.admin || "false"}</div>
+                    </div>
+                    <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px;" onclick="window.toggleAdminStatus('${uId}', '${p.admin === "true" ? "false" : "true"}')">${p.admin === "true" ? "Revoke Admin" : "Make Admin"}</button>
+                `;
+                listContainer.appendChild(row);
+            });
+            document.getElementById('admin-console-modal').style.display = 'flex';
+        };
+
+        window.toggleAdminStatus = function(targetUid, newStatus) {
+            set(ref(db, `profiles/${targetUid}/admin`), newStatus).then(() => {
+                window.openAdminConsole();
+            });
+        };
+
+        window.joinCustomServer = function() {
+            const name = document.getElementById('custom-server-input').value.trim();
+            const visibility = document.getElementById('custom-server-visibility').value;
+            if (!name) return;
+
+            const newServerRef = push(ref(db, 'custom_servers'));
+            const serverId = newServerRef.key;
+
+            const serverData = {
+                name: name,
+                creator: friendCode,
+                visibility: visibility,
+                icon: uploadedServerIconBase64 || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`
+            };
+
+            set(newServerRef, serverData).then(() => {
+                set(ref(db, `user_servers/${friendCode}/${serverId}`), true);
+                const defaultChanRef = push(ref(db, `server_channels/${serverId}`));
+                set(defaultChanRef, { name: 'general', type: 'text' });
+                document.getElementById('create-server-modal').style.display = 'none';
+                window.selectServer(serverId, name);
+            });
         };
 
         window.handleServerIconUpload = function(input) {
@@ -2350,64 +2291,6 @@
             };
             reader.readAsDataURL(file);
         };
-
-        window.joinCustomServer = function() {
-            const sName = document.getElementById('custom-server-input').value.trim();
-            const sVis = document.getElementById('custom-server-visibility').value;
-            if (!sName) return;
-
-            const newServerRef = push(ref(db, 'custom_servers'));
-            const serverId = newServerRef.key;
-
-            const iconVal = uploadedServerIconBase64 || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(sName)}`;
-
-            set(newServerRef, {
-                name: sName,
-                creator: friendCode,
-                visibility: sVis,
-                icon: iconVal
-            }).then(() => {
-                set(ref(db, `user_servers/${friendCode}/${serverId}`), true);
-                const defaultChanRef = push(ref(db, `server_channels/${serverId}`));
-                set(defaultChanRef, { name: 'general', type: 'text' });
-                document.getElementById('create-server-modal').style.display = 'none';
-                window.selectServer(serverId, sName);
-            });
-        };
-
-        window.openAdminConsole = function() {
-            const listContainer = document.getElementById('admin-users-list');
-            listContainer.innerHTML = '';
-            Object.entries(allProfiles).forEach(([uId, profile]) => {
-                const row = document.createElement('div');
-                row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:#2b2d31; padding:8px; border-radius:4px;";
-                const isAdmin = profile.admin === "true";
-                row.innerHTML = `
-                    <div>
-                        <div style="font-weight:bold; color:#f2f3f5; cursor:pointer;" onclick="window.openUserProfileModal('${uId}')">${profile.username || 'User'}</div>
-                        <div style="font-size:11px; color:#949ba4;">@${profile.atName || 'user'} (${uId})</div>
-                    </div>
-                    <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px; background:${isAdmin ? '#da373c' : '#23a55a'}" onclick="window.toggleUserAdmin('${uId}', '${profile.admin}')">${isAdmin ? 'Revoke Admin' : 'Make Admin'}</button>
-                `;
-                listContainer.appendChild(row);
-            });
-            document.getElementById('admin-console-modal').style.display = 'flex';
-        };
-
-        window.toggleUserAdmin = function(targetUid, currentAdminVal) {
-            const nextVal = currentAdminVal === "true" ? "false" : "true";
-            set(ref(db, `profiles/${targetUid}/admin`), nextVal).then(() => {
-                window.openAdminConsole();
-            });
-        };
-
-        window.addEventListener('load', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const inviteParam = urlParams.get('invite');
-            if (inviteParam) {
-                setTimeout(() => window.previewJoinServer(inviteParam), 1500);
-            }
-        });
     </script>
 </body>
 </html>
