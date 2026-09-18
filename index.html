@@ -291,6 +291,7 @@
             background-color: #2b2d31;
             display: flex; flex-direction: column; flex-shrink: 0;
             z-index: 100; position: relative;
+            transition: transform 0.2s ease;
         }
 
         .sidebar-resize-handle {
@@ -377,7 +378,12 @@
         #members-sidebar {
             width: 240px; background-color: #2b2d31; display: flex; flex-direction: column; flex-shrink: 0;
             border-left: 1px solid #1f2023; padding: 16px 8px; gap: 12px; overflow-y: auto; z-index: 99;
+            transition: width 0.2s ease, transform 0.2s ease;
         }
+        #members-sidebar.collapsed {
+            width: 0; padding: 0; overflow: hidden; border: none;
+        }
+
         .members-group-title { font-size: 12px; font-weight: 700; color: #949ba4; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
         .member-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 4px; cursor: pointer; }
         .member-item:hover { background-color: rgba(255,255,255,0.05); }
@@ -392,6 +398,7 @@
             display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
         .chat-header-left { display: flex; align-items: center; gap: 8px; }
+        .chat-header-right { display: flex; align-items: center; gap: 8px; }
         .header-hashtag { font-size: 24px; color: #80848e; font-weight: 300; }
         .header-title { font-weight: 600; color: #f2f3f5; font-size: 16px; }
 
@@ -447,8 +454,8 @@
         .call-end-btn { background-color: #da373c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; }
 
         #home-dashboard { flex: 1; display: flex; flex-direction: column; background-color: #313338; color: #dbdee1; overflow: hidden; }
-        .home-tabs { height: 48px; border-bottom: 1px solid #1f2023; display: flex; align-items: center; padding: 0 16px; gap: 16px; background-color: #313338; }
-        .home-tab-btn { background: none; border: none; color: #b5bac1; font-weight: 600; cursor: pointer; font-size: 14px; padding: 6px 8px; border-radius: 4px; }
+        .home-tabs { height: 48px; border-bottom: 1px solid #1f2023; display: flex; align-items: center; padding: 0 16px; gap: 8px; background-color: #313338; overflow-x: auto; }
+        .home-tab-btn { background: none; border: none; color: #b5bac1; font-weight: 600; cursor: pointer; font-size: 14px; padding: 6px 8px; border-radius: 4px; white-space: nowrap; }
         .home-tab-btn:hover, .home-tab-btn.active { background-color: #35373c; color: #f2f3f5; }
         .home-content { flex: 1; display: flex; overflow: hidden; }
         .friends-list-pane { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
@@ -468,6 +475,15 @@
         }
         .shop-card {
             background: #2b2d31; border: 1px solid #3f4147; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;
+        }
+
+        /* Mobile Responsive Media Queries */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            #server-rail { width: 100%; height: 60px; flex-direction: row; padding: 0 12px; align-items: center; }
+            .rail-separator { width: 2px; height: 32px; margin: 0 4px; }
+            #sidebar { width: 100% !important; height: auto; max-height: 200px; }
+            #members-sidebar { position: absolute; right: 0; top: 48px; bottom: 0; z-index: 105; background: #2b2d31; box-shadow: -4px 0 12px rgba(0,0,0,0.5); }
         }
     </style>
 </head>
@@ -841,7 +857,10 @@
                 <span class="header-hashtag" id="header-symbol">#</span>
                 <div class="header-title" id="current-channel-name">general</div>
             </div>
-            <button class="auth-btn-primary" id="invite-btn-header" onclick="window.openInviteModal()" style="padding:4px 8px; font-size:12px; display:none;">Invite Link</button>
+            <div class="chat-header-right">
+                <button class="auth-btn-primary" id="invite-btn-header" onclick="window.openInviteModal()" style="padding:4px 8px; font-size:12px; display:none;">Invite Link</button>
+                <button class="auth-btn-primary" onclick="window.toggleMembersSidebar()" style="padding:4px 8px; font-size:12px; background:#4e5058;" title="Toggle Members Sidebar">👥 Members</button>
+            </div>
         </div>
 
         <div id="message-container"></div>
@@ -978,6 +997,11 @@
                 resizer.classList.remove('resizing');
             }
         });
+
+        window.toggleMembersSidebar = function() {
+            const membersSidebar = document.getElementById('members-sidebar');
+            membersSidebar.classList.toggle('collapsed');
+        };
 
         window.openCustomizerModal = function() {
             document.getElementById('settings-modal').style.display = 'none';
@@ -1193,7 +1217,6 @@
                 });
             });
 
-            // Check URL query parameters for real server invites
             const urlParams = new URLSearchParams(window.location.search);
             const inviteParam = urlParams.get('invite');
             if (inviteParam) {
@@ -1721,7 +1744,6 @@
         window.dismissInvitePreview = function() {
             pendingInviteServerId = null;
             document.getElementById('invite-preview-modal').style.display = 'none';
-            // Clear URL parameter cleanly
             window.history.replaceState({}, document.title, window.location.pathname);
         };
 
@@ -2210,104 +2232,19 @@
             onChildAdded(currentMessagesRef, currentMessagesCallback);
         };
 
-        window.openServerSettings = function() {
-            if (!activeServerId || !currentServerData) return;
-            document.getElementById('srv-set-name').value = currentServerData.name || '';
-            document.getElementById('srv-set-icon').value = currentServerData.icon || '';
-            
-            const modsList = document.getElementById('srv-mods-list');
-            modsList.innerHTML = '';
-            if (currentServerData.moderators) {
-                for (const mId of Object.keys(currentServerData.moderators)) {
-                    const mProfile = allProfiles[mId] || { username: mId };
-                    const div = document.createElement('div');
-                    div.style.display = 'flex';
-                    div.style.justifyContent = 'space-between';
-                    div.style.alignItems = 'center';
-                    div.style.fontSize = '13px';
-                    div.innerHTML = `<span>${mProfile.username}</span> <button class="btn-cancel" style="color:#fa777c; font-size:11px;" onclick="window.removeServerModerator('${mId}')">Remove</button>`;
-                    modsList.appendChild(div);
-                }
+        window.handleInputTyping = function(e) {
+            // Typing indicator stub
+        };
+
+        window.handleInputKeyDown = function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('input-form').requestSubmit();
             }
-            document.getElementById('server-settings-modal').style.display = 'flex';
-        };
-
-        window.assignServerModerator = function() {
-            const targetUid = document.getElementById('mod-user-id-input').value.trim();
-            if (!targetUid || !activeServerId) return;
-            set(ref(db, `custom_servers/${activeServerId}/moderators/${targetUid}`), true).then(() => {
-                document.getElementById('mod-user-id-input').value = '';
-                alert("Moderator added successfully!");
-                window.openServerSettings();
-            });
-        };
-
-        window.removeServerModerator = function(targetUid) {
-            if (!activeServerId) return;
-            remove(ref(db, `custom_servers/${activeServerId}/moderators/${targetUid}`)).then(() => {
-                window.openServerSettings();
-            });
-        };
-
-        window.saveServerSettings = function() {
-            const newName = document.getElementById('srv-set-name').value.trim();
-            const newIcon = document.getElementById('srv-set-icon').value.trim();
-            if (!newName || !activeServerId) return;
-
-            set(ref(db, `custom_servers/${activeServerId}/name`), newName);
-            set(ref(db, `custom_servers/${activeServerId}/icon`), newIcon);
-            document.getElementById('server-settings-modal').style.display = 'none';
-            document.getElementById('current-server-title').innerText = newName;
-        };
-
-        window.openInviteModal = function() {
-            if (!activeServerId) return;
-            const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${activeServerId}`;
-            document.getElementById('invite-link-display').value = inviteLink;
-            document.getElementById('invite-modal').style.display = 'flex';
-        };
-
-        window.handleServerIconUpload = function(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                uploadedServerIconBase64 = e.target.result;
-                const box = document.getElementById('server-icon-preview-box');
-                box.innerHTML = `<div class="avatar-img-wrap"><img src="${uploadedServerIconBase64}"></div>`;
-            };
-            reader.readAsDataURL(file);
-        };
-
-        window.joinCustomServer = function() {
-            const nameInput = document.getElementById('custom-server-input');
-            const visibility = document.getElementById('custom-server-visibility').value;
-            const serverName = nameInput.value.trim();
-            if (!serverName) return;
-
-            const newServerRef = push(ref(db, 'custom_servers'));
-            const serverId = newServerRef.key;
-            const serverIcon = uploadedServerIconBase64 || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(serverName)}`;
-
-            set(newServerRef, {
-                name: serverName,
-                creator: friendCode,
-                icon: serverIcon,
-                visibility: visibility
-            }).then(() => {
-                set(ref(db, `server_channels/${serverId}/general`), { name: 'general', type: 'text' });
-                set(ref(db, `user_servers/${friendCode}/${serverId}`), true);
-                
-                document.getElementById('create-server-modal').style.display = 'none';
-                nameInput.value = '';
-                uploadedServerIconBase64 = null;
-                document.getElementById('server-icon-preview-box').innerHTML = `<div class="avatar-img-wrap">🏠</div>`;
-                window.selectServer(serverId, serverName);
-            });
         };
 
         window.handleMessageSubmit = function(e) {
-            if (e) e.preventDefault();
+            e.preventDefault();
             const input = document.getElementById('message-input');
             const text = input.value.trim();
             if (!text || !currentChannelId) return;
@@ -2337,75 +2274,149 @@
             reader.readAsDataURL(file);
         };
 
-        function renderMessageOnUI(msg, msgKey, isMerged) {
+        function renderMessageOnUI(msg, msgId, isMerged) {
             const container = document.getElementById('message-container');
-            const profile = allProfiles[msg.uid] || { frame: '', pfp: '' };
-            const frameClass = profile.frame || '';
-            const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
-            
+            const profile = allProfiles[msg.uid] || { username: msg.name, pfp: '', frame: '' };
+            const div = document.createElement('div');
+            div.className = `message ${isMerged ? 'merged' : ''}`;
+
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            const messageEl = document.createElement('div');
-            messageEl.className = `message ${isMerged ? 'merged' : ''}`;
-            
-            let contentHtml = '';
-            if (msg.text) contentHtml += `<div class="text">${escapeHtml(msg.text)}</div>`;
-            if (msg.image) contentHtml += `<img src="${msg.image}" class="msg-image" onclick="window.openImageModal(this.src)">`;
+            const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+            const frameClass = profile.frame || '';
 
             if (isMerged) {
-                messageEl.innerHTML = `
+                div.innerHTML = `
                     <div class="msg-body">
-                        ${contentHtml}
+                        <div class="text">${escapeHtml(msg.text || '')} ${msg.image ? `<img class="msg-image" src="${msg.image}">` : ''}</div>
                     </div>
                 `;
             } else {
-                messageEl.innerHTML = `
+                div.innerHTML = `
                     <div class="msg-pfp avatar-container ${frameClass}" onclick="window.openUserProfileModal('${msg.uid}')">
                         <div class="avatar-img-wrap">${pfpHtml}</div>
                     </div>
                     <div class="msg-body">
                         <div class="msg-header">
-                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${escapeHtml(msg.name || 'User')}</span>
+                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${escapeHtml(profile.username || msg.name)}</span>
                             <span class="timestamp">${timeStr}</span>
                         </div>
-                        ${contentHtml}
+                        <div class="text">${escapeHtml(msg.text || '')} ${msg.image ? `<img class="msg-image" src="${msg.image}">` : ''}</div>
                     </div>
                 `;
             }
-            container.appendChild(messageEl);
+            container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
 
-        function escapeHtml(text) {
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        window.openImageModal = function(src) {
-            const win = window.open();
-            win.document.write(`<img src="${src}" style="max-width:100%; height:auto; background:#000; display:block; margin:auto;">`);
+        window.openInviteModal = function() {
+            if (!activeServerId) return;
+            const inviteUrl = `${window.location.origin}${window.location.pathname}?invite=${activeServerId}`;
+            document.getElementById('invite-link-display').value = inviteUrl;
+            document.getElementById('invite-modal').style.display = 'flex';
+        };
+
+        window.openServerSettings = function() {
+            if (!activeServerId) return;
+            document.getElementById('srv-set-name').value = currentServerData.name || '';
+            document.getElementById('srv-set-icon').value = currentServerData.icon || '';
+            document.getElementById('server-settings-modal').style.display = 'flex';
+        };
+
+        window.saveServerSettings = function() {
+            if (!activeServerId) return;
+            const name = document.getElementById('srv-set-name').value;
+            const icon = document.getElementById('srv-set-icon').value;
+            update(ref(db, `custom_servers/${activeServerId}`), { name: name, icon: icon }).then(() => {
+                document.getElementById('server-settings-modal').style.display = 'none';
+                document.getElementById('current-server-title').innerText = name;
+            });
+        };
+
+        window.joinCustomServer = function() {
+            const name = document.getElementById('custom-server-input').value.trim();
+            const visibility = document.getElementById('custom-server-visibility').value;
+            if (!name) return;
+
+            const newServerRef = push(ref(db, 'custom_servers'));
+            const icon = uploadedServerIconBase64 || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`;
+            
+            newServerRef.set({
+                name: name,
+                visibility: visibility,
+                creator: friendCode,
+                icon: icon
+            }).then(() => {
+                const sId = newServerRef.key;
+                set(ref(db, `user_servers/${friendCode}/${sId}`), true);
+                
+                const defaultChanRef = push(ref(db, `server_channels/${sId}`));
+                defaultChanRef.set({ name: 'general', type: 'text' });
+
+                document.getElementById('create-server-modal').style.display = 'none';
+                document.getElementById('custom-server-input').value = '';
+                uploadedServerIconBase64 = null;
+                document.getElementById('server-icon-preview-box').innerHTML = '<div class="avatar-img-wrap">🏠</div>';
+                
+                window.selectServer(sId, name);
+            });
+        };
+
+        window.handleServerIconUpload = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedServerIconBase64 = e.target.result;
+                const box = document.getElementById('server-icon-preview-box');
+                box.innerHTML = `<div class="avatar-img-wrap"><img src="${uploadedServerIconBase64}"></div>`;
+            };
+            reader.readAsDataURL(file);
         };
 
         window.openAdminConsole = function() {
-            const container = document.getElementById('admin-users-list');
-            container.innerHTML = '';
-            for (const [uId, p] of Object.entries(allProfiles)) {
+            const listContainer = document.getElementById('admin-users-list');
+            listContainer.innerHTML = '';
+            
+            Object.entries(allProfiles).forEach(([uId, profile]) => {
                 const row = document.createElement('div');
-                row.style.display = 'flex';
-                row.style.justifyContent = 'space-between';
-                row.style.alignItems = 'center';
-                row.style.fontSize = '13px';
+                row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; background: #2b2d31; padding: 8px; border-radius: 4px;';
+                
+                const isUserAdmin = profile.admin === "true";
                 row.innerHTML = `
-                    <span>${p.username || uId} (@${p.atName || 'user'})</span>
-                    <span style="color:${p.admin === "true" ? '#23a55a' : '#949ba4'}; font-weight:bold;">${p.admin === "true" ? 'ADMIN' : 'USER'}</span>
+                    <div>
+                        <div style="font-weight: bold; color: #f2f3f5; font-size: 13px;">${profile.username || 'User'}</div>
+                        <div style="font-size: 11px; color: #949ba4;">@${profile.atName || 'user'} | ID: ${uId}</div>
+                    </div>
+                    <div>
+                        <button class="auth-btn-primary" style="padding: 4px 8px; font-size: 11px; background-color: ${isUserAdmin ? '#da373c' : '#23a55a'};" onclick="window.toggleUserAdmin('${uId}', '${isUserAdmin ? 'false' : 'true'}')">
+                            ${isUserAdmin ? 'Revoke Admin' : 'Make Admin'}
+                        </button>
+                    </div>
                 `;
-                container.appendChild(row);
-            }
+                listContainer.appendChild(row);
+            });
+
             document.getElementById('admin-console-modal').style.display = 'flex';
         };
 
-        window.handleInputTyping = function(e) {};
-        window.handleInputKeyDown = function(e) {};
+        window.toggleUserAdmin = function(targetUid, newAdminVal) {
+            set(ref(db, `profiles/${targetUid}/admin`), newAdminVal).then(() => {
+                window.openAdminConsole();
+            });
+        };
+
+        window.assignServerModerator = function() {
+            const uidInput = document.getElementById('mod-user-id-input').value.trim();
+            if (!uidInput || !activeServerId) return;
+            set(ref(db, `custom_servers/${activeServerId}/moderators/${uidInput}`), true).then(() => {
+                document.getElementById('mod-user-id-input').value = '';
+                alert("Moderator assigned successfully!");
+            });
+        };
     </script>
 </body>
 </html>
