@@ -158,7 +158,7 @@
         .frame-galaxy { box-shadow: 0 0 0 3px #8e44ad, 0 0 14px rgba(41, 128, 185, 0.9); }
         .frame-emerald { box-shadow: 0 0 0 3px #2ecc71, 0 0 12px rgba(46, 204, 113, 0.9); }
 
-        #tutorial-modal, #settings-modal, #customizer-modal, #server-settings-modal, #channel-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal, #admin-console-modal, #gift-modal, #user-profile-modal {
+        #tutorial-modal, #settings-modal, #customizer-modal, #server-settings-modal, #channel-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal, #admin-console-modal, #gift-modal, #user-profile-modal, #role-manager-modal {
             position: fixed;
             top: 0;
             left: 0;
@@ -175,7 +175,7 @@
             background-color: #313338;
             padding: 24px;
             border-radius: 8px;
-            width: 440px;
+            width: 460px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -385,12 +385,14 @@
         }
 
         .members-group-title { font-size: 12px; font-weight: 700; color: #949ba4; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-        .member-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 4px; cursor: pointer; }
+        .member-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-radius: 4px; cursor: pointer; }
         .member-item:hover { background-color: rgba(255,255,255,0.05); }
+        .member-item-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
         .member-avatar-box { width: 32px; height: 32px; position: relative; flex-shrink: 0; }
         .member-meta { display: flex; flex-direction: column; min-width: 0; }
         .member-name { font-size: 14px; font-weight: 500; color: #dbdee1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .member-status-text { font-size: 11px; color: #949ba4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .member-role-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; background: #5865f2; color: #fff; flex-shrink: 0; }
 
         #chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--platform-bg); min-width: 0; position: relative; }
         #chat-header {
@@ -403,9 +405,10 @@
         .header-title { font-weight: 600; color: #f2f3f5; font-size: 16px; }
 
         #message-container { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
-        .message { display: flex; gap: 16px; padding: 2px 8px; border-radius: 6px; background-color: var(--msg-bg); user-select: text; }
+        .message { display: flex; gap: 16px; padding: 2px 8px; border-radius: 6px; background-color: var(--msg-bg); user-select: text; position: relative; }
         .message.merged { margin-top: -12px; padding-left: 56px; }
         .message:hover { background-color: rgba(255,255,255,0.02); }
+        .message:hover .msg-delete-btn { display: inline-block; }
 
         .msg-pfp { width: 40px; height: 40px; flex-shrink: 0; margin-top: 2px; }
         .msg-body { display: flex; flex-direction: column; max-width: 100%; flex: 1; }
@@ -414,6 +417,7 @@
         .message .username:hover { text-decoration: underline; }
         .message .timestamp { font-size: 12px; color: #949ba4; }
         .message .text { color: #dbdee1; font-size: 15px; line-height: 1.375rem; word-break: break-word; margin-top: 2px; }
+        .msg-delete-btn { background: none; border: none; color: #fa777c; cursor: pointer; font-size: 12px; display: none; position: absolute; right: 12px; top: 8px; }
 
         .msg-image { max-width: 400px; max-height: 300px; border-radius: 8px; margin-top: 6px; display: block; cursor: pointer; }
 
@@ -707,10 +711,10 @@
         </div>
     </div>
 
-    <!-- Server Settings Modal -->
+    <!-- Server Settings Modal (Includes Role Management & Customization) -->
     <div id="server-settings-modal">
         <div class="modal-box">
-            <h3>Server Settings & Moderator Roles</h3>
+            <h3>Server Settings & Management</h3>
             <div class="auth-field">
                 <label>Server Name</label>
                 <input type="text" id="srv-set-name">
@@ -720,19 +724,64 @@
                 <input type="text" id="srv-set-icon">
             </div>
             <div class="auth-field">
-                <label>Promote User to Moderator (User ID / UID)</label>
-                <div style="display:flex; gap:8px;">
-                    <input type="text" id="mod-user-id-input" placeholder="User UID">
-                    <button class="auth-btn-primary" type="button" onclick="window.assignServerModerator()">Add Mod</button>
-                </div>
-            </div>
-            <div class="auth-field">
-                <label>Current Moderators</label>
-                <div id="srv-mods-list" style="max-height:100px; overflow-y:auto; background:#1e1f22; padding:8px; border-radius:4px; display:flex; flex-direction:column; gap:4px;"></div>
+                <button class="auth-btn-primary" type="button" style="background-color: #2b2d31; border: 1px solid #5865f2;" onclick="window.openRoleManagerModal()">Manage Custom Roles & Permissions</button>
             </div>
             <div class="modal-actions">
                 <button class="btn-cancel" type="button" onclick="document.getElementById('server-settings-modal').style.display='none'">Close</button>
                 <button class="auth-btn-primary" type="button" onclick="window.saveServerSettings()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Manager Modal (Create, Delete, Assign Roles & Permissions) -->
+    <div id="role-manager-modal">
+        <div class="settings-box" style="width: 520px;">
+            <h3>🛡️ Server Roles & Permissions Manager</h3>
+            <p style="font-size: 13px; color: #b5bac1;">Create custom moderator roles, configure privileges, and assign them to members.</p>
+            
+            <div style="background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="font-weight: bold; font-size: 14px; color: #f2f3f5;">Create New Role</div>
+                <div class="auth-field">
+                    <label>Role Name</label>
+                    <input type="text" id="new-role-name-input" placeholder="e.g. Senior Moderator">
+                </div>
+                <div class="auth-field">
+                    <label>Badge / Tag Color</label>
+                    <input type="color" id="new-role-color-input" value="#5865f2" style="height:36px; padding:2px;">
+                </div>
+                <div class="toggle-row">
+                    <span class="toggle-label">Can Delete Messages</span>
+                    <label class="switch">
+                        <input type="checkbox" id="role-perm-delete" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <span class="toggle-label">Can Manage Channels</span>
+                    <label class="switch">
+                        <input type="checkbox" id="role-perm-channels">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <button class="auth-btn-primary" type="button" onclick="window.createNewRole()">Create Role</button>
+            </div>
+
+            <div class="auth-field" style="margin-top: 8px;">
+                <label>Existing Server Roles</label>
+                <div id="server-roles-list" style="max-height: 120px; overflow-y: auto; background: #1e1f22; padding: 8px; border-radius: 4px; display: flex; flex-direction: column; gap: 6px;"></div>
+            </div>
+
+            <div class="auth-field" style="margin-top: 8px;">
+                <label>Assign Roles to Members</label>
+                <div style="display: flex; gap: 8px;">
+                    <select id="assign-member-select" style="flex: 1;"></select>
+                    <select id="assign-role-select" style="flex: 1;"></select>
+                    <button class="auth-btn-primary" type="button" onclick="window.assignRoleToMember()">Assign</button>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 12px;">
+                <button class="auth-btn-primary" type="button" onclick="document.getElementById('role-manager-modal').style.display='none'">Done</button>
             </div>
         </div>
     </div>
@@ -1768,8 +1817,8 @@
 
             get(ref(db, `custom_servers/${serverId}`)).then((snap) => {
                 currentServerData = snap.val() || {};
-                const isCreatorOrMod = currentServerData.creator === friendCode || (currentServerData.moderators && currentServerData.moderators[friendCode]);
-                document.getElementById('add-channel-toggle-btn').style.display = isCreatorOrMod ? 'block' : 'none';
+                const hasChannelPerm = checkServerPermission('channels');
+                document.getElementById('add-channel-toggle-btn').style.display = hasChannelPerm ? 'block' : 'none';
                 updateActiveMembersSidebar();
             });
 
@@ -1779,6 +1828,125 @@
 
             document.getElementById('home-dashboard').style.display = 'none';
             loadServerChannels(serverId);
+        };
+
+        function checkServerPermission(permType) {
+            if (!currentServerData) return false;
+            if (currentServerData.creator === friendCode) return true;
+            const memberRoles = currentServerData.member_roles?.[friendCode] || {};
+            const roles = currentServerData.roles || {};
+            
+            for (const rKey of Object.keys(memberRoles)) {
+                if (roles[rKey] && roles[rKey][permType]) return true;
+            }
+            return false;
+        }
+
+        window.openRoleManagerModal = function() {
+            if (!activeServerId) return;
+            document.getElementById('server-settings-modal').style.display = 'none';
+            document.getElementById('role-manager-modal').style.display = 'flex';
+            loadRolesList();
+            loadRoleAssignmentDropdowns();
+        };
+
+        window.createNewRole = function() {
+            const roleName = document.getElementById('new-role-name-input').value.trim();
+            const roleColor = document.getElementById('new-role-color-input').value;
+            const canDelete = document.getElementById('role-perm-delete').checked;
+            const canChannels = document.getElementById('role-perm-channels').checked;
+
+            if (!roleName || !activeServerId) return;
+
+            const roleRef = push(ref(db, `custom_servers/${activeServerId}/roles`));
+            set(roleRef, {
+                name: roleName,
+                color: roleColor,
+                deleteMessages: canDelete,
+                channels: canChannels
+            }).then(() => {
+                document.getElementById('new-role-name-input').value = '';
+                loadRolesList();
+                loadRoleAssignmentDropdowns();
+            });
+        };
+
+        function loadRolesList() {
+            const container = document.getElementById('server-roles-list');
+            container.innerHTML = '';
+            if (!currentServerData || !currentServerData.roles) {
+                container.innerHTML = '<div style="color:#949ba4; font-size:12px;">No custom roles created.</div>';
+                return;
+            }
+
+            for (const [rId, rVal] of Object.entries(currentServerData.roles)) {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.alignItems = 'center';
+                row.style.justifyContent = 'space-between';
+                row.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="width:10px; height:10px; border-radius:50%; background:${rVal.color}"></span>
+                        <span style="font-size:13px; color:#f2f3f5; font-weight:bold;">${rVal.name}</span>
+                    </div>
+                    <button class="btn-cancel" style="color:#fa777c; font-size:12px;" onclick="window.deleteServerRole('${rId}')">Delete</button>
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        window.deleteServerRole = function(roleId) {
+            if (!activeServerId) return;
+            remove(ref(db, `custom_servers/${activeServerId}/roles/${roleId}`)).then(() => {
+                get(ref(db, `custom_servers/${activeServerId}`)).then((snap) => {
+                    currentServerData = snap.val() || {};
+                    loadRolesList();
+                    loadRoleAssignmentDropdowns();
+                });
+            });
+        };
+
+        function loadRoleAssignmentDropdowns() {
+            const memberSelect = document.getElementById('assign-member-select');
+            const roleSelect = document.getElementById('assign-role-select');
+            memberSelect.innerHTML = '';
+            roleSelect.innerHTML = '';
+
+            onValue(ref(db, `user_servers`), (snap) => {
+                const allUserServers = snap.val() || {};
+                for (const [uId, servers] of Object.entries(allUserServers)) {
+                    if (servers[activeServerId] || currentServerData.creator === uId) {
+                        const profile = allProfiles[uId] || { username: uId };
+                        const opt = document.createElement('option');
+                        opt.value = uId;
+                        opt.innerText = profile.username;
+                        memberSelect.appendChild(opt);
+                    }
+                }
+            }, { onlyOnce: true });
+
+            if (currentServerData && currentServerData.roles) {
+                for (const [rId, rVal] of Object.entries(currentServerData.roles)) {
+                    const opt = document.createElement('option');
+                    opt.value = rId;
+                    opt.innerText = rVal.name;
+                    roleSelect.appendChild(opt);
+                }
+            }
+        }
+
+        window.assignRoleToMember = function() {
+            const memberId = document.getElementById('assign-member-select').value;
+            const roleId = document.getElementById('assign-role-select').value;
+            if (!memberId || !roleId || !activeServerId) return;
+
+            set(ref(db, `custom_servers/${activeServerId}/member_roles/${memberId}/${roleId}`), true).then(() => {
+                alert("Role assigned successfully!");
+                get(ref(db, `custom_servers/${activeServerId}`)).then((snap) => {
+                    currentServerData = snap.val() || {};
+                    updateActiveMembersSidebar();
+                });
+            });
         };
 
         function loadServerChannels(serverId) {
@@ -2144,15 +2312,33 @@
                 const uStatus = profile.status || 'online';
                 const uStatusMsg = profile.statusMsg || `@${profile.atName || 'user'}`;
 
+                let roleBadgeHtml = '';
+                if (activeServerId && currentServerData) {
+                    if (currentServerData.creator === uId) {
+                        roleBadgeHtml = `<span class="member-role-badge" style="background:#f0b232;">Owner</span>`;
+                    } else {
+                        const memberRoles = currentServerData.member_roles?.[uId] || {};
+                        const roles = currentServerData.roles || {};
+                        for (const rKey of Object.keys(memberRoles)) {
+                            if (roles[rKey]) {
+                                roleBadgeHtml += `<span class="member-role-badge" style="background:${roles[rKey].color || '#5865f2'}">${roles[rKey].name}</span>`;
+                            }
+                        }
+                    }
+                }
+
                 item.innerHTML = `
-                    <div class="member-avatar-box avatar-container ${frame}">
-                        <div class="avatar-img-wrap">${pfpHtml}</div>
-                        <div class="status-indicator status-${uStatus}"></div>
+                    <div class="member-item-left">
+                        <div class="member-avatar-box avatar-container ${frame}">
+                            <div class="avatar-img-wrap">${pfpHtml}</div>
+                            <div class="status-indicator status-${uStatus}"></div>
+                        </div>
+                        <div class="member-meta">
+                            <div class="member-name">${profile.username || 'User'}</div>
+                            <div class="member-status-text">${uStatusMsg}</div>
+                        </div>
                     </div>
-                    <div class="member-meta">
-                        <div class="member-name">${profile.username || 'User'}</div>
-                        <div class="member-status-text">${uStatusMsg}</div>
-                    </div>
+                    ${roleBadgeHtml}
                 `;
                 container.appendChild(item);
             });
@@ -2249,9 +2435,10 @@
             const text = input.value.trim();
             if (!text || !currentChannelId) return;
 
-            push(ref(db, `messages/${currentChannelId}`), {
+            const newMsgRef = push(ref(db, `messages/${currentChannelId}`));
+            set(newMsgRef, {
                 uid: friendCode,
-                name: currentUsername,
+                username: currentUsername,
                 text: text,
                 timestamp: Date.now()
             }).then(() => {
@@ -2264,105 +2451,105 @@
             if (!file || !currentChannelId) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                push(ref(db, `messages/${currentChannelId}`), {
+                const base64Img = e.target.result;
+                const newMsgRef = push(ref(db, `messages/${currentChannelId}`));
+                set(newMsgRef, {
                     uid: friendCode,
-                    name: currentUsername,
-                    image: e.target.result,
+                    username: currentUsername,
+                    image: base64Img,
                     timestamp: Date.now()
                 });
             };
             reader.readAsDataURL(file);
         };
 
-        function renderMessageOnUI(msg, msgId, isMerged) {
+        function renderMessageOnUI(msg, msgKey, isMerged) {
             const container = document.getElementById('message-container');
-            const profile = allProfiles[msg.uid] || { username: msg.name, pfp: '', frame: '' };
-            const div = document.createElement('div');
-            div.className = `message ${isMerged ? 'merged' : ''}`;
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isMerged ? 'merged' : ''}`;
+            messageDiv.id = `msg-${msgKey}`;
 
-            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const profile = allProfiles[msg.uid] || {};
+            const frame = profile.frame || '';
             const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
-            const frameClass = profile.frame || '';
+            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            if (isMerged) {
-                div.innerHTML = `
-                    <div class="msg-body">
-                        <div class="text">${escapeHtml(msg.text || '')} ${msg.image ? `<img class="msg-image" src="${msg.image}">` : ''}</div>
-                    </div>
-                `;
-            } else {
-                div.innerHTML = `
-                    <div class="msg-pfp avatar-container ${frameClass}" onclick="window.openUserProfileModal('${msg.uid}')">
+            let pfpColHtml = '';
+            if (!isMerged) {
+                pfpColHtml = `
+                    <div class="msg-pfp avatar-container ${frame}" onclick="window.openUserProfileModal('${msg.uid}')">
                         <div class="avatar-img-wrap">${pfpHtml}</div>
-                    </div>
-                    <div class="msg-body">
-                        <div class="msg-header">
-                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${escapeHtml(profile.username || msg.name)}</span>
-                            <span class="timestamp">${timeStr}</span>
-                        </div>
-                        <div class="text">${escapeHtml(msg.text || '')} ${msg.image ? `<img class="msg-image" src="${msg.image}">` : ''}</div>
                     </div>
                 `;
             }
-            container.appendChild(div);
+
+            let headerColHtml = '';
+            if (!isMerged) {
+                headerColHtml = `
+                    <div class="msg-header">
+                        <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${msg.username || 'User'}</span>
+                        <span class="timestamp">${timeStr}</span>
+                    </div>
+                `;
+            }
+
+            let contentHtml = `<div class="text">${msg.text || ''}</div>`;
+            if (msg.image) {
+                contentHtml += `<img src="${msg.image}" class="msg-image" onclick="window.open(this.src)">`;
+            }
+
+            let deleteBtnHtml = '';
+            const canDeletePerm = checkServerPermission('deleteMessages');
+            if (msg.uid === friendCode || canDeletePerm) {
+                deleteBtnHtml = `<button class="msg-delete-btn" onclick="window.deleteMessage('${msgKey}')">Delete</button>`;
+            }
+
+            messageDiv.innerHTML = `
+                ${pfpColHtml}
+                <div class="msg-body">
+                    ${headerColHtml}
+                    ${contentHtml}
+                </div>
+                ${deleteBtnHtml}
+            `;
+            container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
         }
 
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
-
-        window.openInviteModal = function() {
-            if (!activeServerId) return;
-            const inviteUrl = `${window.location.origin}${window.location.pathname}?invite=${activeServerId}`;
-            document.getElementById('invite-link-display').value = inviteUrl;
-            document.getElementById('invite-modal').style.display = 'flex';
+        window.deleteMessage = function(msgKey) {
+            if (!currentChannelId || !msgKey) return;
+            remove(ref(db, `messages/${currentChannelId}/${msgKey}`)).then(() => {
+                const el = document.getElementById(`msg-${msgKey}`);
+                if (el) el.remove();
+            });
         };
 
         window.openServerSettings = function() {
-            if (!activeServerId) return;
+            if (!activeServerId || !currentServerData) return;
             document.getElementById('srv-set-name').value = currentServerData.name || '';
             document.getElementById('srv-set-icon').value = currentServerData.icon || '';
             document.getElementById('server-settings-modal').style.display = 'flex';
         };
 
         window.saveServerSettings = function() {
-            if (!activeServerId) return;
-            const name = document.getElementById('srv-set-name').value;
-            const icon = document.getElementById('srv-set-icon').value;
-            update(ref(db, `custom_servers/${activeServerId}`), { name: name, icon: icon }).then(() => {
+            const newName = document.getElementById('srv-set-name').value.trim();
+            const newIcon = document.getElementById('srv-set-icon').value.trim();
+            if (!newName || !activeServerId) return;
+
+            update(ref(db, `custom_servers/${activeServerId}`), {
+                name: newName,
+                icon: newIcon
+            }).then(() => {
                 document.getElementById('server-settings-modal').style.display = 'none';
-                document.getElementById('current-server-title').innerText = name;
+                document.getElementById('current-server-title').innerText = newName;
             });
         };
 
-        window.joinCustomServer = function() {
-            const name = document.getElementById('custom-server-input').value.trim();
-            const visibility = document.getElementById('custom-server-visibility').value;
-            if (!name) return;
-
-            const newServerRef = push(ref(db, 'custom_servers'));
-            const icon = uploadedServerIconBase64 || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`;
-            
-            newServerRef.set({
-                name: name,
-                visibility: visibility,
-                creator: friendCode,
-                icon: icon
-            }).then(() => {
-                const sId = newServerRef.key;
-                set(ref(db, `user_servers/${friendCode}/${sId}`), true);
-                
-                const defaultChanRef = push(ref(db, `server_channels/${sId}`));
-                defaultChanRef.set({ name: 'general', type: 'text' });
-
-                document.getElementById('create-server-modal').style.display = 'none';
-                document.getElementById('custom-server-input').value = '';
-                uploadedServerIconBase64 = null;
-                document.getElementById('server-icon-preview-box').innerHTML = '<div class="avatar-img-wrap">🏠</div>';
-                
-                window.selectServer(sId, name);
-            });
+        window.openInviteModal = function() {
+            if (!activeServerId) return;
+            const inviteUrl = `${window.location.origin}${window.location.pathname}?invite=${activeServerId}`;
+            document.getElementById('invite-link-display').value = inviteUrl;
+            document.getElementById('invite-modal').style.display = 'flex';
         };
 
         window.handleServerIconUpload = function(input) {
@@ -2377,44 +2564,28 @@
             reader.readAsDataURL(file);
         };
 
-        window.openAdminConsole = function() {
-            const listContainer = document.getElementById('admin-users-list');
-            listContainer.innerHTML = '';
-            
-            Object.entries(allProfiles).forEach(([uId, profile]) => {
-                const row = document.createElement('div');
-                row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; background: #2b2d31; padding: 8px; border-radius: 4px;';
+        window.joinCustomServer = function() {
+            const name = document.getElementById('custom-server-input').value.trim();
+            const visibility = document.getElementById('custom-server-visibility').value;
+            if (!name) return;
+
+            const newSrvRef = push(ref(db, 'custom_servers'));
+            const sId = newSrvRef.key;
+
+            const sData = {
+                name: name,
+                creator: friendCode,
+                visibility: visibility,
+                icon: uploadedServerIconBase64 || ''
+            };
+
+            set(newSrvRef, sData).then(() => {
+                set(ref(db, `user_servers/${friendCode}/${sId}`), true);
+                const defaultChanRef = push(ref(db, `server_channels/${sId}`));
+                set(defaultChanRef, { name: 'general', type: 'text' });
                 
-                const isUserAdmin = profile.admin === "true";
-                row.innerHTML = `
-                    <div>
-                        <div style="font-weight: bold; color: #f2f3f5; font-size: 13px;">${profile.username || 'User'}</div>
-                        <div style="font-size: 11px; color: #949ba4;">@${profile.atName || 'user'} | ID: ${uId}</div>
-                    </div>
-                    <div>
-                        <button class="auth-btn-primary" style="padding: 4px 8px; font-size: 11px; background-color: ${isUserAdmin ? '#da373c' : '#23a55a'};" onclick="window.toggleUserAdmin('${uId}', '${isUserAdmin ? 'false' : 'true'}')">
-                            ${isUserAdmin ? 'Revoke Admin' : 'Make Admin'}
-                        </button>
-                    </div>
-                `;
-                listContainer.appendChild(row);
-            });
-
-            document.getElementById('admin-console-modal').style.display = 'flex';
-        };
-
-        window.toggleUserAdmin = function(targetUid, newAdminVal) {
-            set(ref(db, `profiles/${targetUid}/admin`), newAdminVal).then(() => {
-                window.openAdminConsole();
-            });
-        };
-
-        window.assignServerModerator = function() {
-            const uidInput = document.getElementById('mod-user-id-input').value.trim();
-            if (!uidInput || !activeServerId) return;
-            set(ref(db, `custom_servers/${activeServerId}/moderators/${uidInput}`), true).then(() => {
-                document.getElementById('mod-user-id-input').value = '';
-                alert("Moderator assigned successfully!");
+                document.getElementById('create-server-modal').style.display = 'none';
+                window.selectServer(sId, name);
             });
         };
     </script>
