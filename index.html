@@ -600,7 +600,8 @@
             <div id="modal-profile-statusmsg" style="background: #1e1f22; padding: 10px; border-radius: 6px; width: 100%; font-size: 14px; color: #dbdee1; margin-bottom: 12px;">No status message set.</div>
             <div id="modal-profile-coins" class="coin-badge" style="margin-bottom: 12px;">🪙 Coins: 0</div>
             <div id="modal-profile-extrainfo" style="font-size: 12px; color: #949ba4; margin-bottom: 16px;">Status: Online</div>
-            <div class="modal-actions" style="width: 100%; justify-content: center;">
+            <div class="modal-actions" style="width: 100%; justify-content: center; gap: 8px;">
+                <button class="auth-btn-primary" type="button" style="background-color: #4e5058;" onclick="window.copyProfileUid()">Copy UID</button>
                 <button class="auth-btn-primary" type="button" onclick="document.getElementById('user-profile-modal').style.display='none'">Close</button>
             </div>
         </div>
@@ -999,6 +1000,7 @@
         let uploadedServerIconBase64 = null;
         let tempAvatarBase64 = '';
         let isAdminUser = false;
+        let viewedProfileUid = '';
         
         let allProfiles = {};
         let currentServerData = null;
@@ -1097,6 +1099,7 @@
         };
 
         window.openUserProfileModal = function(userId) {
+            viewedProfileUid = userId;
             const profile = allProfiles[userId];
             if (!profile) return;
             
@@ -1111,6 +1114,21 @@
             document.getElementById('modal-profile-coins').innerText = `🪙 Coins: ${profile.coins ?? 0}`;
             document.getElementById('modal-profile-extrainfo').innerText = `Status: ${(profile.status || 'online').toUpperCase()}`;
             document.getElementById('user-profile-modal').style.display = 'flex';
+        };
+
+        window.copyProfileUid = function() {
+            if (!viewedProfileUid) return;
+            navigator.clipboard.writeText(viewedProfileUid).then(() => {
+                alert("UID copied to clipboard!");
+            }).catch(() => {
+                const el = document.createElement('textarea');
+                el.value = viewedProfileUid;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                alert("UID copied to clipboard!");
+            });
         };
 
         async function requestNotificationPermission() {
@@ -2307,287 +2325,9 @@
                 const item = document.createElement('div');
                 item.className = 'member-item';
                 item.onclick = () => window.openUserProfileModal(uId);
-                const frame = profile.frame || '';
-                const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
-                const uStatus = profile.status || 'online';
-                const uStatusMsg = profile.statusMsg || `@${profile.atName || 'user'}`;
-
-                let roleBadgeHtml = '';
-                if (activeServerId && currentServerData) {
-                    if (currentServerData.creator === uId) {
-                        roleBadgeHtml = `<span class="member-role-badge" style="background:#f0b232;">Owner</span>`;
-                    } else {
-                        const memberRoles = currentServerData.member_roles?.[uId] || {};
-                        const roles = currentServerData.roles || {};
-                        for (const rKey of Object.keys(memberRoles)) {
-                            if (roles[rKey]) {
-                                roleBadgeHtml += `<span class="member-role-badge" style="background:${roles[rKey].color || '#5865f2'}">${roles[rKey].name}</span>`;
-                            }
-                        }
-                    }
-                }
-
-                item.innerHTML = `
-                    <div class="member-item-left">
-                        <div class="member-avatar-box avatar-container ${frame}">
-                            <div class="avatar-img-wrap">${pfpHtml}</div>
-                            <div class="status-indicator status-${uStatus}"></div>
-                        </div>
-                        <div class="member-meta">
-                            <div class="member-name">${profile.username || 'User'}</div>
-                            <div class="member-status-text">${uStatusMsg}</div>
-                        </div>
-                    </div>
-                    ${roleBadgeHtml}
-                `;
-                container.appendChild(item);
+                const frame = profile.frame;
             });
         }
-
-        window.toggleInlineAddChannel = function() {
-            const box = document.getElementById('inline-add-channel-box');
-            box.style.display = box.style.display === 'none' ? 'flex' : 'none';
-        };
-
-        window.submitNewChannel = function() {
-            const input = document.getElementById('new-channel-input');
-            const name = input.value.trim().toLowerCase().replace(/\s+/g, '-');
-            const type = document.getElementById('new-channel-type').value;
-            if (!name || !activeServerId) return;
-
-            const newChanRef = push(ref(db, `server_channels/${activeServerId}`));
-            set(newChanRef, { name: name, type: type }).then(() => {
-                input.value = '';
-                document.getElementById('inline-add-channel-box').style.display = 'none';
-            });
-        };
-
-        function loadForumThreads(channelId) {
-            const container = document.getElementById('forum-threads-container');
-            container.innerHTML = '';
-            onValue(ref(db, `forum_threads/${channelId}`), (snap) => {
-                container.innerHTML = '';
-                if (!snap.exists()) return;
-                snap.forEach((child) => {
-                    const tId = child.key;
-                    const tVal = child.val();
-                    const authorProfile = allProfiles[tVal.uid] || {};
-                    const card = document.createElement('div');
-                    card.className = 'forum-thread-card';
-                    card.innerHTML = `
-                        <div class="forum-thread-title">${tVal.title}</div>
-                        <div class="forum-thread-meta" style="cursor:pointer;" onclick="window.openUserProfileModal('${tVal.uid}')">Started by ${authorProfile.username || 'User'}</div>
-                    `;
-                    card.onclick = () => window.openForumThread(channelId, tId, tVal.title);
-                    container.appendChild(card);
-                });
-            });
-        }
-
-        window.createForumThreadPrompt = function() {
-            const title = prompt('Enter thread title:');
-            if (!title || !currentChannelId) return;
-            const threadRef = push(ref(db, `forum_threads/${currentChannelId}`));
-            set(threadRef, { title: title, uid: friendCode, timestamp: Date.now() });
-        };
-
-        window.openForumThread = function(channelId, threadId, threadTitle) {
-            currentChannelId = `thread_${threadId}`;
-            currentChannelType = 'text';
-            document.getElementById('forum-area').style.display = 'none';
-            document.getElementById('chat-area').style.display = 'flex';
-            document.getElementById('current-channel-name').innerText = threadTitle;
-            document.getElementById('header-symbol').innerText = '💬';
-
-            const container = document.getElementById('message-container');
-            container.innerHTML = '';
-            if (currentMessagesRef && currentMessagesCallback) off(currentMessagesRef, 'child_added', currentMessagesCallback);
-
-            currentMessagesRef = ref(db, `messages/${currentChannelId}`);
-            let lastUid = null;
-            let lastTime = 0;
-            currentMessagesCallback = (snapshot) => {
-                if (snapshot.exists()) {
-                    const msg = snapshot.val();
-                    const isMerged = (msg.uid === lastUid && (msg.timestamp - lastTime) < 300000);
-                    renderMessageOnUI(msg, snapshot.key, isMerged);
-                    lastUid = msg.uid;
-                    lastTime = msg.timestamp || Date.now();
-                }
-            };
-            onChildAdded(currentMessagesRef, currentMessagesCallback);
-        };
-
-        window.handleInputTyping = function(e) {
-            // Typing indicator stub
-        };
-
-        window.handleInputKeyDown = function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                document.getElementById('input-form').requestSubmit();
-            }
-        };
-
-        window.handleMessageSubmit = function(e) {
-            e.preventDefault();
-            const input = document.getElementById('message-input');
-            const text = input.value.trim();
-            if (!text || !currentChannelId) return;
-
-            const newMsgRef = push(ref(db, `messages/${currentChannelId}`));
-            set(newMsgRef, {
-                uid: friendCode,
-                username: currentUsername,
-                text: text,
-                timestamp: Date.now()
-            }).then(() => {
-                input.value = '';
-            });
-        };
-
-        window.handleImageUpload = function(input) {
-            const file = input.files[0];
-            if (!file || !currentChannelId) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64Img = e.target.result;
-                const newMsgRef = push(ref(db, `messages/${currentChannelId}`));
-                set(newMsgRef, {
-                    uid: friendCode,
-                    username: currentUsername,
-                    image: base64Img,
-                    timestamp: Date.now()
-                });
-            };
-            reader.readAsDataURL(file);
-        };
-
-        function renderMessageOnUI(msg, msgKey, isMerged) {
-            const container = document.getElementById('message-container');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isMerged ? 'merged' : ''}`;
-            messageDiv.id = `msg-${msgKey}`;
-
-            const profile = allProfiles[msg.uid] || {};
-            const frame = profile.frame || '';
-            const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
-            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            let pfpColHtml = '';
-            if (!isMerged) {
-                pfpColHtml = `
-                    <div class="msg-pfp avatar-container ${frame}" onclick="window.openUserProfileModal('${msg.uid}')">
-                        <div class="avatar-img-wrap">${pfpHtml}</div>
-                    </div>
-                `;
-            }
-
-            let headerColHtml = '';
-            if (!isMerged) {
-                headerColHtml = `
-                    <div class="msg-header">
-                        <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${msg.username || 'User'}</span>
-                        <span class="timestamp">${timeStr}</span>
-                    </div>
-                `;
-            }
-
-            let contentHtml = `<div class="text">${msg.text || ''}</div>`;
-            if (msg.image) {
-                contentHtml += `<img src="${msg.image}" class="msg-image" onclick="window.open(this.src)">`;
-            }
-
-            let deleteBtnHtml = '';
-            const canDeletePerm = checkServerPermission('deleteMessages');
-            if (msg.uid === friendCode || canDeletePerm) {
-                deleteBtnHtml = `<button class="msg-delete-btn" onclick="window.deleteMessage('${msgKey}')">Delete</button>`;
-            }
-
-            messageDiv.innerHTML = `
-                ${pfpColHtml}
-                <div class="msg-body">
-                    ${headerColHtml}
-                    ${contentHtml}
-                </div>
-                ${deleteBtnHtml}
-            `;
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        window.deleteMessage = function(msgKey) {
-            if (!currentChannelId || !msgKey) return;
-            remove(ref(db, `messages/${currentChannelId}/${msgKey}`)).then(() => {
-                const el = document.getElementById(`msg-${msgKey}`);
-                if (el) el.remove();
-            });
-        };
-
-        window.openServerSettings = function() {
-            if (!activeServerId || !currentServerData) return;
-            document.getElementById('srv-set-name').value = currentServerData.name || '';
-            document.getElementById('srv-set-icon').value = currentServerData.icon || '';
-            document.getElementById('server-settings-modal').style.display = 'flex';
-        };
-
-        window.saveServerSettings = function() {
-            const newName = document.getElementById('srv-set-name').value.trim();
-            const newIcon = document.getElementById('srv-set-icon').value.trim();
-            if (!newName || !activeServerId) return;
-
-            update(ref(db, `custom_servers/${activeServerId}`), {
-                name: newName,
-                icon: newIcon
-            }).then(() => {
-                document.getElementById('server-settings-modal').style.display = 'none';
-                document.getElementById('current-server-title').innerText = newName;
-            });
-        };
-
-        window.openInviteModal = function() {
-            if (!activeServerId) return;
-            const inviteUrl = `${window.location.origin}${window.location.pathname}?invite=${activeServerId}`;
-            document.getElementById('invite-link-display').value = inviteUrl;
-            document.getElementById('invite-modal').style.display = 'flex';
-        };
-
-        window.handleServerIconUpload = function(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                uploadedServerIconBase64 = e.target.result;
-                const box = document.getElementById('server-icon-preview-box');
-                box.innerHTML = `<div class="avatar-img-wrap"><img src="${uploadedServerIconBase64}"></div>`;
-            };
-            reader.readAsDataURL(file);
-        };
-
-        window.joinCustomServer = function() {
-            const name = document.getElementById('custom-server-input').value.trim();
-            const visibility = document.getElementById('custom-server-visibility').value;
-            if (!name) return;
-
-            const newSrvRef = push(ref(db, 'custom_servers'));
-            const sId = newSrvRef.key;
-
-            const sData = {
-                name: name,
-                creator: friendCode,
-                visibility: visibility,
-                icon: uploadedServerIconBase64 || ''
-            };
-
-            set(newSrvRef, sData).then(() => {
-                set(ref(db, `user_servers/${friendCode}/${sId}`), true);
-                const defaultChanRef = push(ref(db, `server_channels/${sId}`));
-                set(defaultChanRef, { name: 'general', type: 'text' });
-                
-                document.getElementById('create-server-modal').style.display = 'none';
-                window.selectServer(sId, name);
-            });
-        };
     </script>
 </body>
 </html>
