@@ -151,7 +151,6 @@
             object-fit: cover;
         }
 
-        /* Profile Frames Styles */
         .frame-gold { box-shadow: 0 0 0 3px #f0b232, 0 0 10px rgba(240,178,50,0.8); }
         .frame-neon { box-shadow: 0 0 0 3px #00a8fc, 0 0 12px rgba(0,168,252,0.9); }
         .frame-purple { box-shadow: 0 0 0 3px #9b59b6, 0 0 12px rgba(155,89,182,0.9); }
@@ -159,7 +158,7 @@
         .frame-galaxy { box-shadow: 0 0 0 3px #8e44ad, 0 0 14px rgba(41, 128, 185, 0.9); }
         .frame-emerald { box-shadow: 0 0 0 3px #2ecc71, 0 0 12px rgba(46, 204, 113, 0.9); }
 
-        #tutorial-modal, #settings-modal, #customizer-modal, #server-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal, #admin-console-modal, #gift-modal, #user-profile-modal {
+        #tutorial-modal, #settings-modal, #customizer-modal, #server-settings-modal, #channel-settings-modal, #create-server-modal, #invite-modal, #invite-preview-modal, #admin-console-modal, #gift-modal, #user-profile-modal {
             position: fixed;
             top: 0;
             left: 0;
@@ -322,14 +321,27 @@
         .category-add-btn { background: none; border: none; color: #949ba4; cursor: pointer; font-size: 16px; }
         .category-add-btn:hover { color: #f2f3f5; }
 
-        .channel-btn {
-            display: flex; align-items: center; gap: 6px; width: 100%;
-            padding: 6px 8px; margin: 1px 0; background: none; border: none;
-            color: #949ba4; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; text-align: left;
+        .channel-row {
+            display: flex; align-items: center; justify-content: space-between;
+            width: 100%; border-radius: 4px; margin: 1px 0;
         }
-        .channel-btn:hover { background-color: #35373c; color: #dbdee1; }
-        .channel-btn.active { background-color: #404249; color: #fff; }
-        .channel-btn .icon { font-size: 16px; color: #80848e; width: 18px; text-align: center; }
+        .channel-row:hover { background-color: #35373c; }
+        .channel-row:hover .channel-settings-gear { display: inline-block; }
+
+        .channel-btn {
+            display: flex; align-items: center; gap: 6px; flex: 1;
+            padding: 6px 8px; background: none; border: none;
+            color: #949ba4; cursor: pointer; font-size: 14px; font-weight: 500; text-align: left;
+            min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .channel-btn:hover { color: #dbdee1; background: transparent; }
+        .channel-btn.active { color: #fff; background-color: #404249; }
+        .channel-btn .icon { font-size: 16px; color: #80848e; width: 18px; text-align: center; flex-shrink: 0; }
+
+        .channel-settings-gear {
+            background: none; border: none; color: #949ba4; cursor: pointer; font-size: 14px; padding: 0 8px; display: none;
+        }
+        .channel-settings-gear:hover { color: #f2f3f5; }
 
         .inline-add-channel {
             display: flex; flex-direction: column; gap: 6px; padding: 8px;
@@ -682,7 +694,7 @@
     <!-- Server Settings Modal -->
     <div id="server-settings-modal">
         <div class="modal-box">
-            <h3>Server Settings & Roles</h3>
+            <h3>Server Settings & Moderator Roles</h3>
             <div class="auth-field">
                 <label>Server Name</label>
                 <input type="text" id="srv-set-name">
@@ -692,19 +704,37 @@
                 <input type="text" id="srv-set-icon">
             </div>
             <div class="auth-field">
-                <label>Add Role to Server</label>
+                <label>Promote User to Moderator (User ID / UID)</label>
                 <div style="display:flex; gap:8px;">
-                    <input type="text" id="new-role-input" placeholder="Role Name">
-                    <button class="auth-btn-primary" type="button" onclick="window.createServerRole()">Add</button>
+                    <input type="text" id="mod-user-id-input" placeholder="User UID">
+                    <button class="auth-btn-primary" type="button" onclick="window.assignServerModerator()">Add Mod</button>
                 </div>
             </div>
             <div class="auth-field">
-                <label>Existing Roles</label>
-                <div id="srv-roles-list" style="max-height:100px; overflow-y:auto; background:#1e1f22; padding:8px; border-radius:4px; display:flex; flex-direction:column; gap:4px;"></div>
+                <label>Current Moderators</label>
+                <div id="srv-mods-list" style="max-height:100px; overflow-y:auto; background:#1e1f22; padding:8px; border-radius:4px; display:flex; flex-direction:column; gap:4px;"></div>
             </div>
             <div class="modal-actions">
                 <button class="btn-cancel" type="button" onclick="document.getElementById('server-settings-modal').style.display='none'">Close</button>
                 <button class="auth-btn-primary" type="button" onclick="window.saveServerSettings()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Channel Settings Modal -->
+    <div id="channel-settings-modal">
+        <div class="modal-box">
+            <h3>Channel Settings</h3>
+            <div class="auth-field">
+                <label>Channel Name</label>
+                <input type="text" id="chan-set-name">
+            </div>
+            <div class="modal-actions" style="justify-content: space-between;">
+                <button class="btn-cancel" type="button" style="color: #fa777c;" onclick="window.deleteCurrentChannel()">Delete Channel</button>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-cancel" type="button" onclick="document.getElementById('channel-settings-modal').style.display='none'">Cancel</button>
+                    <button class="auth-btn-primary" type="button" onclick="window.saveChannelSettings()">Save</button>
+                </div>
             </div>
         </div>
     </div>
@@ -891,7 +921,7 @@
         let currentUsername = 'User';
         let currentAtName = 'user';
         let currentPfpBase64 = '';
-        let currentFrame = ''; // Default to none
+        let currentFrame = '';
         let currentCoins = 100;
         let lastDailyClaim = 0;
         let currentStatus = 'online';
@@ -905,6 +935,7 @@
         let allProfiles = {};
         let currentServerData = null;
         let pendingInviteServerId = null;
+        let editingChannelId = null;
 
         let currentMessagesRef = null;
         let currentMessagesCallback = null;
@@ -992,7 +1023,6 @@
             document.getElementById('customizer-modal').style.display = 'none';
         };
 
-        // Clickable Profile Modal implementation with Coins
         window.openUserProfileModal = function(userId) {
             const profile = allProfiles[userId];
             if (!profile) return;
@@ -1163,7 +1193,14 @@
                 });
             });
 
-            window.selectHome();
+            // Check URL query parameters for real server invites
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteParam = urlParams.get('invite');
+            if (inviteParam) {
+                window.previewJoinServer(inviteParam);
+            } else {
+                window.selectHome();
+            }
         }
 
         window.startTutorial = function() {
@@ -1338,7 +1375,6 @@
             `;
         };
 
-        // Fully functional Shop View with multiple profile frames
         window.loadShopView = function() {
             const pane = document.getElementById('home-content-pane');
             pane.innerHTML = `
@@ -1418,7 +1454,6 @@
             window.loadShopView();
         };
 
-        // Arcade Mini-Game to earn credits
         window.loadGameView = function() {
             const pane = document.getElementById('home-content-pane');
             pane.innerHTML = `
@@ -1677,6 +1712,8 @@
                     const sVal = snap.val();
                     document.getElementById('invite-server-name-display').innerText = sVal.name;
                     document.getElementById('invite-preview-modal').style.display = 'flex';
+                } else {
+                    alert("Invite link is invalid or the server no longer exists.");
                 }
             });
         };
@@ -1684,6 +1721,8 @@
         window.dismissInvitePreview = function() {
             pendingInviteServerId = null;
             document.getElementById('invite-preview-modal').style.display = 'none';
+            // Clear URL parameter cleanly
+            window.history.replaceState({}, document.title, window.location.pathname);
         };
 
         window.confirmJoinServer = function() {
@@ -1691,6 +1730,7 @@
             const sId = pendingInviteServerId;
             document.getElementById('invite-preview-modal').style.display = 'none';
             set(ref(db, `user_servers/${friendCode}/${sId}`), true).then(() => {
+                window.history.replaceState({}, document.title, window.location.pathname);
                 get(ref(db, `custom_servers/${sId}`)).then((snap) => {
                     if (snap.exists()) window.selectServer(sId, snap.val().name);
                 });
@@ -1743,7 +1783,11 @@
 
         function renderChannelButton(serverId, channelId, channelName, type) {
             const list = document.getElementById('channel-list');
-            if (document.getElementById(`btn-chan-${channelId}`)) return;
+            if (document.getElementById(`row-chan-${channelId}`)) return;
+
+            const row = document.createElement('div');
+            row.className = 'channel-row';
+            row.id = `row-chan-${channelId}`;
 
             const btn = document.createElement('button');
             btn.className = 'channel-btn';
@@ -1756,8 +1800,47 @@
                 btn.classList.add('active');
                 window.switchChannel(channelId, channelName, type);
             };
-            list.appendChild(btn);
+
+            const gear = document.createElement('button');
+            gear.className = 'channel-settings-gear';
+            gear.innerHTML = '⚙️';
+            gear.title = 'Channel Settings';
+            gear.onclick = (e) => {
+                e.stopPropagation();
+                window.openChannelSettings(channelId, channelName);
+            };
+
+            row.appendChild(btn);
+            row.appendChild(gear);
+            list.appendChild(row);
         }
+
+        window.openChannelSettings = function(channelId, currentName) {
+            editingChannelId = channelId;
+            document.getElementById('chan-set-name').value = currentName;
+            document.getElementById('channel-settings-modal').style.display = 'flex';
+        };
+
+        window.saveChannelSettings = function() {
+            const newName = document.getElementById('chan-set-name').value.trim().toLowerCase().replace(/\s+/g, '-');
+            if (!newName || !activeServerId || !editingChannelId) return;
+
+            set(ref(db, `server_channels/${activeServerId}/${editingChannelId}/name`), newName).then(() => {
+                document.getElementById('channel-settings-modal').style.display = 'none';
+                loadServerChannels(activeServerId);
+            });
+        };
+
+        window.deleteCurrentChannel = function() {
+            if (!activeServerId || !editingChannelId) return;
+            if (confirm("Are you sure you want to delete this channel?")) {
+                remove(ref(db, `server_channels/${activeServerId}/${editingChannelId}`)).then(() => {
+                    document.getElementById('channel-settings-modal').style.display = 'none';
+                    loadServerChannels(activeServerId);
+                    window.selectHome();
+                });
+            }
+        };
 
         window.switchChannel = function(channelId, channelName, type) {
             currentChannelId = channelId;
@@ -2131,7 +2214,39 @@
             if (!activeServerId || !currentServerData) return;
             document.getElementById('srv-set-name').value = currentServerData.name || '';
             document.getElementById('srv-set-icon').value = currentServerData.icon || '';
+            
+            const modsList = document.getElementById('srv-mods-list');
+            modsList.innerHTML = '';
+            if (currentServerData.moderators) {
+                for (const mId of Object.keys(currentServerData.moderators)) {
+                    const mProfile = allProfiles[mId] || { username: mId };
+                    const div = document.createElement('div');
+                    div.style.display = 'flex';
+                    div.style.justifyContent = 'space-between';
+                    div.style.alignItems = 'center';
+                    div.style.fontSize = '13px';
+                    div.innerHTML = `<span>${mProfile.username}</span> <button class="btn-cancel" style="color:#fa777c; font-size:11px;" onclick="window.removeServerModerator('${mId}')">Remove</button>`;
+                    modsList.appendChild(div);
+                }
+            }
             document.getElementById('server-settings-modal').style.display = 'flex';
+        };
+
+        window.assignServerModerator = function() {
+            const targetUid = document.getElementById('mod-user-id-input').value.trim();
+            if (!targetUid || !activeServerId) return;
+            set(ref(db, `custom_servers/${activeServerId}/moderators/${targetUid}`), true).then(() => {
+                document.getElementById('mod-user-id-input').value = '';
+                alert("Moderator added successfully!");
+                window.openServerSettings();
+            });
+        };
+
+        window.removeServerModerator = function(targetUid) {
+            if (!activeServerId) return;
+            remove(ref(db, `custom_servers/${activeServerId}/moderators/${targetUid}`)).then(() => {
+                window.openServerSettings();
+            });
         };
 
         window.saveServerSettings = function() {
@@ -2145,139 +2260,11 @@
             document.getElementById('current-server-title').innerText = newName;
         };
 
-        window.createServerRole = function() {
-            const roleName = document.getElementById('new-role-input').value.trim();
-            if (!roleName || !activeServerId) return;
-            push(ref(db, `custom_servers/${activeServerId}/roles`), { name: roleName }).then(() => {
-                document.getElementById('new-role-input').value = '';
-            });
-        };
-
         window.openInviteModal = function() {
             if (!activeServerId) return;
             const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${activeServerId}`;
             document.getElementById('invite-link-display').value = inviteLink;
             document.getElementById('invite-modal').style.display = 'flex';
-        };
-
-        window.handleImageUpload = async function(input) {
-            const file = input.files[0];
-            if (!file || !currentChannelId) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64Img = e.target.result;
-                push(ref(db, `messages/${currentChannelId}`), {
-                    uid: friendCode,
-                    username: currentUsername,
-                    image: base64Img,
-                    timestamp: Date.now()
-                });
-            };
-            reader.readAsDataURL(file);
-        };
-
-        window.handleMessageSubmit = function(e) {
-            e.preventDefault();
-            const input = document.getElementById('message-input');
-            const text = input.value.trim();
-            if (!text || !currentChannelId) return;
-
-            push(ref(db, `messages/${currentChannelId}`), {
-                uid: friendCode,
-                username: currentUsername,
-                text: text,
-                timestamp: Date.now()
-            });
-            input.value = '';
-        };
-
-        function renderMessageOnUI(msg, msgKey, isMerged) {
-            const container = document.getElementById('message-container');
-            const profile = allProfiles[msg.uid] || {};
-            const frame = profile.frame || '';
-            const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
-            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const div = document.createElement('div');
-            div.className = `message ${isMerged ? 'merged' : ''}`;
-
-            if (!isMerged) {
-                div.innerHTML = `
-                    <div class="msg-pfp avatar-container ${frame}" style="width:40px; height:40px;" onclick="window.openUserProfileModal('${msg.uid}')">
-                        <div class="avatar-img-wrap">${pfpHtml}</div>
-                    </div>
-                    <div class="msg-body">
-                        <div class="msg-header">
-                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${msg.username || 'User'}</span>
-                            <span class="timestamp">${timeStr}</span>
-                        </div>
-                        <div class="text">${msg.text ? escapeHtml(msg.text) : ''} ${msg.image ? `<img src="${msg.image}" class="msg-image">` : ''}</div>
-                    </div>
-                `;
-            } else {
-                div.innerHTML = `
-                    <div class="msg-body">
-                        <div class="text">${msg.text ? escapeHtml(msg.text) : ''} ${msg.image ? `<img src="${msg.image}" class="msg-image">` : ''}</div>
-                    </div>
-                `;
-            }
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
-        }
-
-        window.openAdminConsole = function() {
-            if (!isAdminUser) return;
-            const listContainer = document.getElementById('admin-users-list');
-            listContainer.innerHTML = '';
-            Object.entries(allProfiles).forEach(([uId, p]) => {
-                const row = document.createElement('div');
-                row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:#2b2d31; padding:8px; border-radius:4px;";
-                row.innerHTML = `
-                    <div>
-                        <div style="font-weight:bold; color:#f2f3f5;">${p.username} (@${p.atName})</div>
-                        <div style="font-size:11px; color:#949ba4;">ID: ${uId} | Admin: ${p.admin || "false"}</div>
-                    </div>
-                    <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px;" onclick="window.toggleAdminStatus('${uId}', '${p.admin === "true" ? "false" : "true"}')">${p.admin === "true" ? "Revoke Admin" : "Make Admin"}</button>
-                `;
-                listContainer.appendChild(row);
-            });
-            document.getElementById('admin-console-modal').style.display = 'flex';
-        };
-
-        window.toggleAdminStatus = function(targetUid, newStatus) {
-            set(ref(db, `profiles/${targetUid}/admin`), newStatus).then(() => {
-                window.openAdminConsole();
-            });
-        };
-
-        window.joinCustomServer = function() {
-            const name = document.getElementById('custom-server-input').value.trim();
-            const visibility = document.getElementById('custom-server-visibility').value;
-            if (!name) return;
-
-            const newServerRef = push(ref(db, 'custom_servers'));
-            const serverId = newServerRef.key;
-
-            const serverData = {
-                name: name,
-                creator: friendCode,
-                visibility: visibility,
-                icon: uploadedServerIconBase64 || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`
-            };
-
-            set(newServerRef, serverData).then(() => {
-                set(ref(db, `user_servers/${friendCode}/${serverId}`), true);
-                const defaultChanRef = push(ref(db, `server_channels/${serverId}`));
-                set(defaultChanRef, { name: 'general', type: 'text' });
-                document.getElementById('create-server-modal').style.display = 'none';
-                window.selectServer(serverId, name);
-            });
         };
 
         window.handleServerIconUpload = function(input) {
@@ -2291,6 +2278,134 @@
             };
             reader.readAsDataURL(file);
         };
+
+        window.joinCustomServer = function() {
+            const nameInput = document.getElementById('custom-server-input');
+            const visibility = document.getElementById('custom-server-visibility').value;
+            const serverName = nameInput.value.trim();
+            if (!serverName) return;
+
+            const newServerRef = push(ref(db, 'custom_servers'));
+            const serverId = newServerRef.key;
+            const serverIcon = uploadedServerIconBase64 || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(serverName)}`;
+
+            set(newServerRef, {
+                name: serverName,
+                creator: friendCode,
+                icon: serverIcon,
+                visibility: visibility
+            }).then(() => {
+                set(ref(db, `server_channels/${serverId}/general`), { name: 'general', type: 'text' });
+                set(ref(db, `user_servers/${friendCode}/${serverId}`), true);
+                
+                document.getElementById('create-server-modal').style.display = 'none';
+                nameInput.value = '';
+                uploadedServerIconBase64 = null;
+                document.getElementById('server-icon-preview-box').innerHTML = `<div class="avatar-img-wrap">🏠</div>`;
+                window.selectServer(serverId, serverName);
+            });
+        };
+
+        window.handleMessageSubmit = function(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text || !currentChannelId) return;
+
+            push(ref(db, `messages/${currentChannelId}`), {
+                uid: friendCode,
+                name: currentUsername,
+                text: text,
+                timestamp: Date.now()
+            }).then(() => {
+                input.value = '';
+            });
+        };
+
+        window.handleImageUpload = function(input) {
+            const file = input.files[0];
+            if (!file || !currentChannelId) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                push(ref(db, `messages/${currentChannelId}`), {
+                    uid: friendCode,
+                    name: currentUsername,
+                    image: e.target.result,
+                    timestamp: Date.now()
+                });
+            };
+            reader.readAsDataURL(file);
+        };
+
+        function renderMessageOnUI(msg, msgKey, isMerged) {
+            const container = document.getElementById('message-container');
+            const profile = allProfiles[msg.uid] || { frame: '', pfp: '' };
+            const frameClass = profile.frame || '';
+            const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+            
+            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${isMerged ? 'merged' : ''}`;
+            
+            let contentHtml = '';
+            if (msg.text) contentHtml += `<div class="text">${escapeHtml(msg.text)}</div>`;
+            if (msg.image) contentHtml += `<img src="${msg.image}" class="msg-image" onclick="window.openImageModal(this.src)">`;
+
+            if (isMerged) {
+                messageEl.innerHTML = `
+                    <div class="msg-body">
+                        ${contentHtml}
+                    </div>
+                `;
+            } else {
+                messageEl.innerHTML = `
+                    <div class="msg-pfp avatar-container ${frameClass}" onclick="window.openUserProfileModal('${msg.uid}')">
+                        <div class="avatar-img-wrap">${pfpHtml}</div>
+                    </div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${escapeHtml(msg.name || 'User')}</span>
+                            <span class="timestamp">${timeStr}</span>
+                        </div>
+                        ${contentHtml}
+                    </div>
+                `;
+            }
+            container.appendChild(messageEl);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        window.openImageModal = function(src) {
+            const win = window.open();
+            win.document.write(`<img src="${src}" style="max-width:100%; height:auto; background:#000; display:block; margin:auto;">`);
+        };
+
+        window.openAdminConsole = function() {
+            const container = document.getElementById('admin-users-list');
+            container.innerHTML = '';
+            for (const [uId, p] of Object.entries(allProfiles)) {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.fontSize = '13px';
+                row.innerHTML = `
+                    <span>${p.username || uId} (@${p.atName || 'user'})</span>
+                    <span style="color:${p.admin === "true" ? '#23a55a' : '#949ba4'}; font-weight:bold;">${p.admin === "true" ? 'ADMIN' : 'USER'}</span>
+                `;
+                container.appendChild(row);
+            }
+            document.getElementById('admin-console-modal').style.display = 'flex';
+        };
+
+        window.handleInputTyping = function(e) {};
+        window.handleInputKeyDown = function(e) {};
     </script>
 </body>
 </html>
