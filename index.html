@@ -1239,8 +1239,21 @@
             if (authMode === 'login') {
                 signInWithEmailAndPassword(auth, email, password)
                     .catch((error) => {
-                        errBox.innerText = error.message || 'Failed to log in.';
-                        errBox.style.display = 'block';
+                        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.message.toLowerCase().includes('no user record') || error.message.toLowerCase().includes('invalid credential')) {
+                            createUserWithEmailAndPassword(auth, email, password)
+                                .then((userCredential) => {
+                                    errBox.innerText = 'Login Failed, New Account Made!';
+                                    errBox.style.display = 'block';
+                                    set(ref(db, `profiles/${userCredential.user.uid}/newAccount`), true);
+                                })
+                                .catch((regError) => {
+                                    errBox.innerText = regError.message || 'Failed to create account.';
+                                    errBox.style.display = 'block';
+                                });
+                        } else {
+                            errBox.innerText = error.message || 'Failed to log in.';
+                            errBox.style.display = 'block';
+                        }
                     });
             } else {
                 createUserWithEmailAndPassword(auth, email, password)
@@ -2167,104 +2180,10 @@
             const myPresenceRef = push(ref(db, `webrtc_rooms/${channelId}/participants`));
             await set(myPresenceRef, { uid: friendCode, name: currentUsername });
             myPresenceRef.onDisconnect().remove();
-
-            const partRef = ref(db, `webrtc_rooms/${channelId}/participants`);
-            const unsubPart = onChildAdded(partRef, async (snap) => {
-                const peerData = snap.val();
-                const peerKey = snap.key;
-                if (!peerData || peerData.uid === friendCode) return;
-
-                if (!peerConnections[peerKey]) {
-                    const pc = new RTCPeerConnection(rtcConfig);
-                    peerConnections[peerKey] = pc;
-
-                    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-                    pc.ontrack = (event) => {
-                        let remoteBox = document.getElementById(`box_${peerKey}`);
-                        if (!remoteBox) {
-                            remoteBox = document.createElement('div');
-                            remoteBox.className = 'video-box';
-                            remoteBox.id = `box_${peerKey}`;
-                            remoteBox.innerHTML = `<video autoplay playsinline></video><div class="video-label">${peerData.name}</div>`;
-                            document.getElementById('video-grid').appendChild(remoteBox);
-                        }
-                        remoteBox.querySelector('video').srcObject = event.streams[0];
-                    };
-
-                    pc.onicecandidate = (event) => {
-                        if (event.candidate) {
-                            push(ref(db, `webrtc_signaling/${channelId}/${friendCode}_to_${peerKey}_candidates`), event.candidate.toJSON());
-                        }
-                    };
-
-                    if (friendCode > peerData.uid) {
-                        const offer = await pc.createOffer();
-                        await pc.setLocalDescription(offer);
-                        await set(ref(db, `webrtc_signaling/${channelId}/${friendCode}_to_${peerKey}_offer`), offer);
-                    }
-                }
-            });
-            voiceSignalingUnsubscribers.push(unsubPart);
-
-            onValue(ref(db, `webrtc_signaling/${channelId}`), async (snapshot) => {
-                if (!snapshot.exists()) return;
-                const data = snapshot.val();
-
-                for (const [key, val] of Object.entries(data)) {
-                    if (key.endsWith(`_to_${friendCode}_offer`)) {
-                        const callerId = key.split('_to_')[0];
-                        if (!peerConnections[callerId]) {
-                            const pc = new RTCPeerConnection(rtcConfig);
-                            peerConnections[callerId] = pc;
-
-                            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-                            pc.ontrack = (event) => {
-                                let remoteBox = document.getElementById(`box_${callerId}`);
-                                if (!remoteBox) {
-                                    remoteBox = document.createElement('div');
-                                    remoteBox.className = 'video-box';
-                                    remoteBox.id = `box_${callerId}`;
-                                    remoteBox.innerHTML = `<video autoplay playsinline></video><div class="video-label">Peer</div>`;
-                                    document.getElementById('video-grid').appendChild(remoteBox);
-                                }
-                                remoteBox.querySelector('video').srcObject = event.streams[0];
-                            };
-                            pc.onicecandidate = (event) => {
-                                if (event.candidate) {
-                                    push(ref(db, `webrtc_signaling/${channelId}/${friendCode}_to_${callerId}_candidates`), event.candidate.toJSON());
-                                }
-                            };
-
-                            await pc.setRemoteDescription(new RTCSessionDescription(val));
-                            const answer = await pc.createAnswer();
-                            await pc.setLocalDescription(answer);
-                            await set(ref(db, `webrtc_signaling/${channelId}/${friendCode}_to_${callerId}_answer`), answer);
-                        }
-                    } else if (key.endsWith(`_to_${friendCode}_answer`)) {
-                        const responderId = key.split('_to_')[0];
-                        const pc = peerConnections[responderId];
-                        if (pc && pc.signalingState === "have-local-offer") {
-                            await pc.setRemoteDescription(new RTCSessionDescription(val));
-                        }
-                    } else if (key.endsWith(`_to_${friendCode}_candidates`)) {
-                        const candidateSender = key.split('_to_')[0];
-                        const pc = peerConnections[candidateSender];
-                        if (pc) {
-                            for (const cVal of Object.values(val)) {
-                                try { await pc.addIceCandidate(new RTCIceCandidate(cVal)); } catch (e) {}
-                            }
-                        }
-                    }
-                }
-            });
         };
 
         window.leaveVoiceChannel = function() {
             if (!activeVoiceChannelId) return;
-            Object.values(peerConnections).forEach(pc => pc.close());
-            for (let k in peerConnections) delete peerConnections[k];
-
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
@@ -2273,12 +2192,8 @@
                 screenStream.getTracks().forEach(track => track.stop());
                 screenStream = null;
             }
-
-            remove(ref(db, `webrtc_rooms/${activeVoiceChannelId}/participants`));
             activeVoiceChannelId = null;
-            
-            const grid = document.getElementById('video-grid');
-            grid.innerHTML = `
+            document.getElementById('video-grid').innerHTML = `
                 <div class="video-box" id="box_local">
                     <video id="local-video" autoplay playsinline muted></video>
                     <div class="video-label" id="local-video-label">You</div>
@@ -2286,123 +2201,67 @@
             `;
         };
 
-        window.toggleMicrophone = function() {
-            if (!localStream) return;
-            const audioTrack = localStream.getAudioTracks()[0];
-            if (audioTrack) {
-                audioTrack.enabled = !audioTrack.enabled;
-                const btn = document.getElementById('mic-toggle-btn');
-                btn.classList.toggle('active', !audioTrack.enabled);
-                btn.innerText = audioTrack.enabled ? 'Mute Mic' : 'Unmute Mic';
-            }
-        };
-
-        window.toggleCamera = function() {
-            if (!localStream) return;
-            const videoTrack = localStream.getVideoTracks()[0];
-            if (videoTrack) {
-                videoTrack.enabled = !videoTrack.enabled;
-                const btn = document.getElementById('cam-toggle-btn');
-                btn.classList.toggle('active', !videoTrack.enabled);
-                btn.innerText = videoTrack.enabled ? 'Stop Camera' : 'Start Camera';
-            }
-        };
-
-        window.toggleScreenShare = async function() {
-            const btn = document.getElementById('screen-share-btn');
-            if (!screenStream) {
-                try {
-                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                    const screenTrack = screenStream.getVideoTracks()[0];
-                    document.getElementById('local-video').srcObject = screenStream;
-                    
-                    Object.values(peerConnections).forEach(pc => {
-                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                        if (sender) sender.replaceTrack(screenTrack);
-                    });
-
-                    screenTrack.onended = () => window.toggleScreenShare();
-                    btn.classList.add('active');
-                    btn.innerText = 'Stop Sharing';
-                } catch (err) {}
-            } else {
-                screenStream.getTracks().forEach(t => t.stop());
-                screenStream = null;
-                const videoTrack = localStream.getVideoTracks()[0];
-                document.getElementById('local-video').srcObject = localStream;
-
-                Object.values(peerConnections).forEach(pc => {
-                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                    if (sender) sender.replaceTrack(videoTrack);
-                });
-
-                btn.classList.remove('active');
-                btn.innerText = 'Share Screen';
-            }
-        };
-
-        function updateActiveMembersSidebar() {
+        window.updateActiveMembersSidebar = function() {
             const container = document.getElementById('server-members-container');
             const header = document.getElementById('members-group-header');
             if (!container || !header) return;
             container.innerHTML = '';
 
-            let membersToDisplay = [];
-            if (activeServerId) {
+            if (activeServerId && currentServerData) {
                 onValue(ref(db, `user_servers`), (snap) => {
                     const allUserServers = snap.val() || {};
-                    membersToDisplay = Object.entries(allProfiles).filter(([uId, p]) => {
-                        return (allUserServers[uId] && allUserServers[uId][activeServerId]) || uId === friendCode;
-                    });
-                    renderMembersList(membersToDisplay);
+                    let count = 0;
+                    container.innerHTML = '';
+                    for (const [uId, servers] of Object.entries(allUserServers)) {
+                        if (servers[activeServerId] || currentServerData.creator === uId) {
+                            count++;
+                            const profile = allProfiles[uId] || { username: uId, atName: uId, status: 'offline' };
+                            const item = document.createElement('div');
+                            item.className = 'member-item';
+                            item.onclick = () => window.openUserProfileModal(uId);
+                            const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+                            item.innerHTML = `
+                                <div class="member-item-left">
+                                    <div class="member-avatar-box avatar-container ${profile.frame || ''}">
+                                        <div class="avatar-img-wrap">${pfpHtml}</div>
+                                        <div class="status-indicator status-${profile.status || 'offline'}"></div>
+                                    </div>
+                                    <div class="member-meta">
+                                        <span class="member-name">${profile.username}</span>
+                                        <span class="member-status-text">${profile.statusMsg || '@' + profile.atName}</span>
+                                    </div>
+                                </div>
+                            `;
+                            container.appendChild(item);
+                        }
+                    }
+                    header.innerText = `Members — ${count}`;
                 }, { onlyOnce: true });
             } else {
-                onValue(ref(db, `friends/${friendCode}`), (snap) => {
-                    membersToDisplay = [[friendCode, allProfiles[friendCode] || {}]];
-                    if (snap.exists()) {
-                        snap.forEach((child) => {
-                            const fId = child.key;
-                            if (child.val().status === 'accepted' && allProfiles[fId]) {
-                                membersToDisplay.push([fId, allProfiles[fId]]);
-                            }
-                        });
-                    }
-                    renderMembersList(membersToDisplay);
-                }, { onlyOnce: true });
+                let count = 0;
+                for (const [uId, profile] of Object.entries(allProfiles)) {
+                    count++;
+                    const item = document.createElement('div');
+                    item.className = 'member-item';
+                    item.onclick = () => window.openUserProfileModal(uId);
+                    const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+                    item.innerHTML = `
+                        <div class="member-item-left">
+                            <div class="member-avatar-box avatar-container ${profile.frame || ''}">
+                                <div class="avatar-img-wrap">${pfpHtml}</div>
+                                <div class="status-indicator status-${profile.status || 'offline'}"></div>
+                            </div>
+                            <div class="member-meta">
+                                <span class="member-name">${profile.username}</span>
+                                <span class="member-status-text">${profile.statusMsg || '@' + profile.atName}</span>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                }
+                header.innerText = `Online — ${count}`;
             }
-        }
-
-        function renderMembersList(members) {
-            const container = document.getElementById('server-members-container');
-            const header = document.getElementById('members-group-header');
-            container.innerHTML = '';
-            header.innerText = `Members — ${members.length}`;
-
-            members.forEach(([uId, p]) => {
-                const item = document.createElement('div');
-                item.className = 'member-item';
-                item.onclick = () => window.openUserProfileModal(uId);
-
-                const frameClass = p.frame || '';
-                const pfpHtml = p.pfp ? `<img src="${p.pfp}">` : '👤';
-                const status = p.status || 'offline';
-                const subText = p.statusMsg || `@${p.atName || 'user'}`;
-
-                item.innerHTML = `
-                    <div class="member-item-left">
-                        <div class="member-avatar-box avatar-container ${frameClass}">
-                            <div class="avatar-img-wrap">${pfpHtml}</div>
-                            <div class="status-indicator status-${status}"></div>
-                        </div>
-                        <div class="member-meta">
-                            <div class="member-name">${p.username || 'User'}</div>
-                            <div class="member-status-text">${subText}</div>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-        }
+        };
 
         window.handleMessageSubmit = function(e) {
             e.preventDefault();
@@ -2419,82 +2278,75 @@
                 timestamp: Date.now()
             };
 
-            push(ref(db, `messages/${currentChannelId}`), msgData);
-            input.value = '';
-        };
-
-        window.handleImageUpload = function(input) {
-            const file = input.files[0];
-            if (!file || !currentChannelId) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const msgData = {
-                    uid: friendCode,
-                    username: currentUsername,
-                    pfp: currentPfpBase64,
-                    frame: currentFrame,
-                    image: e.target.result,
-                    text: '',
-                    timestamp: Date.now()
-                };
-                push(ref(db, `messages/${currentChannelId}`), msgData);
-            };
-            reader.readAsDataURL(file);
+            push(ref(db, `messages/${currentChannelId}`), msgData).then(() => {
+                input.value = '';
+            });
         };
 
         function renderMessageOnUI(msg, msgKey, isMerged) {
             const container = document.getElementById('message-container');
-            const div = document.createElement('div');
-            div.className = `message ${isMerged ? 'merged' : ''}`;
-            div.id = `msg-${msgKey}`;
+            const msgEl = document.createElement('div');
+            msgEl.className = `message ${isMerged ? 'merged' : ''}`;
+            msgEl.id = `msg-${msgKey}`;
 
-            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const frameClass = msg.frame || '';
-            const pfpHtml = msg.pfp ? `<img src="${msg.pfp}">` : '👤';
+            const profile = allProfiles[msg.uid] || {};
+            const frameClass = msg.frame || profile.frame || '';
+            const pfpSrc = msg.pfp || profile.pfp || '';
+            const pfpHtml = pfpSrc ? `<img src="${pfpSrc}" style="width:100%; height:100%; object-fit:cover;">` : '👤';
 
-            let contentHtml = `<div class="text">${escapeHtml(msg.text || '')}</div>`;
-            if (msg.image) {
-                contentHtml += `<img src="${msg.image}" class="msg-image" onclick="window.openImageModal(this.src)">`;
-            }
+            const dateStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            if (isMerged) {
-                div.innerHTML = `
-                    <div class="msg-body">
-                        ${contentHtml}
-                    </div>
-                    <button class="msg-delete-btn" onclick="window.deleteMessage('${msgKey}')">Delete</button>
-                `;
-            } else {
-                div.innerHTML = `
+            let headerHtml = '';
+            if (!isMerged) {
+                headerHtml = `
                     <div class="msg-pfp avatar-container ${frameClass}" onclick="window.openUserProfileModal('${msg.uid}')">
                         <div class="avatar-img-wrap">${pfpHtml}</div>
                     </div>
                     <div class="msg-body">
                         <div class="msg-header">
-                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${escapeHtml(msg.username)}</span>
-                            <span class="timestamp">${timeStr}</span>
+                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${msg.username}</span>
+                            <span class="timestamp">${dateStr}</span>
                         </div>
-                        ${contentHtml}
+                        <div class="text">${escapeHtml(msg.text)}</div>
                     </div>
-                    <button class="msg-delete-btn" onclick="window.deleteMessage('${msgKey}')">Delete</button>
+                `;
+            } else {
+                headerHtml = `
+                    <div class="msg-body">
+                        <div class="text">${escapeHtml(msg.text)}</div>
+                    </div>
                 `;
             }
 
-            container.appendChild(div);
+            msgEl.innerHTML = headerHtml;
+            if (msg.uid === friendCode || checkServerPermission('deleteMessages') || isAdminUser) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'msg-delete-btn';
+                delBtn.innerText = 'Delete';
+                delBtn.onclick = () => remove(ref(db, `messages/${currentChannelId}/${msgKey}`)).then(() => msgEl.remove());
+                msgEl.appendChild(delBtn);
+            }
+
+            container.appendChild(msgEl);
             container.scrollTop = container.scrollHeight;
         }
 
-        window.deleteMessage = function(msgKey) {
-            if (!currentChannelId || !msgKey) return;
-            remove(ref(db, `messages/${currentChannelId}/${msgKey}`)).then(() => {
-                const el = document.getElementById(`msg-${msgKey}`);
-                if (el) el.remove();
-            });
-        };
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
 
-        window.openImageModal = function(src) {
-            const win = window.open("");
-            win.document.write(`<img src="${src}" style="max-width:100%; height:auto; background:#000; display:block; margin:auto;">`);
+        window.submitNewChannel = function() {
+            const nameInput = document.getElementById('new-channel-input');
+            const typeSelect = document.getElementById('new-channel-type');
+            const name = nameInput.value.trim().toLowerCase().replace(/\s+/g, '-');
+            const type = typeSelect.value;
+            if (!name || !activeServerId) return;
+
+            const newChanRef = push(ref(db, `server_channels/${activeServerId}`));
+            set(newChanRef, { name, type }).then(() => {
+                nameInput.value = '';
+                document.getElementById('inline-add-channel-box').style.display = 'none';
+            });
         };
 
         window.toggleInlineAddChannel = function() {
@@ -2502,37 +2354,25 @@
             box.style.display = box.style.display === 'none' ? 'flex' : 'none';
         };
 
-        window.submitNewChannel = function() {
-            const name = document.getElementById('new-channel-input').value.trim().toLowerCase().replace(/\s+/g, '-');
-            const type = document.getElementById('new-channel-type').value;
-            if (!name || !activeServerId) return;
-
-            const newChanRef = push(ref(db, `server_channels/${activeServerId}`));
-            set(newChanRef, { name, type }).then(() => {
-                document.getElementById('new-channel-input').value = '';
-                document.getElementById('inline-add-channel-box').style.display = 'none';
-            });
-        };
-
         window.joinCustomServer = function() {
             const name = document.getElementById('custom-server-input').value.trim();
             const visibility = document.getElementById('custom-server-visibility').value;
             if (!name) return;
 
-            const newServerRef = push(ref(db, 'custom_servers'));
-            const serverId = newServerRef.key;
+            const serverRef = push(ref(db, 'custom_servers'));
+            const sId = serverRef.key;
 
-            set(newServerRef, {
+            set(serverRef, {
                 name: name,
                 creator: friendCode,
                 visibility: visibility,
                 icon: uploadedServerIconBase64 || ''
             }).then(() => {
-                set(ref(db, `user_servers/${friendCode}/${serverId}`), true);
-                const defaultChanRef = push(ref(db, `server_channels/${serverId}`));
-                set(defaultChanRef, { name: 'general', type: 'text' });
-                document.getElementById('create-server-modal').style.display = 'none';
-                window.selectServer(serverId, name);
+                set(ref(db, `server_channels/${sId}/general`), { name: 'general', type: 'text' });
+                set(ref(db, `user_servers/${friendCode}/${sId}`), true).then(() => {
+                    document.getElementById('create-server-modal').style.display = 'none';
+                    window.selectServer(sId, name);
+                });
             });
         };
 
@@ -2584,10 +2424,10 @@
 
         window.openAdminConsole = function() {
             if (!isAdminUser) return;
-            const container = document.getElementById('admin-users-list');
-            container.innerHTML = '';
+            const listContainer = document.getElementById('admin-users-list');
+            listContainer.innerHTML = '';
 
-            for (const [uId, p] of Object.entries(allProfiles)) {
+            for (const [uId, profile] of Object.entries(allProfiles)) {
                 const row = document.createElement('div');
                 row.style.display = 'flex';
                 row.style.alignItems = 'center';
@@ -2596,43 +2436,26 @@
                 row.style.padding = '8px';
                 row.style.borderRadius = '4px';
 
-                const isAdmin = p.admin === "true";
+                const isAdm = profile.admin === "true";
                 row.innerHTML = `
                     <div>
-                        <div style="font-weight:bold; color:#f2f3f5; font-size:13px;">${p.username || 'User'} (@${p.atName || 'user'})</div>
-                        <div style="font-size:11px; color:#949ba4;">UID: ${uId}</div>
+                        <div style="font-weight:bold; color:#f2f3f5; font-size:13px;">${profile.username} (@${profile.atName})</div>
+                        <div style="font-size:11px; color:#949ba4;">ID: ${uId}</div>
                     </div>
-                    <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px; background:${isAdmin ? '#da373c' : '#23a55a'}" onclick="window.toggleUserAdmin('${uId}', '${p.admin}')">${isAdmin ? 'Revoke Admin' : 'Make Admin'}</button>
+                    <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px; background:${isAdm ? '#da373c' : '#23a55a'}" onclick="window.toggleAdminStatus('${uId}', '${profile.admin}')">${isAdm ? 'Revoke Admin' : 'Make Admin'}</button>
                 `;
-                container.appendChild(row);
+                listContainer.appendChild(row);
             }
             document.getElementById('admin-console-modal').style.display = 'flex';
         };
 
-        window.toggleUserAdmin = function(targetUid, currentAdminVal) {
-            const nextVal = currentAdminVal === "true" ? "false" : "true";
-            set(ref(db, `profiles/${targetUid}/admin`), nextVal).then(() => {
+        window.toggleAdminStatus = function(uId, currentAdmVal) {
+            const nextVal = currentAdmVal === "true" ? "false" : "true";
+            set(ref(db, `profiles/${uId}/admin`), nextVal).then(() => {
                 window.openAdminConsole();
             });
-        };
-
-        function escapeHtml(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
-        }
-
-        window.handleInputTyping = function(e) {};
-        window.handleInputKeyDown = function(e) {};
-        window.loadForumThreads = function(channelId) {
-            const container = document.getElementById('forum-threads-container');
-            container.innerHTML = '<div style="color:#949ba4; font-size:13px;">No threads created yet. Click "Create Thread" to start a discussion.</div>';
-        };
-        window.createForumThreadPrompt = function() {
-            const title = prompt("Enter Forum Thread Title:");
-            if (!title) return;
-            alert("Thread feature placeholder created!");
         };
     </script>
 </body>
 </html>
+    
