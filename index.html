@@ -124,6 +124,19 @@
             display: none;
         }
 
+        .admin-badge {
+            background-color: #da373c;
+            color: #fff;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            text-transform: uppercase;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
         .avatar-container {
             position: relative;
             display: inline-flex;
@@ -175,7 +188,7 @@
             background-color: #313338;
             padding: 24px;
             border-radius: 8px;
-            width: 460px;
+            width: 480px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -390,9 +403,8 @@
         .member-item-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
         .member-avatar-box { width: 32px; height: 32px; position: relative; flex-shrink: 0; }
         .member-meta { display: flex; flex-direction: column; min-width: 0; }
-        .member-name { font-size: 14px; font-weight: 500; color: #dbdee1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .member-name { font-size: 14px; font-weight: 500; color: #dbdee1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; }
         .member-status-text { font-size: 11px; color: #949ba4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .member-role-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; background: #5865f2; color: #fff; flex-shrink: 0; }
 
         #chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--platform-bg); min-width: 0; position: relative; }
         #chat-header {
@@ -413,13 +425,11 @@
         .msg-pfp { width: 40px; height: 40px; flex-shrink: 0; margin-top: 2px; }
         .msg-body { display: flex; flex-direction: column; max-width: 100%; flex: 1; }
         .msg-header { display: flex; align-items: baseline; gap: 8px; }
-        .message .username { font-weight: 500; font-size: 15px; color: #f2f3f5; cursor: pointer; }
+        .message .username { font-weight: 500; font-size: 15px; color: #f2f3f5; cursor: pointer; display: flex; align-items: center; }
         .message .username:hover { text-decoration: underline; }
         .message .timestamp { font-size: 12px; color: #949ba4; }
         .message .text { color: #dbdee1; font-size: 15px; line-height: 1.375rem; word-break: break-word; margin-top: 2px; }
         .msg-delete-btn { background: none; border: none; color: #fa777c; cursor: pointer; font-size: 12px; display: none; position: absolute; right: 12px; top: 8px; }
-
-        .msg-image { max-width: 400px; max-height: 300px; border-radius: 8px; margin-top: 6px; display: block; cursor: pointer; }
 
         #input-form { padding: 0 16px 24px 16px; background-color: transparent; position: relative; }
         .input-wrapper-row { display: flex; align-items: center; background-color: #383a40; border-radius: 8px; padding: 0 12px; gap: 8px; }
@@ -433,12 +443,6 @@
         #forum-area { flex: 1; display: none; flex-direction: column; background-color: #313338; padding: 24px; overflow-y: auto; gap: 16px; }
         .forum-header-row { display: flex; justify-content: space-between; align-items: center; }
         .forum-threads-list { display: flex; flex-direction: column; gap: 8px; }
-        .forum-thread-card {
-            background-color: #2b2d31; padding: 16px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; border: 1px solid transparent;
-        }
-        .forum-thread-card:hover { border-color: #3f4147; background-color: #35373c; }
-        .forum-thread-title { font-size: 16px; font-weight: 600; color: #f2f3f5; }
-        .forum-thread-meta { font-size: 12px; color: #949ba4; }
 
         #voice-area { flex: 1; display: none; flex-direction: column; background-color: #313338; min-width: 0; padding: 16px; gap: 16px; }
         .voice-top-bar { display: flex; justify-content: space-between; align-items: center; background-color: #2b2d31; padding: 12px 16px; border-radius: 8px; }
@@ -454,7 +458,6 @@
         .voice-controls { display: flex; justify-content: center; gap: 12px; padding: 12px; background-color: #2b2d31; border-radius: 8px; }
         .control-btn { background-color: #4e5058; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.15s; }
         .control-btn:hover { background-color: #6d6f78; }
-        .control-btn.active { background-color: #da373c; }
         .call-end-btn { background-color: #da373c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; }
 
         #home-dashboard { flex: 1; display: flex; flex-direction: column; background-color: #313338; color: #dbdee1; overflow: hidden; }
@@ -666,21 +669,21 @@
 
     <!-- Admin Console Modal -->
     <div id="admin-console-modal">
-        <div class="settings-box" style="border: 2px solid #5865f2; background: linear-gradient(145deg, #313338, #232428); width: 560px;">
+        <div class="settings-box" style="border: 2px solid #da373c; background: linear-gradient(145deg, #313338, #232428); width: 600px;">
             <div style="display: flex; align-items: center; justify-content: space-between;">
-                <h3 style="color: #f2f3f5; display: flex; align-items: center; gap: 8px;">🛡️ Admin Dashboard</h3>
-                <span style="font-size: 11px; background: #5865f2; color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: bold;">SECURE ACCESS</span>
+                <h3 style="color: #f2f3f5; display: flex; align-items: center; gap: 8px;">🛡️ Powerful Admin Dashboard</h3>
+                <span style="font-size: 11px; background: #da373c; color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: bold;">ROOT ACCESS</span>
             </div>
             <div class="auth-field">
-                <label>Registered Platform Users & Privileges</label>
-                <div id="admin-users-list" style="max-height: 160px; overflow-y: auto; background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3f4147;"></div>
+                <label>Registered Platform Users & Super Controls</label>
+                <div id="admin-users-list" style="max-height: 150px; overflow-y: auto; background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3f4147;"></div>
             </div>
             <div class="auth-field">
-                <button class="auth-btn-primary" type="button" style="background-color: #23a55a;" onclick="window.openModerateKeywordPrompt()">🔍 Moderate Keyword</button>
+                <button class="auth-btn-primary" type="button" style="background-color: #23a55a;" onclick="window.openModerateKeywordPrompt()">🔍 Global Moderate Keyword</button>
             </div>
             <div class="auth-field" id="admin-keyword-results-wrapper" style="display:none;">
                 <label>Search Results for Keyword: <span id="admin-search-keyword-display" style="color:#f0b232;"></span></label>
-                <div id="admin-keyword-results" style="max-height: 180px; overflow-y: auto; background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3f4147;"></div>
+                <div id="admin-keyword-results" style="max-height: 160px; overflow-y: auto; background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3f4147;"></div>
             </div>
             <div class="modal-actions">
                 <button class="auth-btn-primary" type="button" onclick="document.getElementById('admin-console-modal').style.display='none'">Close Console</button>
@@ -886,7 +889,7 @@
                 </div>
             </div>
             <div style="display: flex; gap: 4px; align-items: center;">
-                <button id="open-admin-btn" onclick="window.openAdminConsole()" style="background:#5865f2; border:none; color:#fff; cursor:pointer; font-size:11px; font-weight:bold; padding:4px 6px; border-radius:4px; display:none;">Admin</button>
+                <button id="open-admin-btn" onclick="window.openAdminConsole()" style="background:#da373c; border:none; color:#fff; cursor:pointer; font-size:11px; font-weight:bold; padding:4px 6px; border-radius:4px; display:none;">Admin</button>
                 <button onclick="window.logOutUser()" style="background:none; border:none; color:#da373c; cursor:pointer; font-size:11px; font-weight:bold; padding:4px;" title="Log Out">Exit</button>
             </div>
         </div>
@@ -1020,9 +1023,6 @@
         let localStream = null;
         let screenStream = null;
         let activeVoiceChannelId = null;
-        const peerConnections = {};
-        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-        let voiceSignalingUnsubscribers = [];
 
         let currentTutorialStep = 0;
         const tutorialSteps = [
@@ -1176,7 +1176,8 @@
             const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
             avatarModal.innerHTML = `<div class="avatar-img-wrap">${pfpHtml}</div>`;
 
-            document.getElementById('modal-profile-name').innerText = profile.username || 'User';
+            const isUserAdmin = profile.admin === "true";
+            document.getElementById('modal-profile-name').innerHTML = `${profile.username || 'User'} ${isUserAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}`;
             document.getElementById('modal-profile-handle').innerText = `@${profile.atName || 'user'}`;
             document.getElementById('modal-profile-statusmsg').innerText = profile.statusMsg || 'No status message set.';
             document.getElementById('modal-profile-coins').innerText = `🪙 Coins: ${profile.coins ?? 0}`;
@@ -1747,6 +1748,8 @@
                         actionHtml = `<button class="action-icon-btn" onclick="window.openDM('${fId}', '${profile.username}')" title="Message">💬</button>`;
                     }
 
+                    const isFriendAdmin = profile.admin === "true";
+
                     row.innerHTML = `
                         <div class="friend-info">
                             <div class="friend-avatar avatar-container ${frameClass}" onclick="window.openUserProfileModal('${fId}')">
@@ -1754,7 +1757,7 @@
                                 <div class="status-indicator status-${profile.status || 'offline'}"></div>
                             </div>
                             <div>
-                                <div style="font-weight:600; color:#f2f3f5; cursor:pointer;" onclick="window.openUserProfileModal('${fId}')">${profile.username}</div>
+                                <div style="font-weight:600; color:#f2f3f5; cursor:pointer;" onclick="window.openUserProfileModal('${fId}')">${profile.username} ${isFriendAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</div>
                                 <div style="font-size:12px; color:#949ba4;">@${profile.atName}</div>
                             </div>
                         </div>
@@ -1925,6 +1928,7 @@
         };
 
         function checkServerPermission(permType) {
+            if (isAdminUser) return true;
             if (!currentServerData) return false;
             if (currentServerData.creator === friendCode) return true;
             const memberRoles = currentServerData.member_roles?.[friendCode] || {};
@@ -2159,8 +2163,6 @@
                     }
                 };
                 onChildAdded(currentMessagesRef, currentMessagesCallback);
-            } else if (type === 'forum') {
-                loadForumThreads(channelId);
             } else if (type === 'voice' || type === 'stage') {
                 window.joinVoiceChannel(channelId, channelName);
             }
@@ -2226,6 +2228,7 @@
                             item.className = 'member-item';
                             item.onclick = () => window.openUserProfileModal(uId);
                             const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+                            const isMemberAdmin = profile.admin === "true";
                             item.innerHTML = `
                                 <div class="member-item-left">
                                     <div class="member-avatar-box avatar-container ${profile.frame || ''}">
@@ -2233,7 +2236,7 @@
                                         <div class="status-indicator status-${profile.status || 'offline'}"></div>
                                     </div>
                                     <div class="member-meta">
-                                        <span class="member-name">${profile.username}</span>
+                                        <span class="member-name">${profile.username} ${isMemberAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
                                         <span class="member-status-text">${profile.statusMsg || '@' + profile.atName}</span>
                                     </div>
                                 </div>
@@ -2251,6 +2254,7 @@
                     item.className = 'member-item';
                     item.onclick = () => window.openUserProfileModal(uId);
                     const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+                    const isMemberAdmin = profile.admin === "true";
                     item.innerHTML = `
                         <div class="member-item-left">
                             <div class="member-avatar-box avatar-container ${profile.frame || ''}">
@@ -2258,7 +2262,7 @@
                                 <div class="status-indicator status-${profile.status || 'offline'}"></div>
                             </div>
                             <div class="member-meta">
-                                <span class="member-name">${profile.username}</span>
+                                <span class="member-name">${profile.username} ${isMemberAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
                                 <span class="member-status-text">${profile.statusMsg || '@' + profile.atName}</span>
                             </div>
                         </div>
@@ -2301,6 +2305,7 @@
             const pfpHtml = pfpSrc ? `<img src="${pfpSrc}" style="width:100%; height:100%; object-fit:cover;">` : '👤';
 
             const dateStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const isMsgSenderAdmin = profile.admin === "true";
 
             let headerHtml = '';
             if (!isMerged) {
@@ -2310,7 +2315,7 @@
                     </div>
                     <div class="msg-body">
                         <div class="msg-header">
-                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${msg.username}</span>
+                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${msg.username} ${isMsgSenderAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
                             <span class="timestamp">${dateStr}</span>
                         </div>
                         <div class="text">${escapeHtml(msg.text)}</div>
@@ -2396,7 +2401,7 @@
 
         window.openServerSettings = function() {
             if (!activeServerId || !currentServerData) return;
-            if (currentServerData.creator !== friendCode && !checkServerPermission('channels')) {
+            if (currentServerData.creator !== friendCode && !checkServerPermission('channels') && !isAdminUser) {
                 alert("You do not have permission to manage this server.");
                 return;
             }
@@ -2428,6 +2433,7 @@
             document.getElementById('invite-modal').style.display = 'flex';
         };
 
+        // --- Powerful Admin Console ---
         window.openAdminConsole = function() {
             if (!isAdminUser) return;
             const listContainer = document.getElementById('admin-users-list');
@@ -2445,10 +2451,13 @@
                 const isAdm = profile.admin === "true";
                 row.innerHTML = `
                     <div>
-                        <div style="font-weight:bold; color:#f2f3f5; font-size:13px;">${profile.username} (@${profile.atName})</div>
+                        <div style="font-weight:bold; color:#f2f3f5; font-size:13px; display:flex; align-items:center;">${profile.username} (@${profile.atName}) ${isAdm ? '<span class="admin-badge">ADMIN</span>' : ''}</div>
                         <div style="font-size:11px; color:#949ba4;">ID: ${uId}</div>
                     </div>
-                    <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px; background:${isAdm ? '#da373c' : '#23a55a'}" onclick="window.toggleAdminStatus('${uId}', '${profile.admin}')">${isAdm ? 'Revoke Admin' : 'Make Admin'}</button>
+                    <div style="display:flex; gap:6px;">
+                        <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px; background:${isAdm ? '#fa777c' : '#23a55a'}" onclick="window.toggleAdminStatus('${uId}', '${profile.admin}')">${isAdm ? 'Revoke Admin' : 'Make Admin'}</button>
+                        <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px; background:#da373c;" onclick="window.adminBanUser('${uId}')">Wipe User</button>
+                    </div>
                 `;
                 listContainer.appendChild(row);
             }
@@ -2462,7 +2471,15 @@
             });
         };
 
-        // --- Keyword Moderation Feature ---
+        window.adminBanUser = function(uId) {
+            if (confirm("Are you sure you want to completely remove this user's profile from the platform?")) {
+                remove(ref(db, `profiles/${uId}`)).then(() => {
+                    alert("User wiped successfully.");
+                    window.openAdminConsole();
+                });
+            }
+        };
+
         window.openModerateKeywordPrompt = function() {
             if (!isAdminUser) return;
             const keyword = prompt("Enter keyword to search across all messages:");
