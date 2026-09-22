@@ -666,14 +666,21 @@
 
     <!-- Admin Console Modal -->
     <div id="admin-console-modal">
-        <div class="settings-box" style="border: 2px solid #5865f2; background: linear-gradient(145deg, #313338, #232428);">
+        <div class="settings-box" style="border: 2px solid #5865f2; background: linear-gradient(145deg, #313338, #232428); width: 560px;">
             <div style="display: flex; align-items: center; justify-content: space-between;">
                 <h3 style="color: #f2f3f5; display: flex; align-items: center; gap: 8px;">🛡️ Admin Dashboard</h3>
                 <span style="font-size: 11px; background: #5865f2; color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: bold;">SECURE ACCESS</span>
             </div>
             <div class="auth-field">
                 <label>Registered Platform Users & Privileges</label>
-                <div id="admin-users-list" style="max-height: 200px; overflow-y: auto; background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3f4147;"></div>
+                <div id="admin-users-list" style="max-height: 160px; overflow-y: auto; background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3f4147;"></div>
+            </div>
+            <div class="auth-field">
+                <button class="auth-btn-primary" type="button" style="background-color: #23a55a;" onclick="window.openModerateKeywordPrompt()">🔍 Moderate Keyword</button>
+            </div>
+            <div class="auth-field" id="admin-keyword-results-wrapper" style="display:none;">
+                <label>Search Results for Keyword: <span id="admin-search-keyword-display" style="color:#f0b232;"></span></label>
+                <div id="admin-keyword-results" style="max-height: 180px; overflow-y: auto; background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #3f4147;"></div>
             </div>
             <div class="modal-actions">
                 <button class="auth-btn-primary" type="button" onclick="document.getElementById('admin-console-modal').style.display='none'">Close Console</button>
@@ -992,8 +999,8 @@
         let currentCoins = 100;
         let lastDailyClaim = 0;
         let currentStatus = 'online';
-        let userSetStatus = 'online'; // Tracks user preference (online, idle, dnd, offline)
-        let isManuallySet = false;     // True if user picked status manually via dropdown
+        let userSetStatus = 'online';
+        let isManuallySet = false;
         let currentStatusMsg = '';
         let notificationsEnabled = false;
         let authMode = 'login';
@@ -1023,14 +1030,13 @@
             { title: "Shop & Arcade Game", desc: "Play the Coin Clicker game to earn credits, and spend them in the Shop on exclusive profile frames!" }
         ];
 
-        // --- Automated Status Activity Handlers ---
         let lastActivityTime = Date.now();
         let statusInterval = null;
 
         function resetActivityTimer() {
-            if (isManuallySet) return; // Do not override manual user statuses with automatic timers
+            if (isManuallySet) return;
             lastActivityTime = Date.now();
-            if (document.hidden) return; // If tab is hidden, leave visibility to visibilitychange event
+            if (document.hidden) return;
             
             if (currentStatus !== 'online' && currentStatus !== 'dnd') {
                 currentStatus = 'online';
@@ -1075,7 +1081,7 @@
         }
 
         window.handleManualStatusChange = function(val) {
-            isManuallySet = (val !== 'online'); // If user picks online, allow auto tracking back, otherwise lock selection
+            isManuallySet = (val !== 'online');
             userSetStatus = val;
             currentStatus = val;
             pushStatusToServer(val);
@@ -2455,7 +2461,91 @@
                 window.openAdminConsole();
             });
         };
+
+        // --- Keyword Moderation Feature ---
+        window.openModerateKeywordPrompt = function() {
+            if (!isAdminUser) return;
+            const keyword = prompt("Enter keyword to search across all messages:");
+            if (!keyword) return;
+            window.searchMessagesForKeyword(keyword.trim());
+        };
+
+        window.searchMessagesForKeyword = function(keyword) {
+            const wrapper = document.getElementById('admin-keyword-results-wrapper');
+            const keywordDisplay = document.getElementById('admin-search-keyword-display');
+            const resultsContainer = document.getElementById('admin-keyword-results');
+            
+            wrapper.style.display = 'flex';
+            keywordDisplay.innerText = `"${keyword}"`;
+            resultsContainer.innerHTML = '<div style="color:#949ba4; font-size:13px;">Searching all messages across servers...</div>';
+
+            get(ref(db, 'messages')).then((snapshot) => {
+                resultsContainer.innerHTML = '';
+                if (!snapshot.exists()) {
+                    resultsContainer.innerHTML = '<div style="color:#949ba4; font-size:13px;">No messages found across the platform.</div>';
+                    return;
+                }
+
+                let foundCount = 0;
+                const lowerKeyword = keyword.toLowerCase();
+
+                snapshot.forEach((chanSnap) => {
+                    const channelId = chanSnap.key;
+                    chanSnap.forEach((msgSnap) => {
+                        const msgKey = msgSnap.key;
+                        const msg = msgSnap.val();
+                        if (msg && msg.text && msg.text.toLowerCase().includes(lowerKeyword)) {
+                            foundCount++;
+                            const item = document.createElement('div');
+                            item.style.background = '#2b2d31';
+                            item.style.padding = '8px';
+                            item.style.borderRadius = '4px';
+                            item.style.display = 'flex';
+                            item.style.flexDirection = 'column';
+                            item.style.gap = '6px';
+                            item.id = `mod-msg-${channelId}-${msgKey}`;
+
+                            item.innerHTML = `
+                                <div style="display:flex; justify-content:space-between; font-size:11px; color:#949ba4;">
+                                    <span>Channel: ${channelId} | User: ${msg.username}</span>
+                                    <span>${new Date(msg.timestamp || Date.now()).toLocaleTimeString()}</span>
+                                </div>
+                                <div style="font-size:13px; color:#f2f3f5; word-break:break-word;">${escapeHtml(msg.text)}</div>
+                                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                                    <button class="auth-btn-primary" style="padding:2px 8px; font-size:11px; background:#f0b232;" onclick="window.censorKeywordMessage('${channelId}', '${msgKey}', ${JSON.stringify(msg.text)}, ${JSON.stringify(keyword)})">Censor</button>
+                                    <button class="auth-btn-primary" style="padding:2px 8px; font-size:11px; background:#da373c;" onclick="window.deleteKeywordMessage('${channelId}', '${msgKey}')">Delete</button>
+                                </div>
+                            `;
+                            resultsContainer.appendChild(item);
+                        }
+                    });
+                });
+
+                if (foundCount === 0) {
+                    resultsContainer.innerHTML = `<div style="color:#949ba4; font-size:13px;">No messages found containing "${keyword}".</div>`;
+                }
+            }).catch((err) => {
+                resultsContainer.innerHTML = `<div style="color:#fa777c; font-size:13px;">Error searching messages: ${err.message}</div>`;
+            });
+        };
+
+        window.censorKeywordMessage = function(channelId, msgKey, originalText, keyword) {
+            const regex = new RegExp(keyword, 'gi');
+            const censoredText = originalText.replace(regex, '[CENSORED]');
+            set(ref(db, `messages/${channelId}/${msgKey}/text`), censoredText).then(() => {
+                const el = document.getElementById(`mod-msg-${channelId}-${msgKey}`);
+                if (el) el.remove();
+                alert("Message censored successfully.");
+            });
+        };
+
+        window.deleteKeywordMessage = function(channelId, msgKey) {
+            remove(ref(db, `messages/${channelId}/${msgKey}`)).then(() => {
+                const el = document.getElementById(`mod-msg-${channelId}-${msgKey}`);
+                if (el) el.remove();
+                alert("Message deleted successfully.");
+            });
+        };
     </script>
 </body>
 </html>
-    
