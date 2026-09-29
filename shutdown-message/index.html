@@ -1,20 +1,307 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Temporary Shutdown</title>
-  </head>
-  <body>
-    <h1>PrivacyChat Has Shut Down</h1>
-    <p>It Seems PrivacyChat Has Come To An End. An Explanation Is Below As To Why PrivacyChat Is No Longer Online.<br><br></p>
-    <p>The Reason As To PrivacyChat Shutting Down Is Because Macon Middle School Has Asked Me To Remove The Site And Its Features, So I Have. Goodbye, PrivacyChat Will Return..</p>
-    <hr>
-    <img src="https://www.google.com/url?esrc=s&q=&rct=j&sa=U&url=https://www.istockphoto.com/photos/cartoon-tombstone&ved=2ahUKEwjfgvit1ZKXAxVKmokEHfQ9CkoQqoUBegQIFRAB&usg=AOvVaw18yCv5Pwi2tYPWYTB7f24m" alt="Tombstone">
-    <p>R.I.P Privacy Chat, July 4, 2026 - September 28, 2026</p>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrivacyChat | Offline</title>
+    <link rel="icon" type="image/svg+xml" href="https://api.dicebear.com/7.x/identicon/svg?seed=PrivacyChat">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
 
-    <!-- Background Audio Player -->
-    <audio autoplay loop controls style="margin-top: 15px;">
-      <source src="https://s3.ustatik.com/audio.com.audio/source/67/06/1871334286400667-1871334286491704.mp3?response-content-disposition=attachment%3B%20filename%3D%22TEMPOREX%20-%20Numbers%20%28Instrumental%20%20Perfect%20intro%20loop%29%20-%20an.mp3%22&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=F0E8U41NBMMW3Y027UTJ%2F20260928%2Feu-central-1%2Fs3%2Faws4_request&X-Amz-Date=20260928T175843Z&X-Amz-SignedHeaders=host&X-Amz-Expires=518400&X-Amz-Signature=44ea315dd5ac7c2609c7e16f0a7a798d971c18188f677fc018a2cac3230aab2c" type="audio/mpeg">
-      Your browser does not support the audio element.
-    </audio>
-  </body>
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #313338;
+            color: #dbdee1;
+            overflow: hidden;
+        }
+
+        /* Server Rail */
+        #server-rail {
+            width: 72px;
+            background-color: #1e1f22;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .rail-item {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            background-color: #da373c;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            position: relative;
+        }
+
+        .rail-item::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            width: 4px;
+            height: 40px;
+            background-color: #fff;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 240px;
+            background-color: #2b2d31;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .server-header {
+            height: 48px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #1f2023;
+            font-weight: 600;
+            color: #f2f3f5;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .sidebar-content {
+            padding: 16px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .channel-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            background-color: #404249;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .channel-btn .hashtag {
+            font-size: 18px;
+            color: #80848e;
+        }
+
+        .user-dock {
+            height: 52px;
+            background-color: #232428;
+            padding: 0 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dock-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #80848e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .dock-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dock-username {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f2f3f5;
+        }
+
+        .dock-subtext {
+            font-size: 11px;
+            color: #fa777c;
+        }
+
+        /* Main Chat Area */
+        #chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #313338;
+        }
+
+        #chat-header {
+            height: 48px;
+            padding: 0 16px;
+            border-bottom: 1px solid #1f2023;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            font-weight: 600;
+            color: #f2f3f5;
+        }
+
+        #message-container {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .system-announcement {
+            background-color: #2b2d31;
+            border-left: 4px solid #da373c;
+            padding: 16px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .system-announcement h2 {
+            color: #fa777c;
+            font-size: 18px;
+        }
+
+        .system-announcement p {
+            line-height: 1.5;
+            color: #dbdee1;
+            font-size: 15px;
+        }
+
+        .memorial-card {
+            background-color: #1e1f22;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            width: fit-content;
+            border: 1px solid #2b2d31;
+        }
+
+        .memorial-card img {
+            width: 64px;
+            height: 64px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .memorial-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .memorial-title {
+            font-weight: 600;
+            color: #f2f3f5;
+        }
+
+        .memorial-dates {
+            font-size: 13px;
+            color: #949ba4;
+        }
+
+        /* Custom Player Dock */
+        .audio-player-wrapper {
+            background-color: #2b2d31;
+            padding: 12px 16px;
+            margin: 0 24px 24px 24px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .audio-player-wrapper span {
+            font-size: 13px;
+            color: #b5bac1;
+            white-space: nowrap;
+        }
+
+        audio {
+            flex: 1;
+            height: 32px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Server Rail -->
+    <div id="server-rail">
+        <div class="rail-item" title="PrivacyChat (Offline)">PC</div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="server-header">PrivacyChat</div>
+        <div class="sidebar-content">
+            <div class="channel-btn">
+                <span class="hashtag">#</span> shutdown-notice
+            </div>
+        </div>
+        <div class="user-profile-dock user-dock">
+            <div class="dock-avatar">🛑</div>
+            <div class="dock-text">
+                <div class="dock-username">System</div>
+                <div class="dock-subtext">Offline Permanently</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div id="chat-area">
+        <div id="chat-header">
+            <span style="color: #80848e; font-size: 20px;">#</span> shutdown-notice
+        </div>
+
+        <div id="message-container">
+            <div class="system-announcement">
+                <h2>PrivacyChat Has Shut Down</h2>
+                <p>It seems PrivacyChat has come to an end. An explanation is below as to why PrivacyChat is no longer online.</p>
+                <p>The reason as to PrivacyChat shutting down is because Macon Middle School has asked me to remove the site and its features, so I have. Goodbye, PrivacyChat will return..</p>
+            </div>
+
+            <div class="memorial-card">
+                <img src="https://www.istockphoto.com/photos/cartoon-tombstone" alt="Tombstone">
+                <div class="memorial-info">
+                    <div class="memorial-title">R.I.P. PrivacyChat</div>
+                    <div class="memorial-dates">July 4, 2026 – September 28, 2026</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Background / Atmospheric Audio Player -->
+        <div class="audio-player-wrapper">
+            <span>🎵 Background Track:</span>
+            <audio autoplay loop controls>
+                <source src="https://s3.ustatik.com/audio.com.audio/source/67/06/1871334286400667-1871334286491704.mp3?response-content-disposition=attachment%3B%20filename%3D%22TEMPOREX%20-%20Numbers%20%28Instrumental%20%20Perfect%20intro%20loop%29%20-%20an.mp3%22&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=F0E8U41NBMMW3Y027UTJ%2F20260928%2Feu-central-1%2Fs3%2Faws4_request&X-Amz-Date=20260928T175843Z&X-Amz-SignedHeaders=host&X-Amz-Expires=518400&X-Amz-Signature=44ea315dd5ac7c2609c7e16f0a7a798d971c18188f677fc018a2cac3230aab2c" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+    </div>
+
+</body>
 </html>
