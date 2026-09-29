@@ -494,7 +494,208 @@
     </style>
 </head>
 <body>
+<div id="Temp Shutdown Message">
+    <!-- SHUTDOWN OVERLAY COMPONENT - Insert after <body> opening tag, before auth-overlay -->
+<!-- Maintenance Overlay -->
+<div id="shutdown-overlay" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+">
+    <div style="
+        background: linear-gradient(145deg, #313338, #2b2d31);
+        border: 2px solid #5865f2;
+        border-radius: 12px;
+        padding: 48px;
+        max-width: 500px;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(88, 101, 242, 0.3);
+        animation: shutdownSlideIn 0.5s ease-out;
+    ">
+        <div style="
+            font-size: 64px;
+            margin-bottom: 16px;
+            animation: shutdownPulse 2s ease-in-out infinite;
+        ">⏱️</div>
 
+        <h1 style="
+            font-size: 28px;
+            font-weight: 700;
+            color: #f2f3f5;
+            margin-bottom: 12px;
+        ">Scheduled Maintenance</h1>
+
+        <p style="
+            font-size: 16px;
+            color: #b5bac1;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        ">PrivacyChat is currently undergoing scheduled maintenance</p>
+
+        <div style="
+            background-color: #1e1f22;
+            border: 1px solid #5865f2;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 24px 0;
+        ">
+            <div style="
+                font-size: 13px;
+                font-weight: 700;
+                color: #b5bac1;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 8px;
+            ">Back Online In</div>
+            <div id="shutdownCountdownTimer" style="
+                font-size: 32px;
+                font-weight: 700;
+                color: #00a8fc;
+                font-family: 'Courier New', monospace;
+                letter-spacing: 2px;
+            ">00:00:00:00</div>
+            <div style="
+                font-size: 12px;
+                color: #949ba4;
+                margin-top: 8px;
+            ">Days • Hours • Minutes • Seconds</div>
+        </div>
+
+        <p style="
+            font-size: 14px;
+            color: #dbdee1;
+            margin-bottom: 8px;
+            line-height: 1.6;
+        ">We're performing important updates to improve your experience.</p>
+        <p style="
+            font-size: 14px;
+            color: #dbdee1;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        ">Thank you for your patience!</p>
+
+        <div style="
+            background-color: rgba(240, 178, 50, 0.1);
+            border: 1px solid #f0b232;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 24px;
+            font-size: 12px;
+            color: #f0b232;
+        ">⚠️ Estimated downtime: Until October 2, 2026 at 4:00 PM EST</div>
+
+        <div style="
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        ">
+            <button onclick="window.openShutdownMessage()" style="
+                background-color: #2b2d31;
+                color: #00a8fc;
+                border: 1px solid #5865f2;
+                padding: 12px 24px;
+                border-radius: 4px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 14px;
+                transition: all 0.15s ease;
+                font-family: inherit;
+            " onmouseover="this.style.backgroundColor='#35373c'" onmouseout="this.style.backgroundColor='#2b2d31'">View Details</button>
+            <button onclick="location.reload()" style="
+                background-color: #5865f2;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 4px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 14px;
+                transition: all 0.15s ease;
+                font-family: inherit;
+            " onmouseover="this.style.backgroundColor='#4752c4'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(88, 101, 242, 0.4)'" onmouseout="this.style.backgroundColor='#5865f2'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">Refresh</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes shutdownSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes shutdownPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+</style>
+
+<script>
+    // Shutdown Overlay Configuration
+    const SHUTDOWN_END_TIME = new Date('2026-10-02T20:00:00Z'); // October 2, 2026 4:00 PM EST (20:00 UTC)
+    const SHUTDOWN_MESSAGE_URL = './shutdown-message';
+
+    function isMaintenanceActive() {
+        const now = new Date();
+        return now < SHUTDOWN_END_TIME;
+    }
+
+    function updateShutdownCountdown() {
+        const now = new Date();
+        const timeLeft = SHUTDOWN_END_TIME - now;
+
+        if (timeLeft <= 0) {
+            document.getElementById('shutdown-overlay').style.display = 'none';
+            return;
+        }
+
+        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+        const timerDisplay = `${String(days).padStart(2, '0')}:${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        document.getElementById('shutdownCountdownTimer').textContent = timerDisplay;
+    }
+
+    window.openShutdownMessage = function() {
+        window.open(SHUTDOWN_MESSAGE_URL, '_blank');
+    };
+
+    function initializeShutdownOverlay() {
+        if (isMaintenanceActive()) {
+            const overlay = document.getElementById('shutdown-overlay');
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            updateShutdownCountdown();
+            setInterval(updateShutdownCountdown, 1000);
+        } else {
+            document.getElementById('shutdown-overlay').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeShutdownOverlay);
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden && isMaintenanceActive()) {
+            updateShutdownCountdown();
+        }
+    });
+</script>
+</div>
     <!-- Auth Overlay -->
     <div id="auth-overlay">
         <form class="auth-card" id="auth-form" onsubmit="window.handleAuthAction(event)">
