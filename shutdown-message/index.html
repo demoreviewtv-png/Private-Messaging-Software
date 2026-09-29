@@ -201,11 +201,10 @@
             border: 1px solid #2b2d31;
         }
 
-        .memorial-card img {
-            width: 64px;
-            height: 64px;
-            border-radius: 8px;
-            object-fit: cover;
+        .memorial-card svg {
+            width: 56px;
+            height: 56px;
+            flex-shrink: 0;
         }
 
         .memorial-info {
@@ -217,6 +216,7 @@
         .memorial-title {
             font-weight: 600;
             color: #f2f3f5;
+            font-size: 16px;
         }
 
         .memorial-dates {
@@ -285,7 +285,15 @@
             </div>
 
             <div class="memorial-card">
-                <img src="https://www.istockphoto.com/photos/cartoon-tombstone" alt="Tombstone">
+                <!-- Working Inline SVG Tombstone -->
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 24C16 15.1634 23.1634 8 32 8C40.8366 8 48 15.1634 48 24V52H16V24Z" fill="#80848E"/>
+                    <path d="M12 52H52V56H12V52Z" fill="#4E5058"/>
+                    <path d="M28 20H36V24H28V20Z" fill="#2B2D31"/>
+                    <path d="M30 16H34V28H30V16Z" fill="#2B2D31"/>
+                    <path d="M22 34H42V36H22V34Z" fill="#2B2D31"/>
+                    <path d="M24 40H40V42H24V40Z" fill="#2B2D31"/>
+                </svg>
                 <div class="memorial-info">
                     <div class="memorial-title">R.I.P. PrivacyChat</div>
                     <div class="memorial-dates">July 4, 2026 – September 28, 2026</div>
@@ -293,7 +301,7 @@
             </div>
         </div>
 
-        <!-- Background / Atmospheric Audio Player -->
+        <!-- Background Audio Player -->
         <div class="audio-player-wrapper">
             <span>🎵 Background Track:</span>
             <audio autoplay loop controls>
