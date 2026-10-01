@@ -1,3 +1,4 @@
+<a_file_content path="index.html.txt">
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -744,7 +745,7 @@
     <!-- Role Manager Modal -->
     <div id="role-manager-modal">
         <div class="settings-box" style="width: 520px;">
-            <h3>🛡️ Server Roles & Permissions Manager</h3>
+            <h3>🛡️️ Server Roles & Permissions Manager</h3>
             <p style="font-size: 13px; color: #b5bac1;">Create custom moderator roles, configure privileges, and assign them to members.</p>
             
             <div style="background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px;">
@@ -1032,6 +1033,15 @@
         let lastActivityTime = Date.now();
         let statusInterval = null;
 
+        function getAvatarHtml(pfpUrl, username) {
+            if (pfpUrl && pfpUrl.trim() !== '') {
+                return `<img src="${pfpUrl}" alt="avatar" />`;
+            }
+            const seed = encodeURIComponent(username || 'User');
+            const dicebearUrl = `https://api.dicebear.com/10.x/glyphs/svg?glyphColor=ff2e88,00e5ff,ffe600,7cff00,ff6a00,b400ff&seed=${seed}`;
+            return `<img src="${dicebearUrl}" alt="avatar" />`;
+        }
+
         function resetActivityTimer() {
             if (isManuallySet) return;
             lastActivityTime = Date.now();
@@ -1172,7 +1182,7 @@
             
             const avatarModal = document.getElementById('modal-profile-avatar');
             avatarModal.className = `preview-avatar avatar-container ${profile.frame || ''}`;
-            const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+            const pfpHtml = getAvatarHtml(profile.pfp, profile.username);
             avatarModal.innerHTML = `<div class="avatar-img-wrap">${pfpHtml}</div>`;
 
             const isUserAdmin = profile.admin === "true";
@@ -1384,7 +1394,7 @@
             
             const avatarDock = document.getElementById('dock-avatar-display');
             avatarDock.className = `dock-avatar avatar-container ${currentFrame}`;
-            const innerImg = currentPfpBase64 ? `<img src="${currentPfpBase64}" alt="PFP">` : '👤';
+            const innerImg = getAvatarHtml(currentPfpBase64, currentUsername);
             avatarDock.innerHTML = `<div class="avatar-img-wrap">${innerImg}</div><div class="status-indicator status-${currentStatus}" id="dock-status-dot"></div>`;
 
             const adminBtn = document.getElementById('open-admin-btn');
@@ -1402,7 +1412,7 @@
             
             const preview = document.getElementById('settings-avatar-preview');
             preview.className = `preview-avatar avatar-container ${currentFrame}`;
-            preview.innerHTML = `<div class="avatar-img-wrap">${tempAvatarBase64 ? `<img src="${tempAvatarBase64}">` : '👤'}</div>`;
+            preview.innerHTML = `<div class="avatar-img-wrap">${getAvatarHtml(tempAvatarBase64, currentUsername)}</div>`;
             document.getElementById('settings-modal').style.display = 'flex';
         };
 
@@ -1413,7 +1423,7 @@
             reader.onload = function(e) {
                 tempAvatarBase64 = e.target.result;
                 const preview = document.getElementById('settings-avatar-preview');
-                preview.innerHTML = `<div class="avatar-img-wrap"><img src="${tempAvatarBase64}" alt="Preview"></div>`;
+                preview.innerHTML = `<div class="avatar-img-wrap">${getAvatarHtml(tempAvatarBase64, currentUsername)}</div>`;
             };
             reader.readAsDataURL(file);
         };
@@ -1551,43 +1561,43 @@
                     <p style="font-size:13px; color:#b5bac1;">Spend your earned coins to unlock special profile picture frames!</p>
                     <div class="shop-grid">
                         <div class="shop-card">
-                            <div class="avatar-container" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div class="avatar-container" style="width:50px; height:50px;"><div class="avatar-img-wrap">${getAvatarHtml(currentPfpBase64, currentUsername)}</div></div>
                             <div style="font-weight:bold; color:#f2f3f5;">None (No Frame)</div>
                             <div style="font-size:12px; color:#949ba4;">Free</div>
                             <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.equipFrame('')">Equip</button>
                         </div>
                         <div class="shop-card">
-                            <div class="avatar-container frame-gold" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div class="avatar-container frame-gold" style="width:50px; height:50px;"><div class="avatar-img-wrap">${getAvatarHtml(currentPfpBase64, currentUsername)}</div></div>
                             <div style="font-weight:bold; color:#f2f3f5;">Gold Ring Frame</div>
                             <div style="font-size:12px; color:#949ba4;">Price: 150 Coins</div>
                             <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-gold', 150)">Buy & Equip</button>
                         </div>
                         <div class="shop-card">
-                            <div class="avatar-container frame-neon" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div class="avatar-container frame-neon" style="width:50px; height:50px;"><div class="avatar-img-wrap">${getAvatarHtml(currentPfpBase64, currentUsername)}</div></div>
                             <div style="font-weight:bold; color:#f2f3f5;">Cyber Neon Frame</div>
                             <div style="font-size:12px; color:#949ba4;">Price: 200 Coins</div>
                             <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-neon', 200)">Buy & Equip</button>
                         </div>
                         <div class="shop-card">
-                            <div class="avatar-container frame-purple" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div class="avatar-container frame-purple" style="width:50px; height:50px;"><div class="avatar-img-wrap">${getAvatarHtml(currentPfpBase64, currentUsername)}</div></div>
                             <div style="font-weight:bold; color:#f2f3f5;">Royal Purple Frame</div>
                             <div style="font-size:12px; color:#949ba4;">Price: 175 Coins</div>
                             <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-purple', 175)">Buy & Equip</button>
                         </div>
                         <div class="shop-card">
-                            <div class="avatar-container frame-fire" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div class="avatar-container frame-fire" style="width:50px; height:50px;"><div class="avatar-img-wrap">${getAvatarHtml(currentPfpBase64, currentUsername)}</div></div>
                             <div style="font-weight:bold; color:#f2f3f5;">Fire Glow Frame</div>
                             <div style="font-size:12px; color:#949ba4;">Price: 250 Coins</div>
                             <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-fire', 250)">Buy & Equip</button>
                         </div>
                         <div class="shop-card">
-                            <div class="avatar-container frame-galaxy" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div class="avatar-container frame-galaxy" style="width:50px; height:50px;"><div class="avatar-img-wrap">${getAvatarHtml(currentPfpBase64, currentUsername)}</div></div>
                             <div style="font-weight:bold; color:#f2f3f5;">Galaxy Violet Frame</div>
                             <div style="font-size:12px; color:#949ba4;">Price: 300 Coins</div>
                             <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-galaxy', 300)">Buy & Equip</button>
                         </div>
                         <div class="shop-card">
-                            <div class="avatar-container frame-emerald" style="width:50px; height:50px;"><div class="avatar-img-wrap">👤</div></div>
+                            <div class="avatar-container frame-emerald" style="width:50px; height:50px;"><div class="avatar-img-wrap">${getAvatarHtml(currentPfpBase64, currentUsername)}</div></div>
                             <div style="font-weight:bold; color:#f2f3f5;">Emerald Shine Frame</div>
                             <div style="font-size:12px; color:#949ba4;">Price: 250 Coins</div>
                             <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-emerald', 250)">Buy & Equip</button>
@@ -1731,7 +1741,7 @@
                     const row = document.createElement('div');
                     row.className = 'friend-row';
                     const frameClass = profile.frame || '';
-                    const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+                    const pfpHtml = getAvatarHtml(profile.pfp, profile.username);
                     
                     let actionHtml = '';
                     const status = typeof fData === 'object' ? fData.status : fData;
@@ -2216,18 +2226,21 @@
 
             if (activeServerId && currentServerData) {
                 onValue(ref(db, `user_servers`), (snap) => {
-                    const allUserServers = snap.val() || {};
-                    let count = 0;
                     container.innerHTML = '';
+                    let count = 0;
+                    const allUserServers = snap.val() || {};
+
                     for (const [uId, servers] of Object.entries(allUserServers)) {
                         if (servers[activeServerId] || currentServerData.creator === uId) {
                             count++;
-                            const profile = allProfiles[uId] || { username: uId, atName: uId, status: 'offline' };
+                            const profile = allProfiles[uId] || { username: uId, status: 'offline', pfp: '', frame: '' };
                             const item = document.createElement('div');
                             item.className = 'member-item';
                             item.onclick = () => window.openUserProfileModal(uId);
-                            const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+
+                            const pfpHtml = getAvatarHtml(profile.pfp, profile.username);
                             const isMemberAdmin = profile.admin === "true";
+
                             item.innerHTML = `
                                 <div class="member-item-left">
                                     <div class="member-avatar-box avatar-container ${profile.frame || ''}">
@@ -2235,8 +2248,8 @@
                                         <div class="status-indicator status-${profile.status || 'offline'}"></div>
                                     </div>
                                     <div class="member-meta">
-                                        <span class="member-name">${profile.username} ${isMemberAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
-                                        <span class="member-status-text">${profile.statusMsg || '@' + profile.atName}</span>
+                                        <div class="member-name">${profile.username} ${isMemberAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</div>
+                                        <div class="member-status-text">${profile.statusMsg || profile.status || 'offline'}</div>
                                     </div>
                                 </div>
                             `;
@@ -2252,8 +2265,10 @@
                     const item = document.createElement('div');
                     item.className = 'member-item';
                     item.onclick = () => window.openUserProfileModal(uId);
-                    const pfpHtml = profile.pfp ? `<img src="${profile.pfp}">` : '👤';
+
+                    const pfpHtml = getAvatarHtml(profile.pfp, profile.username);
                     const isMemberAdmin = profile.admin === "true";
+
                     item.innerHTML = `
                         <div class="member-item-left">
                             <div class="member-avatar-box avatar-container ${profile.frame || ''}">
@@ -2261,27 +2276,72 @@
                                 <div class="status-indicator status-${profile.status || 'offline'}"></div>
                             </div>
                             <div class="member-meta">
-                                <span class="member-name">${profile.username} ${isMemberAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
-                                <span class="member-status-text">${profile.statusMsg || '@' + profile.atName}</span>
+                                <div class="member-name">${profile.username} ${isMemberAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</div>
+                                <div class="member-status-text">${profile.statusMsg || profile.status || 'offline'}</div>
                             </div>
                         </div>
                     `;
                     container.appendChild(item);
                 }
-                header.innerText = `Online — ${count}`;
+                header.innerText = `Online Users — ${count}`;
             }
         };
 
+        function renderMessageOnUI(msg, msgId, isMerged) {
+            const container = document.getElementById('message-container');
+            const div = document.createElement('div');
+            div.className = `message ${isMerged ? 'merged' : ''}`;
+            div.id = `msg-${msgId}`;
+
+            const senderProfile = allProfiles[msg.uid] || {};
+            const pfpUrl = msg.userpfp || senderProfile.pfp || '';
+            const senderName = msg.username || senderProfile.username || 'User';
+
+            let pfpContent = '';
+            if (!isMerged) {
+                pfpContent = `<div class="msg-pfp avatar-container ${msg.frame || senderProfile.frame || ''}">
+                    <div class="avatar-img-wrap">${getAvatarHtml(pfpUrl, senderName)}</div>
+                </div>`;
+            }
+
+            const isMsgAdmin = senderProfile.admin === "true";
+            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const canDelete = (msg.uid === friendCode) || isAdminUser || checkServerPermission('deleteMessages');
+            const deleteBtnHtml = canDelete ? `<button class="msg-delete-btn" onclick="window.deleteMessage('${msgId}')">Delete</button>` : '';
+
+            let bodyContent = '';
+            if (isMerged) {
+                bodyContent = `<div class="msg-body"><div class="text">${msg.text || ''}</div></div>`;
+            } else {
+                bodyContent = `
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${senderName} ${isMsgAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
+                            <span class="timestamp">${timeStr}</span>
+                        </div>
+                        <div class="text">${msg.text || ''}</div>
+                    </div>
+                `;
+            }
+
+            div.innerHTML = `${pfpContent}${bodyContent}${deleteBtnHtml}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
         window.handleMessageSubmit = function(e) {
-            e.preventDefault();
+            if (e) e.preventDefault();
             const input = document.getElementById('message-input');
             const text = input.value.trim();
             if (!text || !currentChannelId) return;
 
+            const pfpToSend = currentPfpBase64 ? currentPfpBase64 : '';
+
             const msgData = {
                 uid: friendCode,
                 username: currentUsername,
-                pfp: currentPfpBase64,
+                userpfp: pfpToSend,
                 frame: currentFrame,
                 text: text,
                 timestamp: Date.now()
@@ -2292,276 +2352,14 @@
             });
         };
 
-        function renderMessageOnUI(msg, msgKey, isMerged) {
-            const container = document.getElementById('message-container');
-            const msgEl = document.createElement('div');
-            msgEl.className = `message ${isMerged ? 'merged' : ''}`;
-            msgEl.id = `msg-${msgKey}`;
-
-            const profile = allProfiles[msg.uid] || {};
-            const frameClass = msg.frame || profile.frame || '';
-            const pfpSrc = msg.pfp || profile.pfp || '';
-            const pfpHtml = pfpSrc ? `<img src="${pfpSrc}" style="width:100%; height:100%; object-fit:cover;">` : '👤';
-
-            const dateStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const isMsgSenderAdmin = profile.admin === "true";
-
-            let headerHtml = '';
-            if (!isMerged) {
-                headerHtml = `
-                    <div class="msg-pfp avatar-container ${frameClass}" onclick="window.openUserProfileModal('${msg.uid}')">
-                        <div class="avatar-img-wrap">${pfpHtml}</div>
-                    </div>
-                    <div class="msg-body">
-                        <div class="msg-header">
-                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${msg.username} ${isMsgSenderAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
-                            <span class="timestamp">${dateStr}</span>
-                        </div>
-                        <div class="text">${escapeHtml(msg.text)}</div>
-                    </div>
-                `;
-            } else {
-                headerHtml = `
-                    <div class="msg-body">
-                        <div class="text">${escapeHtml(msg.text)}</div>
-                    </div>
-                `;
-            }
-
-            msgEl.innerHTML = headerHtml;
-            if (msg.uid === friendCode || checkServerPermission('deleteMessages') || isAdminUser) {
-                const delBtn = document.createElement('button');
-                delBtn.className = 'msg-delete-btn';
-                delBtn.innerText = 'Delete';
-                delBtn.onclick = () => remove(ref(db, `messages/${currentChannelId}/${msgKey}`)).then(() => msgEl.remove());
-                msgEl.appendChild(delBtn);
-            }
-
-            container.appendChild(msgEl);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
-
-        window.submitNewChannel = function() {
-            const nameInput = document.getElementById('new-channel-input');
-            const typeSelect = document.getElementById('new-channel-type');
-            const name = nameInput.value.trim().toLowerCase().replace(/\s+/g, '-');
-            const type = typeSelect.value;
-            if (!name || !activeServerId) return;
-
-            const newChanRef = push(ref(db, `server_channels/${activeServerId}`));
-            set(newChanRef, { name, type }).then(() => {
-                nameInput.value = '';
-                document.getElementById('inline-add-channel-box').style.display = 'none';
-            });
-        };
-
-        window.toggleInlineAddChannel = function() {
-            const box = document.getElementById('inline-add-channel-box');
-            box.style.display = box.style.display === 'none' ? 'flex' : 'none';
-        };
-
-        window.joinCustomServer = function() {
-            const name = document.getElementById('custom-server-input').value.trim();
-            const visibility = document.getElementById('custom-server-visibility').value;
-            if (!name) return;
-
-            const serverRef = push(ref(db, 'custom_servers'));
-            const sId = serverRef.key;
-
-            set(serverRef, {
-                name: name,
-                creator: friendCode,
-                visibility: visibility,
-                icon: uploadedServerIconBase64 || ''
-            }).then(() => {
-                set(ref(db, `server_channels/${sId}/general`), { name: 'general', type: 'text' });
-                set(ref(db, `user_servers/${friendCode}/${sId}`), true).then(() => {
-                    document.getElementById('create-server-modal').style.display = 'none';
-                    window.selectServer(sId, name);
-                });
-            });
-        };
-
-        window.handleServerIconUpload = function(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                uploadedServerIconBase64 = e.target.result;
-                const box = document.getElementById('server-icon-preview-box');
-                box.innerHTML = `<div class="avatar-img-wrap"><img src="${uploadedServerIconBase64}"></div>`;
-            };
-            reader.readAsDataURL(file);
-        };
-
-        window.openServerSettings = function() {
-            if (!activeServerId || !currentServerData) return;
-            if (currentServerData.creator !== friendCode && !checkServerPermission('channels') && !isAdminUser) {
-                alert("You do not have permission to manage this server.");
-                return;
-            }
-            document.getElementById('srv-set-name').value = currentServerData.name || '';
-            document.getElementById('srv-set-icon').value = currentServerData.icon || '';
-            document.getElementById('server-settings-modal').style.display = 'flex';
-        };
-
-        window.saveServerSettings = function() {
-            if (!activeServerId) return;
-            const newName = document.getElementById('srv-set-name').value.trim();
-            const newIcon = document.getElementById('srv-set-icon').value.trim();
-
-            update(ref(db, `custom_servers/${activeServerId}`), {
-                name: newName,
-                icon: newIcon
-            }).then(() => {
-                document.getElementById('server-settings-modal').style.display = 'none';
-                document.getElementById('current-server-title').innerText = newName;
-                currentServerData.name = newName;
-                currentServerData.icon = newIcon;
-            });
-        };
-
-        window.openInviteModal = function() {
-            if (!activeServerId) return;
-            const inviteUrl = `${window.location.origin}${window.location.pathname}?invite=${activeServerId}`;
-            document.getElementById('invite-link-display').value = inviteUrl;
-            document.getElementById('invite-modal').style.display = 'flex';
-        };
-
-        // --- Powerful Admin Console ---
-        window.openAdminConsole = function() {
-            if (!isAdminUser) return;
-            const listContainer = document.getElementById('admin-users-list');
-            listContainer.innerHTML = '';
-
-            for (const [uId, profile] of Object.entries(allProfiles)) {
-                const row = document.createElement('div');
-                row.style.display = 'flex';
-                row.style.alignItems = 'center';
-                row.style.justifyContent = 'space-between';
-                row.style.background = '#2b2d31';
-                row.style.padding = '8px';
-                row.style.borderRadius = '4px';
-
-                const isAdm = profile.admin === "true";
-                row.innerHTML = `
-                    <div>
-                        <div style="font-weight:bold; color:#f2f3f5; font-size:13px; display:flex; align-items:center;">${profile.username} (@${profile.atName}) ${isAdm ? '<span class="admin-badge">ADMIN</span>' : ''}</div>
-                        <div style="font-size:11px; color:#949ba4;">ID: ${uId}</div>
-                    </div>
-                    <div style="display:flex; gap:6px;">
-                        <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px; background:${isAdm ? '#fa777c' : '#23a55a'}" onclick="window.toggleAdminStatus('${uId}', '${profile.admin}')">${isAdm ? 'Revoke Admin' : 'Make Admin'}</button>
-                        <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px; background:#da373c;" onclick="window.adminBanUser('${uId}')">Wipe User</button>
-                    </div>
-                `;
-                listContainer.appendChild(row);
-            }
-            document.getElementById('admin-console-modal').style.display = 'flex';
-        };
-
-        window.toggleAdminStatus = function(uId, currentAdmVal) {
-            const nextVal = currentAdmVal === "true" ? "false" : "true";
-            set(ref(db, `profiles/${uId}/admin`), nextVal).then(() => {
-                window.openAdminConsole();
-            });
-        };
-
-        window.adminBanUser = function(uId) {
-            if (confirm("Are you sure you want to completely remove this user's profile from the platform?")) {
-                remove(ref(db, `profiles/${uId}`)).then(() => {
-                    alert("User wiped successfully.");
-                    window.openAdminConsole();
-                });
-            }
-        };
-
-        window.openModerateKeywordPrompt = function() {
-            if (!isAdminUser) return;
-            const keyword = prompt("Enter keyword to search across all messages:");
-            if (!keyword) return;
-            window.searchMessagesForKeyword(keyword.trim());
-        };
-
-        window.searchMessagesForKeyword = function(keyword) {
-            const wrapper = document.getElementById('admin-keyword-results-wrapper');
-            const keywordDisplay = document.getElementById('admin-search-keyword-display');
-            const resultsContainer = document.getElementById('admin-keyword-results');
-            
-            wrapper.style.display = 'flex';
-            keywordDisplay.innerText = `"${keyword}"`;
-            resultsContainer.innerHTML = '<div style="color:#949ba4; font-size:13px;">Searching all messages across servers...</div>';
-
-            get(ref(db, 'messages')).then((snapshot) => {
-                resultsContainer.innerHTML = '';
-                if (!snapshot.exists()) {
-                    resultsContainer.innerHTML = '<div style="color:#949ba4; font-size:13px;">No messages found across the platform.</div>';
-                    return;
-                }
-
-                let foundCount = 0;
-                const lowerKeyword = keyword.toLowerCase();
-
-                snapshot.forEach((chanSnap) => {
-                    const channelId = chanSnap.key;
-                    chanSnap.forEach((msgSnap) => {
-                        const msgKey = msgSnap.key;
-                        const msg = msgSnap.val();
-                        if (msg && msg.text && msg.text.toLowerCase().includes(lowerKeyword)) {
-                            foundCount++;
-                            const item = document.createElement('div');
-                            item.style.background = '#2b2d31';
-                            item.style.padding = '8px';
-                            item.style.borderRadius = '4px';
-                            item.style.display = 'flex';
-                            item.style.flexDirection = 'column';
-                            item.style.gap = '6px';
-                            item.id = `mod-msg-${channelId}-${msgKey}`;
-
-                            item.innerHTML = `
-                                <div style="display:flex; justify-content:space-between; font-size:11px; color:#949ba4;">
-                                    <span>Channel: ${channelId} | User: ${msg.username}</span>
-                                    <span>${new Date(msg.timestamp || Date.now()).toLocaleTimeString()}</span>
-                                </div>
-                                <div style="font-size:13px; color:#f2f3f5; word-break:break-word;">${escapeHtml(msg.text)}</div>
-                                <div style="display:flex; gap:8px; justify-content:flex-end;">
-                                    <button class="auth-btn-primary" style="padding:2px 8px; font-size:11px; background:#f0b232;" onclick="window.censorKeywordMessage('${channelId}', '${msgKey}', ${JSON.stringify(msg.text)}, ${JSON.stringify(keyword)})">Censor</button>
-                                    <button class="auth-btn-primary" style="padding:2px 8px; font-size:11px; background:#da373c;" onclick="window.deleteKeywordMessage('${channelId}', '${msgKey}')">Delete</button>
-                                </div>
-                            `;
-                            resultsContainer.appendChild(item);
-                        }
-                    });
-                });
-
-                if (foundCount === 0) {
-                    resultsContainer.innerHTML = `<div style="color:#949ba4; font-size:13px;">No messages found containing "${keyword}".</div>`;
-                }
-            }).catch((err) => {
-                resultsContainer.innerHTML = `<div style="color:#fa777c; font-size:13px;">Error searching messages: ${err.message}</div>`;
-            });
-        };
-
-        window.censorKeywordMessage = function(channelId, msgKey, originalText, keyword) {
-            const regex = new RegExp(keyword, 'gi');
-            const censoredText = originalText.replace(regex, '[CENSORED]');
-            set(ref(db, `messages/${channelId}/${msgKey}/text`), censoredText).then(() => {
-                const el = document.getElementById(`mod-msg-${channelId}-${msgKey}`);
+        window.deleteMessage = function(msgId) {
+            if (!currentChannelId || !msgId) return;
+            remove(ref(db, `messages/${currentChannelId}/${msgId}`)).then(() => {
+                const el = document.getElementById(`msg-${msgId}`);
                 if (el) el.remove();
-                alert("Message censored successfully.");
-            });
-        };
-
-        window.deleteKeywordMessage = function(channelId, msgKey) {
-            remove(ref(db, `messages/${channelId}/${msgKey}`)).then(() => {
-                const el = document.getElementById(`mod-msg-${channelId}-${msgKey}`);
-                if (el) el.remove();
-                alert("Message deleted successfully.");
             });
         };
     </script>
 </body>
 </html>
+</a_file_content>
