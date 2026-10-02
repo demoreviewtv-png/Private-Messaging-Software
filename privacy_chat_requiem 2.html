@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Chat Requiem</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          },
+          colors: {
+            crimson: {
+              400: '#f87171',
+              500: '#ef4444',
+              600: '#dc2626',
+              700: '#b91c1c',
+              800: '#991b1b',
+              900: '#7f1d1d',
+              950: '#450a0a',
+            },
+            requiem: {
+              card: 'rgba(15, 23, 42, 0.75)',
+              border: 'rgba(239, 68, 68, 0.25)',
+              glow: 'rgba(239, 68, 68, 0.15)'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    .glass-input {
+      background: rgba(2, 6, 23, 0.8);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .glass-input:focus {
+      outline: none;
+      border-color: #ef4444;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+    }
+    .glow-red {
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+    }
+    .glow-text {
+      text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(239, 68, 68, 0.4);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(239, 68, 68, 0.7);
+    }
+  </style>
+</head>
+<body class="h-full overflow-hidden flex flex-col font-sans select-none bg-slate-950 text-slate-200">
+
+  <div id="app" class="flex h-full w-full relative">
+    
+    <!-- Sidebar / Left Navigation -->
+    <aside id="sidebar" class="w-80 glass-panel border-r border-slate-800/80 flex flex-col h-full z-20 absolute md:relative transition-transform duration-300 -translate-x-full md:translate-x-0 w-full sm:w-80">
+      
+      <!-- Brand Header -->
+      <div class="p-4 border-b border-crimson-900/40 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-crimson-950/80 border border-crimson-600/50 flex items-center justify-center glow-red">
+            <i class="fa-solid fa-user-shield text-crimson-500 text-lg"></i>
+          </div>
+          <div>
+            <h1 class="font-bold font-mono text-base tracking-wider text-slate-100 glow-text">REQUIEM</h1>
+            <p class="text-xs text-crimson-500/80 font-mono flex items-center gap-1">
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              ENCRYPTED CHANNEL
+            </p>
+          </div>
+        </div>
+        <button id="closeSidebarBtn" class="md:hidden text-slate-400 hover:text-white p-2">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Channels Section -->
+      <div class="p-4 flex-1 overflow-y-auto space-y-6">
+        <div>
+          <h2 class="text-xs font-mono font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span>Secure Rooms</span>
+            <span class="text-[10px] text-crimson-400/70 font-normal">P2P NODE</span>
+          </h2>
+          <nav class="space-y-1" id="channelsList">
+            <!-- Channel Items generated dynamically -->
+          </nav>
+        </div>
+
+        <!-- Active Operatives List -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-xs font-mono font-semibold text-slate-400 uppercase tracking-wider">Operatives</h2>
+            <span id="onlineCount" class="text-xs font-mono px-2 py-0.5 rounded-full bg-crimson-950/80 text-crimson-400 border border-crimson-800/50">1 Online</span>
+          </div>
+          <div id="usersList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <!-- Active user cards inserted here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- User Profile Box bottom sidebar -->
+      <div class="p-3 border-t border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
+        <div class="flex items-center space-x-3 cursor-pointer group overflow-hidden" id="openProfileFromSidebar">
+          <div class="relative flex-shrink-0">
+            <img id="mySidebarAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=ShadowRequiem" class="w-10 h-10 rounded-xl bg-slate-800 border border-crimson-600/40 object-cover" />
+            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center space-x-1.5">
+              <span id="mySidebarName" class="font-medium text-sm text-slate-200 truncate group-hover:text-crimson-400 transition-colors">Anonymous</span>
+              <span id="mySidebarBadge" class="text-[10px] px-1.5 py-0.2 rounded font-mono bg-crimson-950 text-crimson-400 border border-crimson-800/50">OPERATIVE</span>
+            </div>
+            <p id="mySidebarHandle" class="text-xs text-slate-500 font-mono truncate">@anon_requiem</p>
+          </div>
+        </div>
+        <button id="editProfileBtn" title="Customize Profile" class="p-2 rounded-lg bg-slate-800/80 text-slate-300 hover:text-crimson-400 hover:bg-slate-800 transition-colors">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Chat Workspace -->
+    <main class="flex-1 flex flex-col h-full bg-slate-950 relative overflow-hidden">
+      
+      <!-- Top Chat Navigation Header -->
+      <header class="h-16 border-b border-slate-800/80 glass-panel px-4 flex items-center justify-between z-10">
+        <div class="flex items-center space-x-3">
+          <button id="openSidebarBtn" class="md:hidden text-slate-300 hover:text-white p-2">
+            <i class="fa-solid fa-bars text-lg"></i>
+          </button>
+          <div class="flex items-center space-x-2">
+            <span class="text-crimson-500 font-mono text-xl">#</span>
+            <div>
+              <h2 id="currentChannelName" class="font-bold text-slate-100 font-mono tracking-wide text-sm sm:text-base">general</h2>
+              <p id="currentChannelDesc" class="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-xs">Encrypted general broadcast channel</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Utility Action Controls -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Audio Toggle Button -->
+          <button id="soundToggleBtn" class="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-crimson-400 transition-colors" title="Toggle Message Audio">
+            <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+          </button>
+          
+          <!-- System Status / Security Badge -->
+          <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs font-mono text-slate-400">
+            <span class="w-2 h-2 rounded-full bg-crimson-500 animate-ping"></span>
+            <span>PROXIED</span>
+          </div>
+
+          <!-- Quick Edit Profile Button -->
+          <button id="headerProfileBtn" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-crimson-950/80 border border-crimson-700/50 hover:bg-crimson-900/80 text-crimson-200 text-xs font-mono transition-all glow-red">
+            <i class="fa-solid fa-user-pen"></i>
+            <span class="hidden sm:inline">IDENTITY</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Messages Display Container -->
+      <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        <!-- Message feed stream will render here dynamically -->
+      </div>
+
+      <!-- Message Input Dock -->
+      <footer class="p-3 sm:p-4 glass-panel border-t border-slate-800/80 relative">
+        
+        <!-- Image Preview Indicator (if attachment added) -->
+        <div id="imagePreviewContainer" class="hidden mb-2 p-2 bg-slate-900/90 rounded-lg border border-crimson-900/50 flex items-center justify-between">
+          <div class="flex items-center space-x-2 truncate">
+            <i class="fa-solid fa-image text-crimson-400"></i>
+            <span id="imagePreviewUrl" class="text-xs font-mono text-slate-300 truncate max-w-xs">Image URL attached</span>
+          </div>
+          <button id="removeImageBtn" class="text-slate-400 hover:text-crimson-400 text-xs p-1">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Main Form -->
+        <form id="chatForm" class="flex items-center gap-2">
+          
+          <!-- Attach Image Link Modal Toggle -->
+          <button type="button" id="attachImageBtn" class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-crimson-400 hover:border-crimson-900/60 transition-colors" title="Attach Image URL">
+            <i class="fa-solid fa-paperclip"></i>
+          </button>
+
+          <!-- Input Bar -->
+          <div class="relative flex-1">
+            <input 
+              type="text" 
+              id="messageInput" 
+              placeholder="Transmit message to cipher network..." 
+              autocomplete="off"
+              class="w-full glass-input text-sm text-slate-100 placeholder-slate-500 rounded-xl px-4 py-2.5 focus:ring-1 focus:ring-crimson-500/50 font-sans"
+            />
+          </div>
+
+          <!-- Quick Emoji Dropdown Button -->
+          <div class="relative">
+            <button type="button" id="emojiPickerBtn" class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-amber-400 transition-colors" title="Quick Emojis">
+              <i class="fa-regular fa-face-smile"></i>
+            </button>
+            
+            <!-- Quick Emoji Palette -->
+            <div id="emojiPalette" class="hidden absolute right-0 bottom-12 p-2 glass-panel rounded-xl shadow-2xl border border-crimson-900/40 grid grid-cols-5 gap-1.5 z-30 w-44">
+              <button type="button" class="emoji-btn hover:bg-slate-800 p-1 rounded text-base">💀</button>
+              <button type="button" class="emoji-btn hover:bg-slate-800 p-1 rounded text-base">👁️</button>
+              <button type="button" class="emoji-btn hover:bg-slate-800 p-1 rounded text-base">⚡</button>
+              <button type="button" class="emoji-btn hover:bg-slate-800 p-1 rounded text-base">🔒</button>
+              <button type="button" class="emoji-btn hover:bg-slate-800 p-1 rounded text-base">🔥</button>
+              <button type="button" class="emoji-btn hover:bg-slate-800 p-1 rounded text-base">🤖</button>
+              <button type="button" class="emoji-btn hover:bg-slate-800 p-1 rounded text-base">🗡️</button>
+              <button type="button" class="emoji-btn hover:bg-slate-800 p-1 rounded text-base">🩸</button>
+              <button type="button" class="emoji-btn hover:bg-slate-800 p-1 rounded text-base">🌐</button>
+              <button type="button" class="emoji-btn hover:bg-slate-800 p-1 rounded text-base">☣️</button>
+            </div>
+          </div>
+
+          <!-- Submit Transmission Button -->
+          <button 
+            type="submit" 
+            class="px-4 py-2.5 rounded-xl bg-crimson-600 hover:bg-crimson-500 active:bg-crimson-700 text-white font-medium text-sm flex items-center justify-center space-x-1.5 transition-all glow-red"
+          >
+            <span class="hidden sm:inline font-mono text-xs">TRANSMIT</span>
+            <i class="fa-solid fa-paper-plane text-xs"></i>
+          </button>
+        </form>
+      </footer>
+    </main>
+  </div>
+
+
+  <!-- MODAL 1: Profile Customization Modal -->
+  <div id="profileModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel w-full max-w-md rounded-2xl border border-crimson-600/40 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+        <h3 class="font-mono font-bold text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-id-card text-crimson-500"></i>
+          OPERATIVE IDENTITY MATRIX
+        </h3>
+        <button id="closeProfileModal" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Form Content -->
+      <div class="p-5 overflow-y-auto space-y-4">
+        
+        <!-- Live Avatar Preview & Presets -->
+        <div class="flex flex-col items-center space-y-3">
+          <div class="relative group">
+            <img id="editAvatarPreview" src="" class="w-20 h-20 rounded-2xl bg-slate-900 border-2 border-crimson-500/60 object-cover shadow-lg" />
+            <span class="absolute -bottom-1 -right-1 bg-crimson-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono">LIVE</span>
+          </div>
+
+          <!-- Avatar Preset Selector -->
+          <div class="text-center w-full">
+            <label class="text-xs font-mono text-slate-400 mb-1.5 block">Quick Cipher Avatars</label>
+            <div class="flex justify-center gap-2" id="avatarPresets">
+              <!-- Preset avatars generated dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Avatar URL -->
+        <div>
+          <label class="block text-xs font-mono text-slate-300 mb-1">Avatar Image URL</label>
+          <input type="url" id="editAvatarUrl" placeholder="https://..." class="w-full glass-input text-xs text-slate-200 rounded-lg p-2.5 focus:ring-1 focus:ring-crimson-500 font-mono" />
+        </div>
+
+        <!-- Display Name -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-mono text-slate-300 mb-1">Display Name</label>
+            <input type="text" id="editName" maxlength="24" placeholder="Ghost Operative" class="w-full glass-input text-xs text-slate-200 rounded-lg p-2.5 focus:ring-1 focus:ring-crimson-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-mono text-slate-300 mb-1">Handle (@atname)</label>
+            <input type="text" id="editHandle" maxlength="20" placeholder="@ghost_99" class="w-full glass-input text-xs text-slate-200 rounded-lg p-2.5 focus:ring-1 focus:ring-crimson-500 font-mono" />
+          </div>
+        </div>
+
+        <!-- Custom Badge Tag & Accent -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-mono text-slate-300 mb-1">Custom Badge Label</label>
+            <input type="text" id="editBadge" maxlength="12" placeholder="CYPHER / HACKER" class="w-full glass-input text-xs text-slate-200 rounded-lg p-2.5 focus:ring-1 focus:ring-crimson-500 uppercase font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs font-mono text-slate-300 mb-1">Badge Color Theme</label>
+            <select id="editBadgeColor" class="w-full glass-input text-xs text-slate-200 rounded-lg p-2.5 focus:ring-1 focus:ring-crimson-500 bg-slate-900 font-mono">
+              <option value="crimson">Crimson Red</option>
+              <option value="emerald">Emerald Green</option>
+              <option value="cyan">Cyber Cyan</option>
+              <option value="purple">Void Purple</option>
+              <option value="amber">Amber Warning</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Status Message -->
+        <div>
+          <label class="block text-xs font-mono text-slate-300 mb-1">Status Transmission</label>
+          <input type="text" id="editStatus" maxlength="40" placeholder="Lurking in the shadows..." class="w-full glass-input text-xs text-slate-200 rounded-lg p-2.5 focus:ring-1 focus:ring-crimson-500" />
+        </div>
+
+        <!-- Bio / Description -->
+        <div>
+          <label class="block text-xs font-mono text-slate-300 mb-1">Operative Bio & Notes</label>
+          <textarea id="editBio" rows="3" maxlength="160" placeholder="Encrypted notes, public key, or cyber bio..." class="w-full glass-input text-xs text-slate-200 rounded-lg p-2.5 focus:ring-1 focus:ring-crimson-500 resize-none"></textarea>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-slate-800 bg-slate-900/60 flex items-center justify-end space-x-3">
+        <button id="cancelProfileBtn" class="px-4 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-slate-200 transition-colors">
+          CANCEL
+        </button>
+        <button id="saveProfileBtn" class="px-5 py-2 rounded-xl bg-crimson-600 hover:bg-crimson-500 text-white font-mono text-xs font-semibold transition-all glow-red">
+          SAVE IDENTITY
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 2: User Profile Card Inspector Modal -->
+  <div id="inspectorModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel w-full max-w-sm rounded-2xl border border-crimson-600/40 shadow-2xl overflow-hidden relative">
+      
+      <!-- Top Cyber Decorative Header Background -->
+      <div class="h-24 bg-gradient-to-r from-crimson-950 via-slate-900 to-crimson-950 relative border-b border-crimson-900/40">
+        <button id="closeInspectorBtn" class="absolute top-3 right-3 text-slate-400 hover:text-white p-1 rounded-full bg-slate-950/60">
+          <i class="fa-solid fa-xmark text-sm w-6 h-6 flex items-center justify-center"></i>
+        </button>
+      </div>
+
+      <!-- User Information Body -->
+      <div class="px-5 pb-5 -mt-10 relative">
+        <div class="flex items-end justify-between mb-3">
+          <img id="inspectAvatar" src="" class="w-20 h-20 rounded-2xl bg-slate-900 border-2 border-crimson-500 object-cover shadow-xl" />
+          <span id="inspectBadge" class="text-xs px-2.5 py-1 rounded-md font-mono bg-crimson-950 text-crimson-400 border border-crimson-800 font-semibold uppercase">OPERATIVE</span>
+        </div>
+
+        <h3 id="inspectName" class="font-bold text-lg text-slate-100">Operative Name</h3>
+        <p id="inspectHandle" class="text-xs font-mono text-crimson-400 mb-2">@handle</p>
+
+        <!-- Status Box -->
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 mb-3 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <p id="inspectStatus" class="text-xs text-slate-300 italic truncate">No status specified</p>
+        </div>
+
+        <!-- Bio Box -->
+        <div class="space-y-1 mb-4">
+          <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">TRANSMISSION BIO</span>
+          <p id="inspectBio" class="text-xs text-slate-300 leading-relaxed bg-slate-900/40 p-3 rounded-xl border border-slate-800/60 font-sans">
+            User bio details will render here.
+          </p>
+        </div>
+
+        <button id="closeInspectCardBtn" class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-mono text-slate-300 border border-slate-800 transition-colors">
+          DISMISS MATRIX
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 3: Image URL Attachment Modal -->
+  <div id="imageModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel w-full max-w-sm rounded-2xl border border-crimson-600/40 shadow-2xl p-5 space-y-4">
+      <h3 class="font-mono font-bold text-slate-100 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-link text-crimson-500"></i>
+        ATTACH CIPHER IMAGE LINK
+      </h3>
+      <div>
+        <label class="block text-xs font-mono text-slate-400 mb-1">Image URL (.png, .jpg, .gif, .webp)</label>
+        <input type="url" id="imageUrlInput" placeholder="https://images.unsplash.com/photo-..." class="w-full glass-input text-xs text-slate-200 rounded-xl p-3 focus:ring-1 focus:ring-crimson-500 font-mono" />
+      </div>
+      <div class="flex justify-end space-x-2">
+        <button id="cancelImageBtn" class="px-4 py-2 rounded-xl text-xs font-mono text-slate-400 hover:text-slate-200">
+          CANCEL
+        </button>
+        <button id="applyImageBtn" class="px-4 py-2 rounded-xl bg-crimson-600 hover:bg-crimson-500 text-white font-mono text-xs font-semibold glow-red">
+          ATTACH IMAGE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Modular Scripts -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, set, remove, serverTimestamp, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // Specified Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyClRzYRn4d4iXLLKQGRVntev3LQwTfuDLQ",
+      authDomain: "redroom-9f4a0.firebaseapp.com",
+      databaseURL: "https://redroom-9f4a0-default-rtdb.firebaseio.com",
+      projectId: "redroom-9f4a0",
+      storageBucket: "redroom-9f4a0.firebasestorage.app",
+      messagingSenderId: "646291907356",
+      appId: "1:646291907356:web:29f88d37dbed10775790d9",
+      measurementId: "G-5QF7S4HR60"
+    };
+
+    // Initialize Firebase Services
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Channels Data Definition
+    const CHANNELS = [
+      { id: 'general', name: 'general', desc: 'Encrypted broadcast lounge for all operatives' },
+      { id: 'shadows', name: 'shadows', desc: 'Covert discussion & classified ops' },
+      { id: 'crypto-lounge', name: 'crypto-lounge', desc: 'Web3, privacy protocols, and decentralization' },
+      { id: 'dev-zero', name: 'dev-zero', desc: 'Zero-day research & secure code snippets' }
+    ];
+
+    // State Variables
+    let currentChannel = 'general';
+    let soundEnabled = true;
+    let attachedImageUrl = '';
+    let onlineUsersMap = {};
+
+    // Generate or fetch local user ID & Profile
+    let myUid = localStorage.getItem('requiem_uid');
+    if (!myUid) {
+      myUid = 'oper_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('requiem_uid', myUid);
+    }
+
+    // Default Profile
+    let myProfile = {
+      uid: myUid,
+      displayName: 'Ghost Operative',
+      atName: '@ghost_' + Math.floor(1000 + Math.random() * 9000),
+      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${myUid}`,
+      badge: 'GHOST',
+      badgeColor: 'crimson',
+      status: 'Signal Online',
+      bio: 'Private communications operative in Requiem network.'
+    };
+
+    // Load Saved Local Profile
+    const savedProfile = localStorage.getItem('requiem_profile');
+    if (savedProfile) {
+      try {
+        myProfile = { ...myProfile, ...JSON.parse(savedProfile) };
+      } catch (e) {
+        console.error("Error reading saved profile", e);
+      }
+    }
+
+    // Audio Notification Effect using Web Audio API Synthesizer (No external sound files required)
+    function playNotificationSound() {
+      if (!soundEnabled) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08); // A5
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      } catch (e) {
+        // Audio playback error fallback
+      }
+    }
+
+    // Setup User Presence in Realtime Database
+    function setupPresence() {
+      const userRef = ref(db, `users/${myUid}`);
+      const userPresenceData = {
+        ...myProfile,
+        lastSeen: serverTimestamp(),
+        online: true
+      };
+
+      set(userRef, userPresenceData);
+      onDisconnect(userRef).update({
+        online: false,
+        lastSeen: serverTimestamp()
+      });
+
+      // Listen to active users
+      const usersRef = ref(db, 'users');
+      onValue(usersRef, (snapshot) => {
+        const users = snapshot.val() || {};
+        onlineUsersMap = users;
+        renderUsersList(users);
+      });
+    }
+
+    // Render Active Operatives List
+    function renderUsersList(users) {
+      const usersListEl = document.getElementById('usersList');
+      usersListEl.innerHTML = '';
+      
+      const userKeys = Object.keys(users);
+      let activeCount = 0;
+
+      userKeys.forEach((uid) => {
+        const u = users[uid];
+        if (u.online) activeCount++;
+
+        const userCard = document.createElement('div');
+        userCard.className = 'flex items-center space-x-2.5 p-2 rounded-xl hover:bg-slate-900/80 cursor-pointer transition-colors text-xs border border-transparent hover:border-slate-800';
+        userCard.onclick = () => openUserInspector(u);
+
+        const badgeClass = getBadgeColorClasses(u.badgeColor || 'crimson');
+
+        userCard.innerHTML = `
+          <div class="relative flex-shrink-0">
+            <img src="${escapeHtml(u.avatar || '')}" class="w-8 h-8 rounded-lg bg-slate-800 object-cover border border-slate-800" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=fallback'"/>
+            <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full ${u.online ? 'bg-emerald-500' : 'bg-slate-600'} border border-slate-950"></span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-slate-200 truncate">${escapeHtml(u.displayName || 'Operative')}</span>
+              <span class="text-[9px] px-1 rounded font-mono ${badgeClass}">${escapeHtml(u.badge || 'AGENT')}</span>
+            </div>
+            <p class="text-[10px] text-slate-500 font-mono truncate">${escapeHtml(u.atName || '')}</p>
+          </div>
+        `;
+        usersListEl.appendChild(userCard);
+      });
+
+      document.getElementById('onlineCount').textContent = `${activeCount} Operative${activeCount === 1 ? '' : 's'} Online`;
+    }
+
+    // Render Channel Navigation List
+    function renderChannels() {
+      const channelsListEl = document.getElementById('channelsList');
+      channelsListEl.innerHTML = '';
+
+      CHANNELS.forEach((ch) => {
+        const isActive = ch.id === currentChannel;
+        const btn = document.createElement('button');
+        btn.className = `w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-mono transition-all ${
+          isActive 
+            ? 'bg-crimson-950/80 text-crimson-300 border border-crimson-700/50 glow-red' 
+            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+        }`;
+        
+        btn.onclick = () => switchChannel(ch.id);
+
+        btn.innerHTML = `
+          <div class="flex items-center space-x-2 truncate">
+            <span class="${isActive ? 'text-crimson-400' : 'text-slate-600'}">#</span>
+            <span class="font-medium truncate">${ch.name}</span>
+          </div>
+          ${isActive ? '<i class="fa-solid fa-chevron-right text-[10px] text-crimson-400"></i>' : ''}
+        `;
+        channelsListEl.appendChild(btn);
+      });
+    }
+
+    // Switch Current Chat Room
+    function switchChannel(channelId) {
+      currentChannel = channelId;
+      const chInfo = CHANNELS.find(c => c.id === channelId) || CHANNELS[0];
+      
+      document.getElementById('currentChannelName').textContent = chInfo.name;
+      document.getElementById('currentChannelDesc').textContent = chInfo.desc;
+      
+      renderChannels();
+      listenToMessages();
+
+      // Mobile close sidebar
+      document.getElementById('sidebar').classList.add('-translate-x-full');
+    }
+
+    let currentMessagesUnsub = null;
+
+    function listenToMessages() {
+      const messagesContainer = document.getElementById('messagesContainer');
+      messagesContainer.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full text-slate-600 space-y-2 font-mono text-xs">
+          <i class="fa-solid fa-circle-notch animate-spin text-crimson-500 text-lg"></i>
+          <span>DECRYPTING FEED...</span>
+        </div>
+      `;
+
+      const messagesRef = ref(db, `messages/${currentChannel}`);
+      
+      onValue(messagesRef, (snapshot) => {
+        const data = snapshot.val();
+        messagesContainer.innerHTML = '';
+
+        if (!data) {
+          messagesContainer.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-slate-600 space-y-2 font-mono text-xs py-12">
+              <i class="fa-solid fa-shield-cat text-3xl text-slate-700"></i>
+              <p>NO MESSAGES FOUND IN #${currentChannel}</p>
+              <p class="text-[10px] text-slate-700">Be the first operative to broadcast.</p>
+            </div>
+          `;
+          return;
+        }
+
+        const msgList = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+        msgList.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+        let lastMessageUser = null;
+
+        msgList.forEach((msg, idx) => {
+          const isMe = msg.uid === myUid;
+          const msgEl = createMessageElement(msg, isMe);
+          messagesContainer.appendChild(msgEl);
+        });
+
+        // Auto-scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // Play audio chime if newest message isn't mine
+        const lastMsg = msgList[msgList.length - 1];
+        if (lastMsg && lastMsg.uid !== myUid && (Date.now() - (lastMsg.timestamp || 0) < 3000)) {
+          playNotificationSound();
+        }
+      });
+    }
+
+    // Create Message DOM Element
+    function createMessageElement(msg, isMe) {
+      const card = document.createElement('div');
+      card.className = `flex space-x-3 group hover:bg-slate-900/30 p-2 rounded-xl transition-colors ${isMe ? 'bg-crimson-950/10' : ''}`;
+
+      const formattedTime = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'JUST NOW';
+      const badgeClass = getBadgeColorClasses(msg.badgeColor || 'crimson');
+
+      card.innerHTML = `
+        <div class="flex-shrink-0 cursor-pointer" onclick="window.inspectUserByUid('${msg.uid}')">
+          <img src="${escapeHtml(msg.avatar || '')}" class="w-10 h-10 rounded-xl bg-slate-900 object-cover border border-slate-800 hover:border-crimson-500 transition-colors" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=fallback'"/>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+              <span class="font-bold text-sm text-slate-200 cursor-pointer hover:text-crimson-400 transition-colors" onclick="window.inspectUserByUid('${msg.uid}')">${escapeHtml(msg.displayName || 'Anonymous')}</span>
+              <span class="text-xs font-mono text-slate-500 cursor-pointer" onclick="window.inspectUserByUid('${msg.uid}')">${escapeHtml(msg.atName || '')}</span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded font-mono ${badgeClass}">${escapeHtml(msg.badge || 'AGENT')}</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-[10px] font-mono text-slate-600">${formattedTime}</span>
+              ${isMe ? `
+                <button onclick="window.deleteMessage('${msg.id}')" class="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-crimson-400 text-xs p-1 transition-opacity" title="Delete Transmission">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Message Text -->
+          <div class="text-sm text-slate-300 leading-relaxed break-words font-sans selection:bg-crimson-900">
+            ${escapeHtml(msg.content || '')}
+          </div>
+
+          <!-- Message Image Attachment if any -->
+          ${msg.imageUrl ? `
+            <div class="mt-2.5 max-w-sm rounded-xl overflow-hidden border border-slate-800 bg-slate-900">
+              <img src="${escapeHtml(msg.imageUrl)}" class="w-full max-h-64 object-cover cursor-pointer hover:opacity-95" onclick="window.open('${escapeHtml(msg.imageUrl)}', '_blank')" />
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Helper for Badge Colors
+    function getBadgeColorClasses(color) {
+      switch (color) {
+        case 'emerald':
+          return 'bg-emerald-950 text-emerald-400 border border-emerald-800/50';
+        case 'cyan':
+          return 'bg-cyan-950 text-cyan-400 border border-cyan-800/50';
+        case 'purple':
+          return 'bg-purple-950 text-purple-400 border border-purple-800/50';
+        case 'amber':
+          return 'bg-amber-950 text-amber-400 border border-amber-800/50';
+        case 'crimson':
+        default:
+          return 'bg-crimson-950 text-crimson-400 border border-crimson-800/50';
+      }
+    }
+
+    // HTML Sanitization
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Delete Message
+    window.deleteMessage = function(msgId) {
+      if (!msgId) return;
+      const msgRef = ref(db, `messages/${currentChannel}/${msgId}`);
+      remove(msgRef);
+    };
+
+    // Inspect user popup card
+    window.inspectUserByUid = function(uid) {
+      const user = onlineUsersMap[uid] || (uid === myUid ? myProfile : null);
+      if (user) {
+        openUserInspector(user);
+      } else {
+        // Fallback default view
+        openUserInspector({
+          displayName: 'Operative',
+          atName: '@unknown',
+          avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${uid}`,
+          badge: 'AGENT',
+          status: 'Encrypted',
+          bio: 'No public matrix bio broadcasted.'
+        });
+      }
+    };
+
+    // Open User Inspector Card
+    function openUserInspector(user) {
+      document.getElementById('inspectName').textContent = user.displayName || 'Operative';
+      document.getElementById('inspectHandle').textContent = user.atName || '@anon';
+      document.getElementById('inspectAvatar').src = user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=fallback`;
+      document.getElementById('inspectBadge').textContent = user.badge || 'AGENT';
+      document.getElementById('inspectBadge').className = `text-xs px-2.5 py-1 rounded-md font-mono ${getBadgeColorClasses(user.badgeColor || 'crimson')}`;
+      document.getElementById('inspectStatus').textContent = user.status || 'Signal Active';
+      document.getElementById('inspectBio').textContent = user.bio || 'No profile bio added yet.';
+
+      document.getElementById('inspectorModal').classList.remove('hidden');
+    }
+
+    // Update local profile & sync to Database
+    function updateMyProfile(updatedFields) {
+      myProfile = { ...myProfile, ...updatedFields };
+      localStorage.setItem('requiem_profile', JSON.stringify(myProfile));
+
+      // Sync UI
+      document.getElementById('mySidebarName').textContent = myProfile.displayName;
+      document.getElementById('mySidebarHandle').textContent = myProfile.atName;
+      document.getElementById('mySidebarAvatar').src = myProfile.avatar;
+      document.getElementById('mySidebarBadge').textContent = myProfile.badge;
+      document.getElementById('mySidebarBadge').className = `text-[10px] px-1.5 py-0.2 rounded font-mono ${getBadgeColorClasses(myProfile.badgeColor)}`;
+
+      // Update Presence in DB
+      setupPresence();
+    }
+
+    // Open Profile Editor Modal
+    function openProfileEditor() {
+      document.getElementById('editName').value = myProfile.displayName;
+      document.getElementById('editHandle').value = myProfile.atName;
+      document.getElementById('editAvatarUrl').value = myProfile.avatar;
+      document.getElementById('editAvatarPreview').src = myProfile.avatar;
+      document.getElementById('editBadge').value = myProfile.badge;
+      document.getElementById('editBadgeColor').value = myProfile.badgeColor || 'crimson';
+      document.getElementById('editStatus').value = myProfile.status;
+      document.getElementById('editBio').value = myProfile.bio;
+
+      renderAvatarPresets();
+      document.getElementById('profileModal').classList.remove('hidden');
+    }
+
+    // Render Preset Avatars in Modal
+    function renderAvatarPresets() {
+      const presetsContainer = document.getElementById('avatarPresets');
+      presetsContainer.innerHTML = '';
+
+      const presetSeeds = ['Phantom', 'ShadowRequiem', 'ViperX', 'CipherKey', 'NeonRed'];
+      presetSeeds.forEach((seed) => {
+        const url = `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`;
+        const img = document.createElement('img');
+        img.src = url;
+        img.className = 'w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer hover:border-crimson-500 transition-colors object-cover';
+        img.onclick = () => {
+          document.getElementById('editAvatarUrl').value = url;
+          document.getElementById('editAvatarPreview').src = url;
+        };
+        presetsContainer.appendChild(img);
+      });
+    }
+
+    // Initialize Event Listeners
+    function setupEventListeners() {
+      
+      // Send Message Form Submit
+      const chatForm = document.getElementById('chatForm');
+      const messageInput = document.getElementById('messageInput');
+
+      chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = messageInput.value.trim();
+        
+        if (!text && !attachedImageUrl) return;
+
+        const msgPayload = {
+          uid: myProfile.uid,
+          displayName: myProfile.displayName,
+          atName: myProfile.atName,
+          avatar: myProfile.avatar,
+          badge: myProfile.badge,
+          badgeColor: myProfile.badgeColor,
+          content: text,
+          imageUrl: attachedImageUrl || null,
+          timestamp: serverTimestamp()
+        };
+
+        const messagesRef = ref(db, `messages/${currentChannel}`);
+        push(messagesRef, msgPayload);
+
+        // Reset Inputs
+        messageInput.value = '';
+        attachedImageUrl = '';
+        document.getElementById('imagePreviewContainer').classList.add('hidden');
+      });
+
+      // Sound Toggle
+      document.getElementById('soundToggleBtn').addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        const soundIcon = document.getElementById('soundIcon');
+        if (soundEnabled) {
+          soundIcon.className = 'fa-solid fa-volume-high';
+          document.getElementById('soundToggleBtn').classList.remove('text-slate-600');
+        } else {
+          soundIcon.className = 'fa-solid fa-volume-xmark';
+          document.getElementById('soundToggleBtn').classList.add('text-slate-600');
+        }
+      });
+
+      // Emoji Toggle & Pick
+      const emojiPickerBtn = document.getElementById('emojiPickerBtn');
+      const emojiPalette = document.getElementById('emojiPalette');
+      
+      emojiPickerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        emojiPalette.classList.toggle('hidden');
+      });
+
+      document.addEventListener('click', () => emojiPalette.classList.add('hidden'));
+
+      document.querySelectorAll('.emoji-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          messageInput.value += btn.textContent;
+          emojiPalette.classList.add('hidden');
+          messageInput.focus();
+        });
+      });
+
+      // Attach Image Modal Controls
+      const imageModal = document.getElementById('imageModal');
+      document.getElementById('attachImageBtn').addEventListener('click', () => {
+        imageModal.classList.remove('hidden');
+      });
+      document.getElementById('cancelImageBtn').addEventListener('click', () => {
+        imageModal.classList.add('hidden');
+      });
+      document.getElementById('applyImageBtn').addEventListener('click', () => {
+        const url = document.getElementById('imageUrlInput').value.trim();
+        if (url) {
+          attachedImageUrl = url;
+          document.getElementById('imagePreviewUrl').textContent = url;
+          document.getElementById('imagePreviewContainer').classList.remove('hidden');
+        }
+        imageModal.classList.add('hidden');
+      });
+      document.getElementById('removeImageBtn').addEventListener('click', () => {
+        attachedImageUrl = '';
+        document.getElementById('imagePreviewContainer').classList.add('hidden');
+      });
+
+      // Profile Modal Listeners
+      document.getElementById('openProfileFromSidebar').addEventListener('click', openProfileEditor);
+      document.getElementById('editProfileBtn').addEventListener('click', openProfileEditor);
+      document.getElementById('headerProfileBtn').addEventListener('click', openProfileEditor);
+      
+      document.getElementById('closeProfileModal').addEventListener('click', () => {
+        document.getElementById('profileModal').classList.add('hidden');
+      });
+      document.getElementById('cancelProfileBtn').addEventListener('click', () => {
+        document.getElementById('profileModal').classList.add('hidden');
+      });
+
+      // Dynamic Preview on Avatar Input
+      document.getElementById('editAvatarUrl').addEventListener('input', (e) => {
+        document.getElementById('editAvatarPreview').src = e.target.value.trim() || myProfile.avatar;
+      });
+
+      // Save Profile
+      document.getElementById('saveProfileBtn').addEventListener('click', () => {
+        const newName = document.getElementById('editName').value.trim() || 'Ghost Operative';
+        let newHandle = document.getElementById('editHandle').value.trim() || '@anon';
+        if (!newHandle.startsWith('@')) newHandle = '@' + newHandle;
+
+        const newAvatar = document.getElementById('editAvatarUrl').value.trim() || myProfile.avatar;
+        const newBadge = document.getElementById('editBadge').value.trim() || 'OPERATIVE';
+        const newBadgeColor = document.getElementById('editBadgeColor').value || 'crimson';
+        const newStatus = document.getElementById('editStatus').value.trim() || 'Active';
+        const newBio = document.getElementById('editBio').value.trim() || '';
+
+        updateMyProfile({
+          displayName: newName,
+          atName: newHandle,
+          avatar: newAvatar,
+          badge: newBadge,
+          badgeColor: newBadgeColor,
+          status: newStatus,
+          bio: newBio
+        });
+
+        document.getElementById('profileModal').classList.add('hidden');
+      });
+
+      // Close User Inspector
+      document.getElementById('closeInspectorBtn').addEventListener('click', () => {
+        document.getElementById('inspectorModal').classList.add('hidden');
+      });
+      document.getElementById('closeInspectCardBtn').addEventListener('click', () => {
+        document.getElementById('inspectorModal').classList.add('hidden');
+      });
+
+      // Mobile Sidebar Toggle
+      document.getElementById('openSidebarBtn').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('-translate-x-full');
+      });
+      document.getElementById('closeSidebarBtn').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.add('-translate-x-full');
+      });
+    }
+
+    // App Initialization Bootstrapper
+    window.addEventListener('DOMContentLoaded', () => {
+      renderChannels();
+      updateMyProfile({}); // Initialize profile UI
+      setupPresence();
+      listenToMessages();
+      setupEventListeners();
+    });
+  </script>
+</body>
+</html>
