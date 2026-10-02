@@ -670,7 +670,7 @@
     <div id="admin-console-modal">
         <div class="settings-box" style="border: 2px solid #da373c; background: linear-gradient(145deg, #313338, #232428); width: 600px;">
             <div style="display: flex; align-items: center; justify-content: space-between;">
-                <h3 style="color: #f2f3f5; display: flex; align-items: center; gap: 8px;">🛡️️ Powerful Admin Dashboard</h3>
+                <h3 style="color: #f2f3f5; display: flex; align-items: center; gap: 8px;">🛡 Powerful Admin Dashboard</h3>
                 <span style="font-size: 11px; background: #da373c; color: #fff; padding: 2px 8px; border-radius: 12px; font-weight: bold;">ROOT ACCESS</span>
             </div>
             <div class="auth-field">
@@ -744,7 +744,7 @@
     <!-- Role Manager Modal -->
     <div id="role-manager-modal">
         <div class="settings-box" style="width: 520px;">
-            <h3>🛡️ Server Roles & Permissions Manager</h3>
+            <h3>🛡️️ Server Roles & Permissions Manager</h3>
             <p style="font-size: 13px; color: #b5bac1;">Create custom moderator roles, configure privileges, and assign them to members.</p>
             
             <div style="background: #1e1f22; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px;">
@@ -1526,6 +1526,472 @@
             }
         };
 
+        window.handleServerIconUpload = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedServerIconBase64 = e.target.result;
+                document.getElementById('server-icon-preview-box').innerHTML = `<div class="avatar-img-wrap"><img src="${uploadedServerIconBase64}"></div>`;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.joinCustomServer = function() {
+            const serverName = document.getElementById('custom-server-input').value.trim();
+            const visibility = document.getElementById('custom-server-visibility').value;
+
+            if (!serverName) return;
+
+            const newServerRef = push(ref(db, 'custom_servers'));
+            const newServerId = newServerRef.key;
+
+            const iconUrl = uploadedServerIconBase64 || `https://api.dicebear.com/10.x/glyphs/svg?glyphColor=ff2e88,00e5ff,ffe600,7cff00,ff6a00,b400ff,76a7ff,525fa3,8c8c8c,75c675,ffaa64,ff4d6f,af61f2&backgroundColor=b6e3f4&seed=${encodeURIComponent(serverName)}`;
+
+            const newServerData = {
+                name: serverName,
+                creator: friendCode,
+                visibility: visibility,
+                icon: iconUrl,
+                members: {
+                    [friendCode]: { joinedAt: Date.now() }
+                }
+            };
+
+            set(newServerRef, newServerData).then(() => {
+                set(ref(db, `user_servers/${friendCode}/${newServerId}`), true);
+
+                const defaultChanRef = push(ref(db, `custom_servers/${newServerId}/channels`));
+                set(defaultChanRef, {
+                    name: "general",
+                    type: "text",
+                    createdAt: Date.now()
+                }).then(() => {
+                    document.getElementById('create-server-modal').style.display = 'none';
+                    document.getElementById('custom-server-input').value = '';
+                    uploadedServerIconBase64 = null;
+                    window.selectServer(newServerId, serverName);
+                });
+            });
+        };
+
+        window.previewJoinServer = function(serverId) {
+            pendingInviteServerId = serverId;
+            get(ref(db, `custom_servers/${serverId}`)).then((snap) => {
+                if (snap.exists()) {
+                    const sData = snap.val();
+                    document.getElementById('invite-server-name-display').innerText = sData.name;
+                    const iconUrl = sData.icon || `https://api.dicebear.com/10.x/glyphs/svg?glyphColor=ff2e88,00e5ff,ffe600,7cff00,ff6a00,b400ff,76a7ff,525fa3,8c8c8c,75c675,ffaa64,ff4d6f,af61f2&backgroundColor=b6e3f4&seed=${encodeURIComponent(sData.name)}`;
+                    document.getElementById('invite-server-icon-preview').innerHTML = `<div class="avatar-img-wrap"><img src="${iconUrl}" alt="Server Icon"></div>`;
+                    document.getElementById('invite-preview-modal').style.display = 'flex';
+                }
+            });
+        };
+
+        window.confirmJoinServer = function() {
+            if (!pendingInviteServerId) return;
+            const sId = pendingInviteServerId;
+            set(ref(db, `user_servers/${friendCode}/${sId}`), true);
+            set(ref(db, `custom_servers/${sId}/members/${friendCode}`), { joinedAt: Date.now() });
+
+            get(ref(db, `custom_servers/${sId}`)).then((snap) => {
+                document.getElementById('invite-preview-modal').style.display = 'none';
+                if (snap.exists()) {
+                    window.selectServer(sId, snap.val().name);
+                }
+            });
+        };
+
+        window.dismissInvitePreview = function() {
+            document.getElementById('invite-preview-modal').style.display = 'none';
+            window.selectHome();
+        };
+
+        window.loadPublicServersList = function() {
+            const container = document.getElementById('public-servers-list');
+            if (!container) return;
+            container.innerHTML = '<div style="color:#949ba4;">Loading servers...</div>';
+
+            get(ref(db, 'custom_servers')).then((snap) => {
+                container.innerHTML = '';
+                if (snap.exists()) {
+                    snap.forEach((child) => {
+                        const sKey = child.key;
+                        const sVal = child.val();
+                        if (sVal.visibility === 'public') {
+                            const iconUrl = sVal.icon || `https://api.dicebear.com/10.x/glyphs/svg?glyphColor=ff2e88,00e5ff,ffe600,7cff00,ff6a00,b400ff,76a7ff,525fa3,8c8c8c,75c675,ffaa64,ff4d6f,af61f2&backgroundColor=b6e3f4&seed=${encodeURIComponent(sVal.name)}`;
+                            
+                            const div = document.createElement('div');
+                            div.className = 'friend-row';
+                            div.innerHTML = `
+                                <div class="friend-info">
+                                    <div class="friend-avatar avatar-container"><div class="avatar-img-wrap"><img src="${iconUrl}"></div></div>
+                                    <div>
+                                        <div style="font-weight:bold; color:#fff;">${sVal.name}</div>
+                                        <div style="font-size:12px; color:#949ba4;">Public Server</div>
+                                    </div>
+                                </div>
+                                <button class="auth-btn-primary" style="padding:6px 12px; font-size:13px;" onclick="window.previewJoinServer('${sKey}')">Join Server</button>
+                            `;
+                            container.appendChild(div);
+                        }
+                    });
+                }
+                if (container.children.length === 0) {
+                    container.innerHTML = '<div style="color:#949ba4;">No public servers available right now.</div>';
+                }
+            });
+        };
+
+        window.selectServer = function(serverId, serverName) {
+            if (activeVoiceChannelId) window.leaveVoiceChannel();
+            activeServerId = serverId;
+            document.getElementById('current-server-title').innerText = serverName;
+            document.getElementById('add-channel-toggle-btn').style.display = 'inline-block';
+            document.getElementById('invite-btn-header').style.display = 'inline-block';
+
+            document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
+            const currentRail = document.getElementById(`rail-${serverId}`);
+            if (currentRail) currentRail.classList.add('active');
+
+            if (channelsRef) off(channelsRef);
+            channelsRef = ref(db, `custom_servers/${serverId}/channels`);
+
+            onValue(ref(db, `custom_servers/${serverId}`), (sSnap) => {
+                currentServerData = sSnap.val();
+            });
+
+            onValue(channelsRef, (snapshot) => {
+                const chanList = document.getElementById('channel-list');
+                chanList.innerHTML = '';
+                
+                let firstChannelId = null;
+                let firstChannelType = 'text';
+
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnap) => {
+                        const cKey = childSnap.key;
+                        const cVal = childSnap.val();
+                        if (!firstChannelId) {
+                            firstChannelId = cKey;
+                            firstChannelType = cVal.type || 'text';
+                        }
+
+                        const isOwner = currentServerData && (currentServerData.creator === friendCode || isAdminUser);
+
+                        const row = document.createElement('div');
+                        row.className = 'channel-row';
+                        
+                        let prefix = '#';
+                        if (cVal.type === 'voice') prefix = '🔊';
+                        if (cVal.type === 'forum') prefix = '💬';
+                        if (cVal.type === 'stage') prefix = '🎙️';
+
+                        row.innerHTML = `
+                            <button class="channel-btn ${currentChannelId === cKey ? 'active' : ''}" onclick="window.selectChannel('${cKey}', '${cVal.name}', '${cVal.type || 'text'}')">
+                                <span class="icon">${prefix}</span>
+                                <span>${cVal.name}</span>
+                            </button>
+                            ${isOwner ? `<button class="channel-settings-gear" onclick="window.openChannelSettings('${cKey}', '${cVal.name}')">⚙</button>` : ''}
+                        `;
+                        chanList.appendChild(row);
+                    });
+                } else {
+                    const defaultChanRef = push(ref(db, `custom_servers/${serverId}/channels`));
+                    set(defaultChanRef, { name: "general", type: "text", createdAt: Date.now() });
+                }
+
+                if (!currentChannelId && firstChannelId) {
+                    window.selectChannel(firstChannelId, "general", firstChannelType);
+                }
+            });
+
+            document.getElementById('home-dashboard').style.display = 'none';
+            document.getElementById('members-sidebar').style.display = 'flex';
+            updateActiveMembersSidebar();
+        };
+
+        window.toggleInlineAddChannel = function() {
+            const box = document.getElementById('inline-add-channel-box');
+            box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+        };
+
+        window.submitNewChannel = function() {
+            const nameInput = document.getElementById('new-channel-input');
+            const typeInput = document.getElementById('new-channel-type');
+            const name = nameInput.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            const type = typeInput.value;
+
+            if (!name || !activeServerId) return;
+
+            const newChanRef = push(ref(db, `custom_servers/${activeServerId}/channels`));
+            set(newChanRef, {
+                name: name,
+                type: type,
+                createdAt: Date.now()
+            }).then(() => {
+                nameInput.value = '';
+                document.getElementById('inline-add-channel-box').style.display = 'none';
+            });
+        };
+
+        window.selectChannel = function(channelId, channelName, type = 'text') {
+            if (activeVoiceChannelId && activeVoiceChannelId !== channelId) {
+                window.leaveVoiceChannel();
+            }
+
+            currentChannelId = channelId;
+            currentChannelType = type;
+
+            document.querySelectorAll('.channel-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById('current-channel-name').innerText = channelName;
+            document.getElementById('header-symbol').innerText = type === 'voice' ? '🔊' : (type === 'forum' ? '💬' : '#');
+
+            document.getElementById('chat-area').style.display = 'none';
+            document.getElementById('forum-area').style.display = 'none';
+            document.getElementById('voice-area').style.display = 'none';
+
+            if (type === 'text') {
+                document.getElementById('chat-area').style.display = 'flex';
+                window.listenForMessages();
+            } else if (type === 'voice' || type === 'stage') {
+                document.getElementById('voice-area').style.display = 'flex';
+                document.getElementById('voice-channel-title-display').innerText = `🔊 ${channelName}`;
+                window.joinVoiceChannel(channelId);
+            } else if (type === 'forum') {
+                document.getElementById('forum-area').style.display = 'flex';
+                document.getElementById('forum-title').innerText = `💬 ${channelName} Forum`;
+                window.loadForumThreads();
+            }
+        };
+
+        window.openChannelSettings = function(channelId, currentName) {
+            editingChannelId = channelId;
+            document.getElementById('chan-set-name').value = currentName;
+            document.getElementById('channel-settings-modal').style.display = 'flex';
+        };
+
+        window.saveChannelSettings = function() {
+            const newName = document.getElementById('chan-set-name').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            if (!newName || !activeServerId || !editingChannelId) return;
+
+            update(ref(db, `custom_servers/${activeServerId}/channels/${editingChannelId}`), {
+                name: newName
+            }).then(() => {
+                document.getElementById('channel-settings-modal').style.display = 'none';
+            });
+        };
+
+        window.deleteCurrentChannel = function() {
+            if (!activeServerId || !editingChannelId) return;
+            remove(ref(db, `custom_servers/${activeServerId}/channels/${editingChannelId}`)).then(() => {
+                document.getElementById('channel-settings-modal').style.display = 'none';
+                currentChannelId = null;
+            });
+        };
+
+        window.openServerSettings = function() {
+            if (!activeServerId || !currentServerData) return;
+            if (currentServerData.creator !== friendCode && !isAdminUser) return;
+
+            document.getElementById('srv-set-name').value = currentServerData.name || '';
+            document.getElementById('srv-set-icon').value = currentServerData.icon || '';
+            document.getElementById('server-settings-modal').style.display = 'flex';
+        };
+
+        window.saveServerSettings = function() {
+            const name = document.getElementById('srv-set-name').value.trim();
+            const icon = document.getElementById('srv-set-icon').value.trim();
+            if (!name || !activeServerId) return;
+
+            update(ref(db, `custom_servers/${activeServerId}`), { name, icon }).then(() => {
+                document.getElementById('server-settings-modal').style.display = 'none';
+                document.getElementById('current-server-title').innerText = name;
+            });
+        };
+
+        window.openInviteModal = function() {
+            if (!activeServerId) return;
+            const url = `${window.location.origin}${window.location.pathname}?invite=${activeServerId}`;
+            document.getElementById('invite-link-display').value = url;
+            document.getElementById('invite-modal').style.display = 'flex';
+        };
+
+        window.listenForMessages = function() {
+            const container = document.getElementById('message-container');
+            container.innerHTML = '';
+
+            if (currentMessagesRef && currentMessagesCallback) {
+                off(currentMessagesRef, 'child_added', currentMessagesCallback);
+            }
+
+            if (!activeServerId || !currentChannelId) return;
+
+            currentMessagesRef = ref(db, `custom_servers/${activeServerId}/messages/${currentChannelId}`);
+            currentMessagesCallback = onChildAdded(currentMessagesRef, (snapshot) => {
+                const msg = snapshot.val();
+                const msgKey = snapshot.key;
+                
+                const senderProfile = allProfiles[msg.senderId] || {};
+                const senderName = senderProfile.username || msg.senderName || 'User';
+                const senderAt = senderProfile.atName || 'user';
+                const senderPfp = senderProfile.pfp || '';
+                const senderFrame = senderProfile.frame || '';
+                const isSenderAdmin = senderProfile.admin === "true";
+
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'message';
+                msgDiv.id = `msg-${msgKey}`;
+
+                const pfpUrl = getAvatarUrl(senderName, senderAt, senderPfp);
+
+                const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                msgDiv.innerHTML = `
+                    <div class="msg-pfp avatar-container ${senderFrame}" onclick="window.openUserProfileModal('${msg.senderId}')">
+                        <div class="avatar-img-wrap"><img src="${pfpUrl}"></div>
+                    </div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username" onclick="window.openUserProfileModal('${msg.senderId}')">${senderName} ${isSenderAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
+                            <span class="timestamp">${timeStr}</span>
+                        </div>
+                        <div class="text">${msg.text ? msg.text : ''}</div>
+                        ${msg.imageUrl ? `<img src="${msg.imageUrl}" style="max-width: 300px; border-radius: 8px; margin-top: 8px;">` : ''}
+                    </div>
+                    ${(msg.senderId === friendCode || isAdminUser) ? `<button class="msg-delete-btn" onclick="window.deleteMessage('${msgKey}')">🗑</button>` : ''}
+                `;
+
+                container.appendChild(msgDiv);
+                container.scrollTop = container.scrollHeight;
+            });
+        };
+
+        window.handleMessageSubmit = function(e) {
+            e.preventDefault();
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text || !activeServerId || !currentChannelId) return;
+
+            const newMsgRef = push(ref(db, `custom_servers/${activeServerId}/messages/${currentChannelId}`));
+            set(newMsgRef, {
+                senderId: friendCode,
+                senderName: currentUsername,
+                text: text,
+                timestamp: Date.now()
+            }).then(() => {
+                input.value = '';
+            });
+        };
+
+        window.deleteMessage = function(msgKey) {
+            if (!activeServerId || !currentChannelId) return;
+            remove(ref(db, `custom_servers/${activeServerId}/messages/${currentChannelId}/${msgKey}`)).then(() => {
+                const el = document.getElementById(`msg-${msgKey}`);
+                if (el) el.remove();
+            });
+        };
+
+        window.joinVoiceChannel = function(channelId) {
+            activeVoiceChannelId = channelId;
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+                localStream = stream;
+                const localVideo = document.getElementById('local-video');
+                if (localVideo) localVideo.srcObject = stream;
+            }).catch(() => {
+                navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+                    localStream = stream;
+                }).catch(() => {});
+            });
+        };
+
+        window.leaveVoiceChannel = function() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            activeVoiceChannelId = null;
+            document.getElementById('voice-area').style.display = 'none';
+        };
+
+        window.toggleMicrophone = function() {
+            if (localStream) {
+                const audioTrack = localStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    audioTrack.enabled = !audioTrack.enabled;
+                    document.getElementById('mic-toggle-btn').innerText = audioTrack.enabled ? 'Mute Mic' : 'Unmute Mic';
+                }
+            }
+        };
+
+        window.toggleCamera = function() {
+            if (localStream) {
+                const videoTrack = localStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    videoTrack.enabled = !videoTrack.enabled;
+                    document.getElementById('cam-toggle-btn').innerText = videoTrack.enabled ? 'Stop Camera' : 'Start Camera';
+                }
+            }
+        };
+
+        window.toggleScreenShare = function() {
+            if (!screenStream) {
+                navigator.mediaDevices.getDisplayMedia({ video: true }).then((stream) => {
+                    screenStream = stream;
+                    const localVideo = document.getElementById('local-video');
+                    if (localVideo) localVideo.srcObject = stream;
+                    document.getElementById('screen-share-btn').innerText = 'Stop Sharing';
+                });
+            } else {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+                const localVideo = document.getElementById('local-video');
+                if (localVideo && localStream) localVideo.srcObject = localStream;
+                document.getElementById('screen-share-btn').innerText = 'Share Screen';
+            }
+        };
+
+        function updateActiveMembersSidebar() {
+            const container = document.getElementById('server-members-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            let userList = Object.keys(allProfiles);
+
+            if (activeServerId && currentServerData && currentServerData.members) {
+                userList = Object.keys(currentServerData.members);
+            }
+
+            document.getElementById('members-group-header').innerText = `Members — ${userList.length}`;
+
+            userList.forEach((uid) => {
+                const p = allProfiles[uid];
+                if (!p) return;
+
+                const status = p.status || 'online';
+                const pfpUrl = getAvatarUrl(p.username, p.atName, p.pfp);
+                const isUserAdmin = p.admin === "true";
+
+                const div = document.createElement('div');
+                div.className = 'member-item';
+                div.onclick = () => window.openUserProfileModal(uid);
+                div.innerHTML = `
+                    <div class="member-item-left">
+                        <div class="member-avatar-box avatar-container ${p.frame || ''}">
+                            <div class="avatar-img-wrap"><img src="${pfpUrl}"></div>
+                            <div class="status-indicator status-${status}"></div>
+                        </div>
+                        <div class="member-meta">
+                            <div class="member-name">${p.username || 'User'} ${isUserAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</div>
+                            <div class="member-status-text">${p.statusMsg ? p.statusMsg : `@${p.atName || 'user'}`}</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
         window.loadRewardsView = function() {
             const pane = document.getElementById('home-content-pane');
             pane.innerHTML = `
@@ -1539,609 +2005,157 @@
                         </div>
                         <button class="auth-btn-primary" onclick="window.claimDailyReward()">Claim Daily Reward</button>
                     </div>
-                    <div style="background: #2b2d31; padding: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-top: 12px;">
-                        <div>
-                            <div style="font-weight: bold; font-size: 16px; color: #f2f3f5;">Send Gift to Friend</div>
-                            <div style="font-size: 13px; color: #949ba4;">Transfer your coins to any connected friend.</div>
-                        </div>
-                        <button class="auth-btn-primary" onclick="window.openGiftModal()">Open Gifting</button>
-                    </div>
                 </div>
             `;
+        };
+
+        window.claimDailyReward = function() {
+            const now = Date.now();
+            if (now - lastDailyClaim >= 86400000) {
+                currentCoins += 50;
+                lastDailyClaim = now;
+                set(ref(db, `profiles/${friendCode}/coins`), currentCoins);
+                set(ref(db, `profiles/${friendCode}/lastDailyClaim`), lastDailyClaim);
+                alert("You claimed 50 daily coins!");
+                window.loadRewardsView();
+            } else {
+                alert("Daily reward available every 24 hours.");
+            }
         };
 
         window.loadShopView = function() {
             const pane = document.getElementById('home-content-pane');
-            const placeholderAvatar = getAvatarUrl(currentUsername, currentAtName, '');
             pane.innerHTML = `
                 <div class="friends-list-pane">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>🛍️️ PrivacyChat Shop</h3>
+                        <h3>🛍️ Profile Frame Shop</h3>
                         <div class="coin-badge">🪙 Balance: ${currentCoins} Coins</div>
                     </div>
-                    <p style="font-size:13px; color:#b5bac1;">Spend your earned coins to unlock special profile picture frames!</p>
                     <div class="shop-grid">
                         <div class="shop-card">
-                            <div class="avatar-container" style="width:50px; height:50px;"><div class="avatar-img-wrap"><img src="${placeholderAvatar}"></div></div>
-                            <div style="font-weight:bold; color:#f2f3f5;">None (No Frame)</div>
-                            <div style="font-size:12px; color:#949ba4;">Free</div>
-                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.equipFrame('')">Equip</button>
+                            <div class="preview-avatar frame-gold"><div class="avatar-img-wrap"><img src="${getAvatarUrl(currentUsername, currentAtName, currentPfpBase64)}"></div></div>
+                            <div style="font-weight:bold; color:#fff;">Gold Ring Frame</div>
+                            <div style="color:#f0b232;">🪙 100 Coins</div>
+                            <button class="auth-btn-primary" onclick="window.buyFrame('frame-gold', 100)">Buy Frame</button>
                         </div>
                         <div class="shop-card">
-                            <div class="avatar-container frame-gold" style="width:50px; height:50px;"><div class="avatar-img-wrap"><img src="${placeholderAvatar}"></div></div>
-                            <div style="font-weight:bold; color:#f2f3f5;">Gold Ring Frame</div>
-                            <div style="font-size:12px; color:#949ba4;">Price: 150 Coins</div>
-                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-gold', 150)">Buy & Equip</button>
+                            <div class="preview-avatar frame-neon"><div class="avatar-img-wrap"><img src="${getAvatarUrl(currentUsername, currentAtName, currentPfpBase64)}"></div></div>
+                            <div style="font-weight:bold; color:#fff;">Cyber Neon Frame</div>
+                            <div style="color:#f0b232;">🪙 150 Coins</div>
+                            <button class="auth-btn-primary" onclick="window.buyFrame('frame-neon', 150)">Buy Frame</button>
                         </div>
                         <div class="shop-card">
-                            <div class="avatar-container frame-neon" style="width:50px; height:50px;"><div class="avatar-img-wrap"><img src="${placeholderAvatar}"></div></div>
-                            <div style="font-weight:bold; color:#f2f3f5;">Cyber Neon Frame</div>
-                            <div style="font-size:12px; color:#949ba4;">Price: 200 Coins</div>
-                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-neon', 200)">Buy & Equip</button>
-                        </div>
-                        <div class="shop-card">
-                            <div class="avatar-container frame-purple" style="width:50px; height:50px;"><div class="avatar-img-wrap"><img src="${placeholderAvatar}"></div></div>
-                            <div style="font-weight:bold; color:#f2f3f5;">Royal Purple Frame</div>
-                            <div style="font-size:12px; color:#949ba4;">Price: 175 Coins</div>
-                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-purple', 175)">Buy & Equip</button>
-                        </div>
-                        <div class="shop-card">
-                            <div class="avatar-container frame-fire" style="width:50px; height:50px;"><div class="avatar-img-wrap"><img src="${placeholderAvatar}"></div></div>
-                            <div style="font-weight:bold; color:#f2f3f5;">Fire Glow Frame</div>
-                            <div style="font-size:12px; color:#949ba4;">Price: 250 Coins</div>
-                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-fire', 250)">Buy & Equip</button>
-                        </div>
-                        <div class="shop-card">
-                            <div class="avatar-container frame-galaxy" style="width:50px; height:50px;"><div class="avatar-img-wrap"><img src="${placeholderAvatar}"></div></div>
-                            <div style="font-weight:bold; color:#f2f3f5;">Galaxy Violet Frame</div>
-                            <div style="font-size:12px; color:#949ba4;">Price: 300 Coins</div>
-                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-galaxy', 300)">Buy & Equip</button>
-                        </div>
-                        <div class="shop-card">
-                            <div class="avatar-container frame-emerald" style="width:50px; height:50px;"><div class="avatar-img-wrap"><img src="${placeholderAvatar}"></div></div>
-                            <div style="font-weight:bold; color:#f2f3f5;">Emerald Shine Frame</div>
-                            <div style="font-size:12px; color:#949ba4;">Price: 250 Coins</div>
-                            <button class="auth-btn-primary" style="padding:6px 12px; font-size:12px;" onclick="window.buyFrame('frame-emerald', 250)">Buy & Equip</button>
+                            <div class="preview-avatar frame-galaxy"><div class="avatar-img-wrap"><img src="${getAvatarUrl(currentUsername, currentAtName, currentPfpBase64)}"></div></div>
+                            <div style="font-weight:bold; color:#fff;">Galaxy Violet Frame</div>
+                            <div style="color:#f0b232;">🪙 200 Coins</div>
+                            <button class="auth-btn-primary" onclick="window.buyFrame('frame-galaxy', 200)">Buy Frame</button>
                         </div>
                     </div>
                 </div>
             `;
         };
 
-        window.equipFrame = function(frameName) {
-            currentFrame = frameName;
-            set(ref(db, `profiles/${friendCode}/frame`), currentFrame);
-            updateProfileUI();
-            alert("Successfully equipped frame!");
-            window.loadShopView();
-        };
-
-        window.buyFrame = function(frameName, cost) {
-            if (currentCoins < cost) {
-                alert("You don't have enough coins! Play the Arcade Game or claim daily rewards to earn more.");
-                return;
+        window.buyFrame = function(frameClass, cost) {
+            if (currentCoins >= cost) {
+                currentCoins -= cost;
+                currentFrame = frameClass;
+                set(ref(db, `profiles/${friendCode}/coins`), currentCoins);
+                set(ref(db, `profiles/${friendCode}/frame`), currentFrame).then(() => {
+                    alert("Frame purchased and equipped!");
+                    updateProfileUI();
+                    window.loadShopView();
+                });
+            } else {
+                alert("Not enough coins!");
             }
-            currentCoins -= cost;
-            currentFrame = frameName;
-            set(ref(db, `profiles/${friendCode}/coins`), currentCoins);
-            set(ref(db, `profiles/${friendCode}/frame`), currentFrame);
-            updateProfileUI();
-            alert("Purchase successful! Frame equipped.");
-            window.loadShopView();
         };
 
         window.loadGameView = function() {
             const pane = document.getElementById('home-content-pane');
             pane.innerHTML = `
-                <div class="friends-list-pane" style="align-items: center; text-align: center;">
-                    <h3>🎮 Coin Clicker Arcade Game</h3>
-                    <p style="font-size: 13px; color: #b5bac1; max-width: 400px;">Click the golden coin as fast as you can to earn credits! Each click rewards +1 Coin.</p>
-                    <div style="margin: 16px 0;" class="coin-badge">🪙 Your Coins: <span id="game-coin-score">${currentCoins}</span></div>
-                    <div id="clicker-coin-btn" onclick="window.incrementGameScore()" style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #f0b232, #d4ac0d); display: flex; align-items: center; justify-content: center; font-size: 54px; cursor: pointer; box-shadow: 0 8px 20px rgba(240,178,50,0.4); transition: transform 0.1s ease;">🪙</div>
-                    <div style="font-size: 12px; color: #949ba4; margin-top: 12px;">Coins are automatically saved to your account!</div>
+                <div class="friends-list-pane" style="align-items:center; justify-content:center; text-align:center;">
+                    <h3>🎮 Arcade Coin Clicker</h3>
+                    <div style="font-size: 14px; color: #b5bac1; margin-bottom: 16px;">Click the coin to earn free currency for the shop!</div>
+                    <div id="coin-clicker-target" onclick="window.clickCoinTarget()" style="font-size: 80px; cursor: pointer; transform: scale(1); transition: transform 0.1s ease;">🪙</div>
+                    <div id="game-score-display" class="coin-badge" style="font-size: 18px; margin-top: 16px;">🪙 Balance: ${currentCoins} Coins</div>
                 </div>
             `;
         };
 
-        window.incrementGameScore = function() {
+        window.clickCoinTarget = function() {
             currentCoins += 1;
-            const scoreEl = document.getElementById('game-coin-score');
-            if (scoreEl) scoreEl.innerText = currentCoins;
             set(ref(db, `profiles/${friendCode}/coins`), currentCoins);
-            
-            const btn = document.getElementById('clicker-coin-btn');
-            if (btn) {
-                btn.style.transform = 'scale(0.92)';
-                setTimeout(() => btn.style.transform = 'scale(1)', 100);
-            }
-        };
-
-        window.claimDailyReward = function() {
-            const now = Date.now();
-            const ONE_DAY = 24 * 60 * 60 * 1000;
-            if (now - lastDailyClaim < ONE_DAY) {
-                alert("You have already claimed your daily reward today! Come back tomorrow.");
-                return;
-            }
-            currentCoins += 50;
-            lastDailyClaim = now;
-            set(ref(db, `profiles/${friendCode}/coins`), currentCoins);
-            set(ref(db, `profiles/${friendCode}/lastDailyClaim`), lastDailyClaim);
-            alert("Success! 50 Coins added to your balance.");
-            window.loadRewardsView();
-        };
-
-        window.openGiftModal = function() {
-            const select = document.getElementById('gift-recipient-select');
-            select.innerHTML = '';
-            onValue(ref(db, `friends/${friendCode}`), (snap) => {
-                if (!snap.exists()) return;
-                snap.forEach((child) => {
-                    const fId = child.key;
-                    const fData = child.val();
-                    const status = typeof fData === 'object' ? fData.status : fData;
-                    if (status === 'accepted') {
-                        const profile = allProfiles[fId] || { username: fId };
-                        const opt = document.createElement('option');
-                        opt.value = fId;
-                        opt.innerText = profile.username;
-                        select.appendChild(opt);
-                    }
-                });
-            }, { onlyOnce: true });
-            document.getElementById('gift-modal').style.display = 'flex';
-        };
-
-        window.confirmSendGift = function() {
-            const recipientId = document.getElementById('gift-recipient-select').value;
-            const amount = parseInt(document.getElementById('gift-amount-input').value);
-            if (!recipientId || isNaN(amount) || amount <= 0) return;
-            if (amount > currentCoins) {
-                alert("You don't have enough coins!");
-                return;
-            }
-
-            currentCoins -= amount;
-            set(ref(db, `profiles/${friendCode}/coins`), currentCoins);
-
-            get(ref(db, `profiles/${recipientId}/coins`)).then((snap) => {
-                const recipientCoins = (snap.exists() ? snap.val() : 100) + amount;
-                set(ref(db, `profiles/${recipientId}/coins`), recipientCoins);
-                document.getElementById('gift-modal').style.display = 'none';
-                alert(`Successfully sent ${amount} coins as a gift!`);
-                window.loadRewardsView();
-            });
+            document.getElementById('game-score-display').innerText = `🪙 Balance: ${currentCoins} Coins`;
+            const el = document.getElementById('coin-clicker-target');
+            el.style.transform = 'scale(1.2)';
+            setTimeout(() => el.style.transform = 'scale(1)', 100);
         };
 
         window.loadFriendsView = function() {
             const pane = document.getElementById('home-content-pane');
-            pane.innerHTML = `
-                <div class="friends-list-pane">
-                    <h3>Add Friend</h3>
-                    <div style="display:flex; gap:8px; max-width:400px;">
-                        <input type="text" id="friend-add-input" placeholder="Enter Friend's User ID or @handle" style="flex:1; padding:10px; background:#1e1f22; border:none; border-radius:4px; color:#fff;">
-                        <button class="auth-btn-primary" onclick="window.sendFriendRequest()">Send Request</button>
-                    </div>
-                    <h3>Friends</h3>
-                    <div id="friends-container" style="display:flex; flex-direction:column; gap:8px;"></div>
-                </div>
-            `;
-            const container = document.getElementById('friends-container');
+            pane.innerHTML = `<div class="friends-list-pane"><h3>All Users & Friends</h3><div id="friends-list-container"></div></div>`;
             
-            onValue(ref(db, `friends/${friendCode}`), (snap) => {
-                container.innerHTML = '';
-                if (!snap.exists()) {
-                    container.innerHTML = '<div style="color:#949ba4; font-size:13px;">No friends yet.</div>';
-                    return;
-                }
+            const container = document.getElementById('friends-list-container');
+            container.innerHTML = '';
+
+            Object.keys(allProfiles).forEach((uid) => {
+                if (uid === friendCode) return;
+                const p = allProfiles[uid];
+
+                const div = document.createElement('div');
+                div.className = 'friend-row';
+                const pfpUrl = getAvatarUrl(p.username, p.atName, p.pfp);
                 
-                snap.forEach((child) => {
-                    const fId = child.key;
-                    const fData = child.val();
-                    const profile = allProfiles[fId] || { username: fId, atName: fId };
-                    const row = document.createElement('div');
-                    row.className = 'friend-row';
-                    const frameClass = profile.frame || '';
-                    const avatarSrc = getAvatarUrl(profile.username, profile.atName, profile.pfp);
-                    const pfpHtml = `<img src="${avatarSrc}" alt="avatar">`;
-                    
-                    let actionHtml = '';
-                    const status = typeof fData === 'object' ? fData.status : fData;
-                    const direction = typeof fData === 'object' ? fData.direction : '';
-
-                    if (status === 'pending') {
-                        if (direction === 'incoming') {
-                            actionHtml = `<button class="auth-btn-primary" style="padding:4px 12px; font-size:12px; background-color:#23a55a;" onclick="window.acceptFriend('${fId}')">Accept</button>`;
-                        } else {
-                            actionHtml = `<span style="font-size:12px; color:#949ba4;">Request Sent</span>`;
-                        }
-                    } else if (status === 'accepted') {
-                        actionHtml = `<button class="action-icon-btn" onclick="window.openDM('${fId}', '${profile.username}')" title="Message">💬</button>`;
-                    }
-
-                    const isFriendAdmin = profile.admin === "true";
-
-                    row.innerHTML = `
-                        <div class="friend-info">
-                            <div class="friend-avatar avatar-container ${frameClass}" onclick="window.openUserProfileModal('${fId}')">
-                                <div class="avatar-img-wrap">${pfpHtml}</div>
-                                <div class="status-indicator status-${profile.status || 'offline'}"></div>
-                            </div>
-                            <div>
-                                <div style="font-weight:600; color:#f2f3f5; cursor:pointer;" onclick="window.openUserProfileModal('${fId}')">${profile.username} ${isFriendAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</div>
-                                <div style="font-size:12px; color:#949ba4;">@${profile.atName}</div>
-                            </div>
+                div.innerHTML = `
+                    <div class="friend-info">
+                        <div class="friend-avatar avatar-container ${p.frame || ''}">
+                            <div class="avatar-img-wrap"><img src="${pfpUrl}"></div>
+                            <div class="status-indicator status-${p.status || 'online'}"></div>
                         </div>
-                        <div class="friend-actions">${actionHtml}</div>
-                    `;
-                    container.appendChild(row);
-                });
+                        <div>
+                            <div style="font-weight:bold; color:#fff;">${p.username || 'User'}</div>
+                            <div style="font-size:12px; color:#949ba4;">@${p.atName || 'user'}</div>
+                        </div>
+                    </div>
+                    <button class="auth-btn-primary" style="padding:6px 12px; font-size:13px;" onclick="window.openUserProfileModal('${uid}')">Profile</button>
+                `;
+                container.appendChild(div);
             });
-        };
-
-        window.sendFriendRequest = function() {
-            const val = document.getElementById('friend-add-input').value.trim();
-            if (!val) return;
-            let targetUid = val;
-            if (val.startsWith('@')) {
-                const handle = val.replace('@', '').toLowerCase();
-                const found = Object.entries(allProfiles).find(([id, p]) => p.atName === handle);
-                if (found) targetUid = found[0];
-            }
-            if (targetUid === friendCode) return;
-            const updates = {};
-            updates[`friends/${targetUid}/${friendCode}`] = { status: 'pending', direction: 'incoming' };
-            updates[`friends/${friendCode}/${targetUid}`] = { status: 'pending', direction: 'outgoing' };
-            update(ref(db), updates).then(() => {
-                alert('Friend request sent!');
-                document.getElementById('friend-add-input').value = '';
-            });
-        };
-
-        window.acceptFriend = function(fId) {
-            const updates = {};
-            updates[`friends/${friendCode}/${fId}`] = { status: 'accepted', direction: 'incoming' };
-            updates[`friends/${fId}/${friendCode}`] = { status: 'accepted', direction: 'outgoing' };
-            update(ref(db), updates);
         };
 
         window.loadDMsList = function() {
             const container = document.getElementById('dms-list-container');
             if (!container) return;
-            onValue(ref(db, `friends/${friendCode}`), (snap) => {
-                container.innerHTML = '';
-                if (!snap.exists()) return;
-                snap.forEach((child) => {
-                    const fData = child.val();
-                    const status = typeof fData === 'object' ? fData.status : fData;
-                    if (status === 'accepted') {
-                        const fId = child.key;
-                        const profile = allProfiles[fId] || { username: fId };
-                        const btn = document.createElement('button');
-                        btn.className = 'channel-btn';
-                        btn.innerHTML = `<span class="icon">💬</span> ${profile.username}`;
-                        btn.onclick = () => window.openDM(fId, profile.username);
-                        container.appendChild(btn);
-                    }
-                });
-            }, { onlyOnce: true });
+            container.innerHTML = '<div style="color:#949ba4;">Select a user from the Friends tab to view details.</div>';
         };
 
-        window.openDM = function(fId, fName) {
-            const dmChannelId = [friendCode, fId].sort().join('_dm_');
-            currentChannelId = dmChannelId;
-            currentChannelType = 'text';
-            document.getElementById('home-dashboard').style.display = 'none';
-            document.getElementById('chat-area').style.display = 'flex';
-            document.getElementById('forum-area').style.display = 'none';
-            document.getElementById('voice-area').style.display = 'none';
-            document.getElementById('members-sidebar').style.display = 'flex';
-            document.getElementById('current-channel-name').innerText = fName;
-            document.getElementById('header-symbol').innerText = '@';
-            document.getElementById('message-input').placeholder = `Message @${fName}`;
-            
-            updateActiveMembersSidebar();
-
-            const container = document.getElementById('message-container');
+        window.openAdminConsole = function() {
+            if (!isAdminUser) return;
+            const container = document.getElementById('admin-users-list');
             container.innerHTML = '';
-            if (currentMessagesRef && currentMessagesCallback) off(currentMessagesRef, 'child_added', currentMessagesCallback);
 
-            currentMessagesRef = ref(db, `messages/${dmChannelId}`);
-            let lastUid = null;
-            let lastTime = 0;
-            currentMessagesCallback = (snapshot) => {
-                if (snapshot.exists()) {
-                    const msg = snapshot.val();
-                    const isMerged = (msg.uid === lastUid && (msg.timestamp - lastTime) < 300000);
-                    renderMessageOnUI(msg, snapshot.key, isMerged);
-                    lastUid = msg.uid;
-                    lastTime = msg.timestamp || Date.now();
-                }
-            };
-            onChildAdded(currentMessagesRef, currentMessagesCallback);
-        };
-
-        window.loadPublicServersList = function() {
-            const container = document.getElementById('public-servers-list');
-            onValue(ref(db, 'custom_servers'), (snap) => {
-                container.innerHTML = '';
-                if (!snap.exists()) return;
-                snap.forEach((child) => {
-                    const sId = child.key;
-                    const sVal = child.val();
-                    if (sVal.visibility === 'public') {
-                        const row = document.createElement('div');
-                        row.className = 'friend-row';
-                        const iconUrl = sVal.icon || `https://api.dicebear.com/10.x/glyphs/svg?glyphColor=ff2e88,00e5ff,ffe600,7cff00,ff6a00,b400ff,76a7ff,525fa3,8c8c8c,75c675,ffaa64,ff4d6f,af61f2&backgroundColor=b6e3f4&seed=${encodeURIComponent(sVal.name)}`;
-                        row.innerHTML = `
-                            <div class="friend-info">
-                                <div class="friend-avatar avatar-container"><div class="avatar-img-wrap"><img src="${iconUrl}"></div></div>
-                                <div style="font-weight:600; color:#f2f3f5;">${sVal.name}</div>
-                            </div>
-                            <button class="auth-btn-primary" onclick="window.previewJoinServer('${sId}')">Join Server</button>
-                        `;
-                        container.appendChild(row);
-                    }
-                });
-            }, { onlyOnce: true });
-        };
-
-        window.previewJoinServer = function(serverId) {
-            get(ref(db, `custom_servers/${serverId}`)).then((snap) => {
-                if (snap.exists()) {
-                    pendingInviteServerId = serverId;
-                    const sVal = snap.val();
-                    document.getElementById('invite-server-name-display').innerText = sVal.name;
-                    document.getElementById('invite-preview-modal').style.display = 'flex';
-                } else {
-                    alert("Invite link is invalid or the server no longer exists.");
-                }
-            });
-        };
-
-        window.dismissInvitePreview = function() {
-            pendingInviteServerId = null;
-            document.getElementById('invite-preview-modal').style.display = 'none';
-            window.history.replaceState({}, document.title, window.location.pathname);
-        };
-
-        window.confirmJoinServer = function() {
-            if (!pendingInviteServerId) return;
-            const sId = pendingInviteServerId;
-            document.getElementById('invite-preview-modal').style.display = 'none';
-            set(ref(db, `user_servers/${friendCode}/${sId}`), true).then(() => {
-                window.history.replaceState({}, document.title, window.location.pathname);
-                get(ref(db, `custom_servers/${sId}`)).then((snap) => {
-                    if (snap.exists()) window.selectServer(sId, snap.val().name);
-                });
-            });
-        };
-
-        window.selectServer = function(serverId, serverName) {
-            if (activeVoiceChannelId) window.leaveVoiceChannel();
-            activeServerId = serverId;
-            document.getElementById('current-server-title').innerText = serverName;
-            document.getElementById('invite-btn-header').style.display = 'inline-block';
-            document.getElementById('members-sidebar').style.display = 'flex';
-
-            get(ref(db, `custom_servers/${serverId}`)).then((snap) => {
-                currentServerData = snap.val() || {};
-                const hasChannelPerm = checkServerPermission('channels');
-                document.getElementById('add-channel-toggle-btn').style.display = hasChannelPerm ? 'block' : 'none';
-                updateActiveMembersSidebar();
-            });
-
-            document.querySelectorAll('.rail-item').forEach(el => el.classList.remove('active'));
-            const railEl = document.getElementById(`rail-${serverId}`);
-            if (railEl) railEl.classList.add('active');
-
-            document.getElementById('home-dashboard').style.display = 'none';
-            loadServerChannels(serverId);
-        };
-
-        function checkServerPermission(permType) {
-            if (isAdminUser) return true;
-            if (!currentServerData) return false;
-            if (currentServerData.creator === friendCode) return true;
-            const memberRoles = currentServerData.member_roles?.[friendCode] || {};
-            const roles = currentServerData.roles || {};
-            
-            for (const rKey of Object.keys(memberRoles)) {
-                if (roles[rKey] && roles[rKey].perms && roles[rKey].perms[permType]) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        function updateActiveMembersSidebar() {
-            const container = document.getElementById('server-members-container');
-            const header = document.getElementById('members-group-header');
-            if (!container || !header) return;
-
-            container.innerHTML = '';
-            let count = 0;
-
-            if (!activeServerId) {
-                Object.entries(allProfiles).forEach(([uId, profile]) => {
-                    count++;
-                    renderMemberRow(container, uId, profile);
-                });
-            } else {
-                get(ref(db, `user_servers`)).then((snap) => {
-                    if (!snap.exists()) return;
-                    snap.forEach((userSnap) => {
-                        const uId = userSnap.key;
-                        const uServers = userSnap.val();
-                        if (uServers[activeServerId] && allProfiles[uId]) {
-                            count++;
-                            renderMemberRow(container, uId, allProfiles[uId]);
-                        }
-                    });
-                });
-            }
-            header.innerText = `Members — ${count}`;
-        }
-
-        function renderMemberRow(container, uId, profile) {
-            const item = document.createElement('div');
-            item.className = 'member-item';
-            item.onclick = () => window.openUserProfileModal(uId);
-
-            const avatarSrc = getAvatarUrl(profile.username, profile.atName, profile.pfp);
-            const statusClass = profile.status || 'offline';
-            const isAdmin = profile.admin === "true";
-
-            item.innerHTML = `
-                <div class="member-item-left">
-                    <div class="member-avatar-box avatar-container ${profile.frame || ''}">
-                        <div class="avatar-img-wrap"><img src="${avatarSrc}" alt="avatar"></div>
-                        <div class="status-indicator status-${statusClass}"></div>
-                    </div>
-                    <div class="member-meta">
-                        <div class="member-name">${profile.username || 'User'} ${isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</div>
-                        <div class="member-status-text">${profile.statusMsg || `@${profile.atName || 'user'}`}</div>
-                    </div>
-                </div>
-            `;
-            container.appendChild(item);
-        }
-
-        function loadServerChannels(serverId) {
-            const list = document.getElementById('channel-list');
-            list.innerHTML = '';
-            if (channelsRef) off(channelsRef);
-
-            channelsRef = ref(db, `custom_servers/${serverId}/channels`);
-            onValue(channelsRef, (snap) => {
-                list.innerHTML = '';
-                if (!snap.exists()) return;
-                let firstChan = null;
-                snap.forEach((cSnap) => {
-                    const cId = cSnap.key;
-                    const cVal = cSnap.val();
-                    if (!firstChan) firstChan = { id: cId, val: cVal };
-
-                    const row = document.createElement('div');
-                    row.className = 'channel-row';
-                    
-                    const symbol = cVal.type === 'voice' ? '🔊' : cVal.type === 'forum' ? '📋' : '#';
-                    row.innerHTML = `
-                        <button class="channel-btn ${currentChannelId === cId ? 'active' : ''}">
-                            <span class="icon">${symbol}</span> ${cVal.name}
-                        </button>
-                    `;
-                    row.querySelector('.channel-btn').onclick = () => window.selectChannel(cId, cVal.name, cVal.type);
-                    list.appendChild(row);
-                });
-
-                if (firstChan && !currentChannelId) {
-                    window.selectChannel(firstChan.id, firstChan.val.name, firstChan.val.type);
-                }
-            });
-        }
-
-        window.selectChannel = function(cId, cName, type) {
-            currentChannelId = cId;
-            currentChannelType = type || 'text';
-
-            document.getElementById('current-channel-name').innerText = cName;
-            document.getElementById('header-symbol').innerText = type === 'voice' ? '🔊' : type === 'forum' ? '📋' : '#';
-
-            document.getElementById('chat-area').style.display = (type === 'text' || type === 'stage') ? 'flex' : 'none';
-            document.getElementById('forum-area').style.display = type === 'forum' ? 'flex' : 'none';
-            document.getElementById('voice-area').style.display = type === 'voice' ? 'flex' : 'none';
-
-            if (type === 'text' || type === 'stage') {
-                const container = document.getElementById('message-container');
-                container.innerHTML = '';
-                if (currentMessagesRef && currentMessagesCallback) off(currentMessagesRef, 'child_added', currentMessagesCallback);
-
-                currentMessagesRef = ref(db, `messages/${cId}`);
-                let lastUid = null;
-                let lastTime = 0;
-                currentMessagesCallback = (snapshot) => {
-                    if (snapshot.exists()) {
-                        const msg = snapshot.val();
-                        const isMerged = (msg.uid === lastUid && (msg.timestamp - lastTime) < 300000);
-                        renderMessageOnUI(msg, snapshot.key, isMerged);
-                        lastUid = msg.uid;
-                        lastTime = msg.timestamp || Date.now();
-                    }
-                };
-                onChildAdded(currentMessagesRef, currentMessagesCallback);
-            }
-        };
-
-        function renderMessageOnUI(msg, msgId, isMerged) {
-            const container = document.getElementById('message-container');
-            const profile = allProfiles[msg.uid] || { username: msg.username, atName: 'user', frame: '' };
-            
-            const msgEl = document.createElement('div');
-            msgEl.className = `message ${isMerged ? 'merged' : ''}`;
-            
-            const avatarSrc = getAvatarUrl(profile.username, profile.atName, profile.pfp);
-            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const deleteBtn = (msg.uid === friendCode || isAdminUser) 
-                ? `<button class="msg-delete-btn" onclick="window.deleteMessage('${msgId}')">Delete</button>` 
-                : '';
-
-            if (isMerged) {
-                msgEl.innerHTML = `
-                    <div class="msg-body">
-                        <div class="text">${escapeHtml(msg.text)}</div>
-                    </div>
-                    ${deleteBtn}
+            Object.keys(allProfiles).forEach((uid) => {
+                const p = allProfiles[uid];
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.innerHTML = `
+                    <span style="color:#fff;">${p.username} (@${p.atName})</span>
+                    <button class="auth-btn-primary" style="padding:4px 8px; font-size:11px; background:#da373c;" onclick="window.adminBanUser('${uid}')">Ban User</button>
                 `;
-            } else {
-                msgEl.innerHTML = `
-                    <div class="msg-pfp avatar-container ${profile.frame || ''}" onclick="window.openUserProfileModal('${msg.uid}')">
-                        <div class="avatar-img-wrap"><img src="${avatarSrc}" alt="avatar"></div>
-                    </div>
-                    <div class="msg-body">
-                        <div class="msg-header">
-                            <span class="username" onclick="window.openUserProfileModal('${msg.uid}')">${escapeHtml(profile.username)}</span>
-                            <span class="timestamp">${timeStr}</span>
-                        </div>
-                        <div class="text">${escapeHtml(msg.text)}</div>
-                    </div>
-                    ${deleteBtn}
-                `;
-            }
-
-            container.appendChild(msgEl);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        window.deleteMessage = function(msgId) {
-            if (!currentChannelId || !msgId) return;
-            remove(ref(db, `messages/${currentChannelId}/${msgId}`));
-            const container = document.getElementById('message-container');
-            container.innerHTML = '';
-            window.selectChannel(currentChannelId, document.getElementById('current-channel-name').innerText, currentChannelType);
-        };
-
-        window.handleMessageSubmit = function(e) {
-            if (e) e.preventDefault();
-            const input = document.getElementById('message-input');
-            const text = input.value.trim();
-            if (!text || !currentChannelId) return;
-
-            push(ref(db, `messages/${currentChannelId}`), {
-                uid: friendCode,
-                username: currentUsername,
-                text: text,
-                timestamp: Date.now()
+                container.appendChild(row);
             });
 
-            input.value = '';
+            document.getElementById('admin-console-modal').style.display = 'flex';
         };
 
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
+        window.adminBanUser = function(uid) {
+            remove(ref(db, `profiles/${uid}`)).then(() => {
+                alert("User deleted from platform.");
+                window.openAdminConsole();
+            });
+        };
     </script>
 </body>
 </html>
