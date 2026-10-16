@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full select-none bg-[#1e1f22] text-[#dbdee1]">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PrivacyChat Requiem</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Firebase JS SDK v8 Compat Libraries -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            discord: {
+              chat: '#313338',
+              sidebar: '#2b2d31',
+              server: '#1e1f22',
+              panel: '#232428',
+              blurple: 'var(--accent-color)',
+              blurpleHover: 'var(--accent-hover)',
+              input: '#383a40',
+              textMuted: '#949ba4',
+              textBody: '#dbdee1',
+              textHeading: '#f2f3f5',
+              green: '#23a55a',
+              yellow: '#f0b232',
+              red: '#f23f43',
+              gray: '#80848e'
+            }
+          },
+          fontFamily: {
+            discord: ['gg sans', 'Whitney', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --accent-color: #7c5cff;
+      --accent-hover: #6842ff;
+      --accent-light: rgba(124, 92, 255, 0.15);
+    }
+
+    body {
+      font-family: 'gg sans', 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      background-color: #1e1f22;
+      color: #dbdee1;
+    }
+
+    .bg-accent { background-color: var(--accent-color) !important; }
+    .bg-accent-hover:hover { background-color: var(--accent-hover) !important; }
+    .text-accent { color: var(--accent-color) !important; }
+    .border-accent { border-color: var(--accent-color) !important; }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #2b2d31;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1a1b1e;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #111214;
+    }
+
+    .server-pill {
+      position: absolute;
+      left: -4px;
+      width: 8px;
+      background-color: #ffffff;
+      border-radius: 0 4px 4px 0;
+      transition: all 0.2s ease;
+    }
+
+    .discord-tooltip {
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 var(--accent-light); }
+      70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(124, 92, 255, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(124, 92, 255, 0); }
+    }
+
+    .pulse-lock {
+      animation: pulse-ring 2.5s infinite;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col antialiased">
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- 1. AUTHENTICATION MODAL -->
+  <div id="authOverlay" class="fixed inset-0 z-50 bg-[#1e1f22] flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-[#313338] rounded-xl p-8 shadow-2xl border border-[#2b2d31]">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 rounded-2xl bg-accent text-white flex items-center justify-center mx-auto mb-3 shadow-lg text-2xl font-bold">
+          <svg class="w-9 h-9 fill-current" viewBox="0 0 24 24">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6a3 3 0 0 1 3 3v2h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h1v-2a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v2h2v-2a1 1 0 0 0-1-1z"/>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-black text-[#f2f3f5] tracking-tight">PrivacyChat Requiem</h2>
+        <p id="authSubtitle" class="text-xs text-[#949ba4] mt-1">Welcome back! Sign in to enter your workspace.</p>
+      </div>
+
+      <form id="authForm" onsubmit="event.preventDefault();" class="space-y-4">
+        <!-- Display Name (Signup mode only) -->
+        <div id="displayNameGroup" class="hidden">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-[#b5bac1] mb-2">Display Name</label>
+          <input type="text" id="authDisplayName" placeholder="e.g. Operative_One" class="w-full bg-[#1e1f22] text-[#dbdee1] border border-[#3f4147] focus:border-accent rounded p-2.5 text-sm focus:outline-none transition-colors" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-[#b5bac1] mb-2">Email Address</label>
+          <input type="email" id="authEmail" required placeholder="name@domain.com" class="w-full bg-[#1e1f22] text-[#dbdee1] border border-[#3f4147] focus:border-accent rounded p-2.5 text-sm focus:outline-none transition-colors" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-[#b5bac1] mb-2">Password</label>
+          <input type="password" id="authPassword" required placeholder="••••••••••••" class="w-full bg-[#1e1f22] text-[#dbdee1] border border-[#3f4147] focus:border-accent rounded p-2.5 text-sm focus:outline-none transition-colors" />
+        </div>
+
+        <button id="authSubmitBtn" type="submit" class="w-full py-2.5 bg-accent bg-accent-hover text-white font-semibold text-sm rounded transition-colors shadow-md mt-2 flex items-center justify-center gap-2">
+          <span>Log In</span>
+        </button>
+      </form>
+
+      <div class="mt-4 pt-4 border-t border-[#3f4147] text-center text-xs text-[#949ba4]">
+        <span id="authTogglePrompt">Need an account?</span>
+        <button id="authToggleBtn" class="text-accent hover:underline font-semibold ml-1">Register</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. PENDING CLEARANCE SCREEN -->
+  <div id="pendingOverlay" class="fixed inset-0 z-50 bg-[#111214]/95 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-lg bg-[#2b2d31] rounded-2xl p-8 shadow-2xl border border-[#3f4147] text-center relative overflow-hidden">
+      <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#f0b232] via-purple-500 to-[#f0b232]"></div>
+
+      <div class="w-20 h-20 rounded-full bg-[#1e1f22] text-[#f0b232] flex items-center justify-center mx-auto mb-5 text-3xl pulse-lock border border-[#3f4147]">
+        <i class="fa-solid fa-user-lock"></i>
+      </div>
+
+      <div class="inline-flex items-center gap-2 bg-[#f0b232]/10 text-[#f0b232] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
+        <span class="w-2 h-2 rounded-full bg-[#f0b232] animate-ping"></span>
+        Account Pending Clearance
+      </div>
+
+      <h3 class="text-2xl font-extrabold text-[#f2f3f5] mb-2">Awaiting Administrator Clearance</h3>
+      <p class="text-xs text-[#949ba4] leading-relaxed max-w-md mx-auto mb-6">
+        Your account registration is recorded. An administrator must set your clearance status to approved before you can access channels, messaging, or customization options.
+      </p>
+
+      <div class="bg-[#1e1f22] rounded-xl p-4 text-left border border-[#35363c] space-y-2.5 mb-6">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-[#949ba4] font-medium">Username:</span>
+          <span id="pendingHandleDisplay" class="font-bold text-[#f2f3f5]">Operative</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-[#949ba4] font-medium">Email:</span>
+          <span id="pendingEmailDisplay" class="font-mono text-[11px] text-[#dbdee1]">user@domain.com</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-[#949ba4] font-medium">User UID:</span>
+          <div class="flex items-center gap-1.5">
+            <span id="pendingUidDisplay" class="font-mono text-[10px] text-accent bg-[#2b2d31] px-2 py-0.5 rounded truncate max-w-[140px]">resolving...</span>
+            <button id="btnCopyUid" class="text-[10px] bg-[#3f4147] hover:bg-accent text-white px-2 py-0.5 rounded transition-colors" title="Copy UID">
+              <i class="fa-solid fa-copy"></i> Copy
+            </button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between text-xs pt-2 border-t border-[#2e3035]">
+          <span class="text-[#949ba4] font-medium">Approval Status:</span>
+          <span class="text-[#f0b232] font-bold flex items-center gap-1.5 text-xs">
+            <i class="fa-solid fa-spinner animate-spin"></i> Listening for Access Approval...
+          </span>
+        </div>
+      </div>
+
+      <button id="btnCancelPending" class="text-xs text-[#f23f43] hover:underline font-semibold flex items-center justify-center gap-1.5 mx-auto">
+        <i class="fa-solid fa-right-from-bracket"></i> Sign out
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. MAIN APPLICATION UI -->
+  <div id="mainApp" class="flex-1 flex overflow-hidden hidden">
+
+    <!-- 3.1 LEFTMOST SERVER RAIL -->
+    <div class="w-[68px] bg-[#1e1f22] flex flex-col items-center py-3 gap-2 flex-shrink-0 z-20">
+      <div class="relative group">
+        <div id="homePill" class="server-pill top-3 h-10"></div>
+        <button id="btnServerHome" class="w-12 h-12 rounded-[16px] bg-accent text-white flex items-center justify-center text-xl transition-all duration-200 shadow-md">
+          <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6a3 3 0 0 1 3 3v2h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h1v-2a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v2h2v-2a1 1 0 0 0-1-1z"/>
+          </svg>
+        </button>
+        <div class="absolute left-[76px] top-2 bg-[#111214] text-xs font-semibold text-[#f2f3f5] px-3 py-1.5 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 discord-tooltip">
+          PrivacyChat Workspace
+        </div>
+      </div>
+
+      <div class="w-8 h-[2px] bg-[#35363c] rounded my-1"></div>
+
+      <div id="serverRailList" class="flex-1 w-full flex flex-col items-center gap-2 overflow-y-auto no-scrollbar">
+      </div>
+
+      <div class="relative group mt-auto">
+        <button id="btnOpenAddServer" class="w-12 h-12 rounded-[24px] hover:rounded-[16px] bg-[#313338] hover:bg-[#23a55a] text-[#23a55a] hover:text-white flex items-center justify-center text-lg transition-all duration-200 shadow-md">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+        <div class="absolute left-[76px] top-2 bg-[#111214] text-xs font-semibold text-[#f2f3f5] px-3 py-1.5 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 discord-tooltip">
+          Create or Join Workspace
+        </div>
+      </div>
+
+      <button id="mobileSidebarToggle" class="md:hidden w-10 h-10 rounded-full bg-[#2b2d31] text-[#949ba4] flex items-center justify-center hover:text-white mt-1">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+
+    <!-- 3.2 CHANNELS SIDEBAR -->
+    <div id="channelsSidebar" class="w-60 bg-[#2b2d31] flex flex-col flex-shrink-0 z-10 border-r border-[#1e1f22]">
+      <div class="h-12 border-b border-[#1f2023] px-4 flex items-center justify-between font-bold text-sm text-[#f2f3f5] shadow-sm hover:bg-[#35373c] cursor-pointer transition-colors relative group" id="serverHeaderBtn">
+        <span id="currentServerTitle" class="truncate font-extrabold">PrivacyChat Hub</span>
+        <i class="fa-solid fa-chevron-down text-xs text-[#949ba4]"></i>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+        <div>
+          <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#949ba4] px-2 mb-1">
+            <span class="flex items-center gap-1">
+              <i class="fa-solid fa-chevron-down text-[9px]"></i> Text Channels
+            </span>
+            <button id="btnAddChannel" class="hover:text-white p-1 rounded" title="Create Channel">
+              <i class="fa-solid fa-plus text-xs"></i>
+            </button>
+          </div>
+          <div id="channelList" class="space-y-0.5"></div>
+        </div>
+      </div>
+
+      <!-- USER PROFILE FOOTER -->
+      <div class="h-14 bg-[#232428] px-2 flex items-center justify-between border-t border-[#1e1f22]">
+        <div id="userFooterCard" class="flex items-center gap-2 p-1 hover:bg-[#35373c] rounded-md cursor-pointer transition-colors max-w-[130px] truncate">
+          <div class="relative flex-shrink-0">
+            <div id="userFooterAvatar" class="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs bg-cover bg-center overflow-hidden">
+              ?
+            </div>
+            <span id="userFooterStatusDot" class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#23a55a] border-2 border-[#232428]"></span>
+          </div>
+          <div class="truncate">
+            <div id="userFooterName" class="text-xs font-bold text-[#f2f3f5] truncate">Operative</div>
+            <div id="userFooterStatusText" class="text-[10px] text-[#949ba4] truncate">Online</div>
+          </div>
+        </div>
+
+        <div class="flex items-center text-[#b5bac1] gap-0.5">
+          <button id="btnStatusMenu" class="p-1.5 hover:text-white hover:bg-[#35373c] rounded transition-colors" title="Status">
+            <i class="fa-solid fa-circle text-[10px] text-[#23a55a]" id="statusMenuIcon"></i>
+          </button>
+          <button id="btnOpenSettings" class="p-1.5 hover:text-white hover:bg-[#35373c] rounded transition-colors" title="User Settings">
+            <i class="fa-solid fa-gear text-xs"></i>
+          </button>
+          <button id="btnSignOutMain" class="p-1.5 hover:text-[#f23f43] hover:bg-[#35373c] rounded transition-colors" title="Sign Out">
+            <i class="fa-solid fa-right-from-bracket text-xs"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.3 MAIN CHAT AREA -->
+    <div class="flex-1 flex flex-col bg-[#313338] min-w-0">
+      <div class="h-12 border-b border-[#1f2023] px-4 flex items-center justify-between flex-shrink-0 bg-[#313338] shadow-sm">
+        <div class="flex items-center gap-2 truncate">
+          <i class="fa-solid fa-hashtag text-[#80848e] text-lg"></i>
+          <span id="headerChannelName" class="font-bold text-[#f2f3f5] text-sm">general</span>
+          <span class="text-xs text-[#3f4147]">|</span>
+          <span id="headerChannelDesc" class="text-xs text-[#949ba4] truncate hidden sm:inline">General workspace chat</span>
+        </div>
+
+        <div class="flex items-center gap-3 text-[#b5bac1] text-sm">
+          <button id="btnCopyInvite" class="text-xs bg-[#1e1f22] hover:bg-accent hover:text-white px-2.5 py-1 rounded text-[#dbdee1] flex items-center gap-1.5 font-semibold transition-colors" title="Copy Server Invite ID">
+            <i class="fa-solid fa-user-plus text-xs"></i> Invite
+          </button>
+          <button id="toggleMembersSidebarBtn" class="p-1.5 hover:text-white rounded transition-colors" title="Toggle Member List">
+            <i class="fa-solid fa-users"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="messagesFeed" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+
+      <div class="p-4 pt-0">
+        <div class="bg-[#383a40] rounded-lg p-2.5 flex flex-col gap-2">
+          <div id="attachmentPreview" class="hidden relative inline-block max-w-xs">
+            <img id="attachmentPreviewImg" src="" class="max-h-28 rounded border border-[#3f4147]" />
+            <button id="btnRemoveAttachment" class="absolute -top-2 -right-2 bg-[#f23f43] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="btnAttachImage" class="p-1.5 text-[#b5bac1] hover:text-white transition-colors" title="Attach Image URL">
+              <i class="fa-solid fa-circle-plus text-base"></i>
+            </button>
+
+            <textarea id="chatInput" rows="1" placeholder="Message #general" class="flex-1 bg-transparent text-sm text-[#dbdee1] placeholder-[#80848e] focus:outline-none resize-none max-h-36 py-1 font-sans"></textarea>
+
+            <div class="flex items-center gap-1.5 text-[#b5bac1]">
+              <button id="btnCodeFormat" class="p-1.5 hover:text-white transition-colors" title="Format Code Block">
+                <i class="fa-solid fa-code text-sm"></i>
+              </button>
+              <button id="btnEmoji" class="p-1.5 hover:text-[#f0b232] transition-colors" title="Insert Emoji">
+                <i class="fa-solid fa-face-smile text-base"></i>
+              </button>
+              <button id="btnSend" class="p-1.5 text-accent hover:opacity-80 transition-opacity" title="Send Message">
+                <i class="fa-solid fa-paper-plane text-base"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.4 MEMBER LIST -->
+    <div id="membersSidebar" class="w-60 bg-[#2b2d31] flex-shrink-0 border-l border-[#1e1f22] flex flex-col hidden lg:flex">
+      <div class="p-4 overflow-y-auto flex-1 space-y-4">
+        <div>
+          <div class="text-[11px] font-bold uppercase tracking-wider text-[#949ba4] mb-2">
+            ONLINE OPERATIVES — <span id="countOnline">0</span>
+          </div>
+          <div id="membersOnlineList" class="space-y-0.5"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- STATUS SELECTOR DROPDOWN -->
+  <div id="statusMenuDropdown" class="fixed bottom-16 left-52 z-50 bg-[#111214] border border-[#3f4147] rounded-lg shadow-2xl p-1.5 w-44 hidden">
+    <button data-status="online" class="status-option-btn w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#dbdee1] hover:bg-accent hover:text-white rounded transition-colors">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#23a55a]"></span> Online
+    </button>
+    <button data-status="idle" class="status-option-btn w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#dbdee1] hover:bg-accent hover:text-white rounded transition-colors">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#f0b232]"></span> Idle
+    </button>
+    <button data-status="dnd" class="status-option-btn w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#dbdee1] hover:bg-accent hover:text-white rounded transition-colors">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#f23f43]"></span> Do Not Disturb
+    </button>
+    <button data-status="invisible" class="status-option-btn w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#dbdee1] hover:bg-accent hover:text-white rounded transition-colors">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#80848e]"></span> Invisible
+    </button>
+  </div>
+
+  <!-- CREATE / JOIN SERVER MODAL -->
+  <div id="addServerModal" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-md bg-[#313338] rounded-2xl border border-[#3f4147] p-6 shadow-2xl space-y-5">
+      <div class="flex justify-between items-center border-b border-[#3f4147] pb-3">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-server text-accent"></i> Workspace Operations
+        </h3>
+        <button id="closeAddServerBtn" class="text-[#949ba4] hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="flex bg-[#1e1f22] p-1 rounded-lg text-xs font-bold">
+        <button id="tabCreateServerBtn" class="flex-1 py-2 rounded-md bg-accent text-white">Create Workspace</button>
+        <button id="tabJoinServerBtn" class="flex-1 py-2 rounded-md text-[#949ba4] hover:text-white">Join Workspace</button>
+      </div>
+
+      <div id="createServerSection" class="space-y-4">
+        <div>
+          <label class="block text-[11px] font-bold uppercase text-[#b5bac1] mb-1">Workspace Name</label>
+          <input type="text" id="newServerName" placeholder="e.g. Secret Squad" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:border-accent focus:outline-none text-xs" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase text-[#b5bac1] mb-1">Workspace Icon Emoji or Image URL</label>
+          <input type="text" id="newServerIcon" placeholder="e.g. 🛡️ or https://image.url/icon.png" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:border-accent focus:outline-none text-xs" />
+        </div>
+        <button id="btnSubmitCreateServer" class="w-full py-2.5 bg-accent bg-accent-hover text-white rounded font-bold text-xs shadow-md">Create Workspace</button>
+      </div>
+
+      <div id="joinServerSection" class="space-y-4 hidden">
+        <div>
+          <label class="block text-[11px] font-bold uppercase text-[#b5bac1] mb-1">Workspace Invite ID</label>
+          <input type="text" id="joinServerIdInput" placeholder="Paste server ID..." class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:border-accent focus:outline-none text-xs font-mono" />
+        </div>
+        <button id="btnSubmitJoinServer" class="w-full py-2.5 bg-[#23a55a] hover:bg-[#1f924e] text-white rounded font-bold text-xs shadow-md">Join Workspace</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD CHANNEL MODAL -->
+  <div id="addChannelModal" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-sm bg-[#313338] rounded-xl border border-[#3f4147] p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-[#3f4147] pb-2">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fa-solid fa-hashtag text-accent"></i> Create Text Channel</h3>
+        <button id="closeAddChannelBtn" class="text-[#949ba4] hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-[#b5bac1] mb-1">Channel Name</label>
+        <input type="text" id="newChannelNameInput" placeholder="e.g. general-talk" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:border-accent focus:outline-none text-xs" />
+      </div>
+
+      <button id="btnSubmitAddChannel" class="w-full py-2.5 bg-accent bg-accent-hover text-white rounded font-bold text-xs shadow-md">Create Channel</button>
+    </div>
+  </div>
+
+  <!-- MAX USER PROFILE CUSTOMIZATION MODAL WITH DICEBEAR & ACCENT COLOR -->
+  <div id="settingsModal" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-xl bg-[#313338] rounded-2xl border border-[#3f4147] overflow-hidden shadow-2xl flex flex-col md:flex-row h-[580px]">
+      
+      <div class="w-full md:w-48 bg-[#2b2d31] p-4 border-r border-[#1e1f22] flex flex-col gap-1">
+        <div class="text-[11px] font-bold uppercase text-[#949ba4] px-2 mb-2">User Settings</div>
+        <button id="tabProfileBtn" class="w-full text-left px-3 py-2 rounded text-xs font-semibold bg-[#35373c] text-white">User Profile</button>
+        <div class="flex-1"></div>
+        <button id="btnSettingsSignOut" class="w-full text-left px-3 py-2 rounded text-xs font-semibold text-[#f23f43] hover:bg-[#f23f43]/10 flex items-center gap-2">
+          <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+        </button>
+      </div>
+
+      <div class="flex-1 p-6 overflow-y-auto space-y-5">
+        <div class="flex justify-between items-center">
+          <h3 class="text-base font-bold text-white">Customize User Profile</h3>
+          <button id="closeSettingsBtn" class="text-[#949ba4] hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+
+        <!-- Live Preview Card -->
+        <div class="bg-[#232428] rounded-xl overflow-hidden border border-[#3f4147] shadow-md">
+          <div id="previewBanner" class="h-16 bg-gradient-to-r from-purple-600 to-indigo-800 bg-cover bg-center"></div>
+          <div class="px-4 relative -top-6 flex items-end justify-between">
+            <div id="previewAvatar" class="w-16 h-16 rounded-full bg-accent border-4 border-[#232428] text-white font-bold text-xl flex items-center justify-center bg-cover bg-center shadow-lg overflow-hidden">
+              ?
+            </div>
+          </div>
+          <div class="px-4 pb-4 -mt-4">
+            <div id="previewName" class="text-base font-bold text-white">Display Name</div>
+            <div id="previewTag" class="text-xs text-[#949ba4] font-mono">@username#0001</div>
+            <div id="previewNote" class="text-xs text-[#23a55a] font-medium mt-1">Playing Games</div>
+            <div id="previewBio" class="text-xs text-[#dbdee1] mt-2 pt-2 border-t border-[#3f4147]">About me snippet...</div>
+          </div>
+        </div>
+
+        <div class="space-y-4 text-xs">
+          <!-- ACCENT COLOR PICKER -->
+          <div class="bg-[#2b2d31] p-3 rounded-lg border border-[#3f4147]">
+            <label class="block text-[#b5bac1] font-bold mb-1.5">Purple Accent Color (Saved to Account)</label>
+            <div class="flex items-center gap-3">
+              <input type="color" id="settingsAccentColor" value="#7c5cff" class="w-10 h-10 rounded border-0 bg-transparent cursor-pointer" />
+              <div class="flex gap-2">
+                <button type="button" class="preset-color-btn w-6 h-6 rounded-full bg-[#7c5cff] border border-white/20" data-color="#7c5cff"></button>
+                <button type="button" class="preset-color-btn w-6 h-6 rounded-full bg-[#5b34ea] border border-white/20" data-color="#5b34ea"></button>
+                <button type="button" class="preset-color-btn w-6 h-6 rounded-full bg-[#9d4edd] border border-white/20" data-color="#9d4edd"></button>
+                <button type="button" class="preset-color-btn w-6 h-6 rounded-full bg-[#6c5ce7] border border-white/20" data-color="#6c5ce7"></button>
+                <button type="button" class="preset-color-btn w-6 h-6 rounded-full bg-[#8b5cf6] border border-white/20" data-color="#8b5cf6"></button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">Display Name</label>
+            <input type="text" id="settingsDisplayName" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none" />
+          </div>
+
+          <!-- DICEBEAR STYLE SELECTOR -->
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">DiceBear Avatar Generator Style</label>
+            <select id="settingsDicebearStyle" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none">
+              <option value="bottts">bottts (Robots)</option>
+              <option value="identicon">identicon (Abstract)</option>
+              <option value="thumbs">thumbs (Thumbs Up)</option>
+              <option value="fun-emoji">fun-emoji (Emojis)</option>
+              <option value="personas">personas (People)</option>
+              <option value="micah">micah (Minimalist)</option>
+              <option value="lorelei">lorelei (Anime/Artistic)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">Custom Avatar Image URL (Overrides DiceBear)</label>
+            <input type="text" id="settingsAvatarUrl" placeholder="Leave empty to use DiceBear auto avatar" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">Profile Banner Image URL</label>
+            <input type="text" id="settingsBannerUrl" placeholder="https://domain.com/banner.png" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">Custom Status Note</label>
+            <input type="text" id="settingsStatusNote" placeholder="e.g. Coding in PrivacyChat Requiem" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">About Me / Bio</label>
+            <textarea id="settingsBio" rows="2" placeholder="Tell the server about yourself..." class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none resize-none"></textarea>
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button id="saveSettingsBtn" class="bg-accent bg-accent-hover text-white px-5 py-2.5 rounded font-semibold text-xs shadow-md">Save Changes</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- USER POPOUT MODAL -->
+  <div id="userProfileModal" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-xs bg-[#232428] rounded-2xl overflow-hidden shadow-2xl border border-[#3f4147] relative">
+      <div id="popoutBanner" class="h-24 bg-gradient-to-r from-purple-600 to-indigo-800 bg-cover bg-center relative">
+        <button id="closeProfileModalBtn" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/40 text-white hover:bg-black/60 flex items-center justify-center text-xs">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="px-4 relative -top-10 mb-0">
+        <div class="relative inline-block">
+          <div id="popoutAvatar" class="w-20 h-20 rounded-full bg-accent text-white font-bold text-2xl flex items-center justify-center border-4 border-[#232428] bg-cover bg-center overflow-hidden">
+            ?
+          </div>
+          <span id="popoutStatusDot" class="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#23a55a] border-4 border-[#232428]"></span>
+        </div>
+      </div>
+
+      <div class="px-4 pb-5 -mt-6">
+        <div id="popoutDisplayName" class="text-lg font-bold text-white">Operative</div>
+        <div id="popoutEmail" class="text-xs text-[#949ba4] font-mono mb-3">user@domain.com</div>
+
+        <div class="w-full h-[1px] bg-[#3f4147] my-3"></div>
+
+        <div class="space-y-3">
+          <div>
+            <div class="text-[10px] font-bold uppercase text-[#b5bac1] mb-1">Status Note</div>
+            <div id="popoutStatusNote" class="text-xs text-[#dbdee1]">Online</div>
+          </div>
+          <div>
+            <div class="text-[10px] font-bold uppercase text-[#b5bac1] mb-1">About Me</div>
+            <div id="popoutBio" class="text-xs text-[#dbdee1] leading-relaxed">No bio provided.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyClRzYRn4d4iXLLKQGRVntev3LQwTfuDLQ",
+      authDomain: "redroom-9f4a0.firebaseapp.com",
+      databaseURL: "https://redroom-9f4a0-default-rtdb.firebaseio.com",
+      projectId: "redroom-9f4a0",
+      storageBucket: "redroom-9f4a0.firebasestorage.app",
+      messagingSenderId: "646291907356",
+      appId: "1:646291907356:web:29f88d37dbed10775790d9",
+      measurementId: "G-5QF7S4HR60"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((err) => console.error(err));
+
+    let currentUser = null;
+    let currentUserProfile = {
+      displayName: 'Operative',
+      color: '#7c5cff',
+      accentColor: '#7c5cff',
+      dicebearStyle: 'bottts',
+      avatarUrl: '',
+      bannerUrl: '',
+      statusNote: 'Online',
+      statusState: 'online',
+      bio: '',
+      approved: false
+    };
+
+    let activeServerId = 'home';
+    let activeChannelId = 'general';
+    let attachedImageUrl = null;
+    let approvalListenerRef = null;
+    let messagesListenerRef = null;
+    let isSignupMode = false;
+
+    // DICEBEAR AVATAR HELPER
+    function getDiceBearAvatar(seed, style = 'bottts') {
+      const cleanSeed = encodeURIComponent(seed || 'operative');
+      return `https://api.dicebear.com/7.x/${style}/svg?seed=${cleanSeed}`;
+    }
+
+    // ACCENT COLOR HELPER
+    function applyAccentColor(hexColor) {
+      if (!hexColor) hexColor = '#7c5cff';
+      document.documentElement.style.setProperty('--accent-color', hexColor);
+      document.documentElement.style.setProperty('--accent-hover', adjustColorBrightness(hexColor, -20));
+      document.documentElement.style.setProperty('--accent-light', hexColor + '26');
+    }
+
+    function adjustColorBrightness(hex, percent) {
+      let num = parseInt(hex.replace('#',''), 16),
+          amt = Math.round(2.55 * percent),
+          R = (num >> 16) + amt,
+          G = (num >> 8 & 0x00FF) + amt,
+          B = (num & 0x0000FF) + amt;
+      return '#' + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
+    }
+
+    // Preset color button bindings
+    document.querySelectorAll('.preset-color-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const color = e.target.dataset.color;
+        document.getElementById('settingsAccentColor').value = color;
+        applyAccentColor(color);
+      });
+    });
+
+    document.getElementById('settingsAccentColor').addEventListener('input', (e) => {
+      applyAccentColor(e.target.value);
+    });
+
+    // Web Audio Chimes
+    function playAudioTone(freq, type = 'sine', duration = 0.12) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playMessageChime() {
+      playAudioTone(587.33, 'sine', 0.1);
+      setTimeout(() => playAudioTone(880, 'sine', 0.15), 80);
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bgColor = type === 'error' ? 'bg-[#f23f43]' : type === 'success' ? 'bg-[#23a55a]' : 'bg-accent';
+
+      toast.className = `${bgColor} text-white text-xs font-semibold px-4 py-2.5 rounded shadow-xl flex items-center gap-2 pointer-events-auto transition-all duration-300 transform translate-x-5 opacity-0`;
+      toast.innerHTML = `<i class="fa-solid fa-shield-halved text-sm"></i><span>${escapeHtml(message)}</span>`;
+
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.remove('translate-x-5', 'opacity-0'), 10);
+      setTimeout(() => {
+        toast.classList.add('translate-x-5', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Auth & Gatekeeper
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById('authOverlay').classList.add('hidden');
+        setupGatekeeperListener(user);
+      } else {
+        currentUser = null;
+        document.getElementById('authOverlay').classList.remove('hidden');
+        document.getElementById('pendingOverlay').classList.add('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
+      }
+    });
+
+    function setupGatekeeperListener(user) {
+      const userRef = db.ref(`users/${user.uid}`);
+      document.getElementById('pendingEmailDisplay').innerText = user.email || 'N/A';
+      document.getElementById('pendingUidDisplay').innerText = user.uid;
+
+      if (approvalListenerRef) userRef.off('value', approvalListenerRef);
+
+      approvalListenerRef = userRef.on('value', (snapshot) => {
+        const val = snapshot.val();
+
+        if (!val) {
+          userRef.set({
+            displayName: user.email ? user.email.split('@')[0] : 'Operative',
+            email: user.email,
+            accentColor: '#7c5cff',
+            dicebearStyle: 'bottts',
+            approved: false,
+            status: 'pending'
+          });
+          return;
+        }
+
+        currentUserProfile = { ...currentUserProfile, ...val };
+        applyAccentColor(currentUserProfile.accentColor || '#7c5cff');
+        document.getElementById('pendingHandleDisplay').innerText = currentUserProfile.displayName || 'Operative';
+
+        const isApproved = val.approved === true || val.status === 'approved';
+
+        if (isApproved) {
+          document.getElementById('pendingOverlay').classList.add('hidden');
+          document.getElementById('mainApp').classList.remove('hidden');
+
+          const presenceRef = db.ref(`presence/${user.uid}`);
+          presenceRef.onDisconnect().remove();
+          presenceRef.set({
+            displayName: currentUserProfile.displayName,
+            email: user.email,
+            accentColor: currentUserProfile.accentColor || '#7c5cff',
+            dicebearStyle: currentUserProfile.dicebearStyle || 'bottts',
+            avatarUrl: currentUserProfile.avatarUrl || '',
+            bannerUrl: currentUserProfile.bannerUrl || '',
+            statusNote: currentUserProfile.statusNote || 'Online',
+            statusState: currentUserProfile.statusState || 'online',
+            bio: currentUserProfile.bio || '',
+            approved: true
+          });
+
+          initMainApp();
+        } else {
+          document.getElementById('mainApp').classList.add('hidden');
+          document.getElementById('pendingOverlay').classList.remove('hidden');
+          db.ref(`presence/${user.uid}`).remove();
+        }
+      });
+    }
+
+    function updateUserProfileDisplay() {
+      document.getElementById('userFooterName').innerText = currentUserProfile.displayName;
+      document.getElementById('userFooterStatusText').innerText = currentUserProfile.statusNote || 'Online';
+      
+      const avatarEl = document.getElementById('userFooterAvatar');
+      const avatarSrc = currentUserProfile.avatarUrl || getDiceBearAvatar(currentUser.uid, currentUserProfile.dicebearStyle || 'bottts');
+      avatarEl.style.backgroundImage = `url('${avatarSrc}')`;
+      avatarEl.innerText = '';
+
+      updateStatusDotUI(currentUserProfile.statusState || 'online');
+    }
+
+    // Message Rendering Update for DiceBear
+    function renderMessageNode(msg, serverId, channelId) {
+      const isOwner = currentUser && currentUser.uid === msg.senderUid;
+      const div = document.createElement('div');
+      div.className = "group relative flex gap-4 px-2 py-1 hover:bg-[#2e3035] rounded transition-colors";
+
+      const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+      const avatarSrc = msg.senderAvatar || getDiceBearAvatar(msg.senderUid, msg.dicebearStyle || 'bottts');
+      let avatarHtml = `<div class="w-10 h-10 rounded-full bg-cover bg-center flex-shrink-0 cursor-pointer user-popout-trigger overflow-hidden border border-[#3f4147]" style="background-image: url('${avatarSrc}')"></div>`;
+
+      let attachmentHtml = '';
+      if (msg.imageUrl) {
+        attachmentHtml = `<div class="mt-2"><img src="${escapeHtml(msg.imageUrl)}" class="max-h-60 rounded-lg border border-[#3f4147] object-cover" /></div>`;
+      }
+
+      div.innerHTML = `
+        ${avatarHtml}
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold text-white hover:underline cursor-pointer user-popout-trigger">${escapeHtml(msg.senderName || 'Operative')}</span>
+            <span class="text-[10px] text-[#949ba4]">${timeStr}</span>
+          </div>
+          <div class="text-xs text-[#dbdee1] mt-1 whitespace-pre-wrap leading-relaxed">${formatMessageContent(msg.text)}</div>
+          ${attachmentHtml}
+        </div>
+
+        <div class="absolute right-3 -top-3 hidden group-hover:flex items-center bg-[#2b2d31] border border-[#3f4147] rounded-md shadow-lg p-1 text-[#b5bac1] text-xs gap-1">
+          ${isOwner ? `<button class="hover:text-[#f23f43] p-1 msg-del-btn" title="Delete Message"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+        </div>
+      `;
+
+      div.querySelectorAll('.user-popout-trigger').forEach(el => {
+        el.addEventListener('click', () => {
+          openUserProfilePopout(msg.senderUid, msg.senderName, msg.senderEmail, avatarSrc, msg.senderBanner, msg.statusNote, msg.bio);
+        });
+      });
+
+      const delBtn = div.querySelector('.msg-del-btn');
+      if (delBtn) {
+        delBtn.addEventListener('click', async () => {
+          await db.ref(`servers/${serverId}/messages/${channelId}/${msg.id}`).remove();
+        });
+      }
+
+      return div;
+    }
+
+    async function sendMessage() {
+      if (!currentUserProfile.approved && currentUserProfile.status !== 'approved') return;
+
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+
+      if ((!text && !attachedImageUrl) || !currentUser) return;
+
+      input.value = '';
+
+      const msgObj = {
+        senderUid: currentUser.uid,
+        senderName: currentUserProfile.displayName,
+        senderEmail: currentUser.email,
+        dicebearStyle: currentUserProfile.dicebearStyle || 'bottts',
+        senderAvatar: currentUserProfile.avatarUrl || '',
+        senderBanner: currentUserProfile.bannerUrl || '',
+        statusNote: currentUserProfile.statusNote,
+        bio: currentUserProfile.bio || '',
+        text: text,
+        imageUrl: attachedImageUrl || '',
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      };
+
+      attachedImageUrl = null;
+      document.getElementById('attachmentPreview').classList.add('hidden');
+
+      await db.ref(`servers/${activeServerId}/messages/${activeChannelId}`).push(msgObj);
+      playMessageChime();
+    }
+
+    // Settings Save with Accent & DiceBear
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+      const dName = document.getElementById('settingsDisplayName').value.trim();
+      if (!dName) return;
+
+      currentUserProfile.displayName = dName;
+      currentUserProfile.accentColor = document.getElementById('settingsAccentColor').value;
+      currentUserProfile.dicebearStyle = document.getElementById('settingsDicebearStyle').value;
+      currentUserProfile.avatarUrl = document.getElementById('settingsAvatarUrl').value.trim();
+      currentUserProfile.bannerUrl = document.getElementById('settingsBannerUrl').value.trim();
+      currentUserProfile.statusNote = document.getElementById('settingsStatusNote').value.trim();
+      currentUserProfile.bio = document.getElementById('settingsBio').value.trim();
+
+      applyAccentColor(currentUserProfile.accentColor);
+      updateUserProfileDisplay();
+
+      if (currentUser) {
+        await db.ref(`users/${currentUser.uid}`).update(currentUserProfile);
+        await db.ref(`presence/${currentUser.uid}`).update(currentUserProfile);
+      }
+
+      document.getElementById('settingsModal').classList.add('hidden');
+      showToast("Settings & Accent Color Saved!", "success");
+    });
+
+    document.getElementById('btnCopyInvite').addEventListener('click', () => {
+      copyToClipboard(activeServerId);
+      showToast(`Server Invite Code (${activeServerId}) copied!`, "success");
+    });
+
+    function copyToClipboard(text) {
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+
+    // Auth Toggle
+    const authToggleBtn = document.getElementById('authToggleBtn');
+    authToggleBtn.addEventListener('click', () => {
+      isSignupMode = !isSignupMode;
+      document.getElementById('displayNameGroup').classList.toggle('hidden', !isSignupMode);
+      document.getElementById('authSubtitle').innerText = isSignupMode ? "Create an account to request access." : "Welcome back! Sign in to enter your servers.";
+      document.getElementById('authSubmitBtn').querySelector('span').innerText = isSignupMode ? "Register Account" : "Log In";
+      document.getElementById('authTogglePrompt').innerText = isSignupMode ? "Already have an account?" : "Need an account?";
+      authToggleBtn.innerText = isSignupMode ? "Log In" : "Register";
+    });
+
+    // Auth Submit
+    document.getElementById('authForm').addEventListener('submit', async () => {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value.trim();
+      const displayName = document.getElementById('authDisplayName').value.trim() || 'Operative';
+
+      if (!email || !password) return;
+
+      try {
+        if (isSignupMode) {
+          const userCred = await auth.createUserWithEmailAndPassword(email, password);
+          const uid = userCred.user.uid;
+
+          const newUserRecord = {
+            displayName: displayName,
+            email: email,
+            color: '#5865f2',
+            avatarUrl: '',
+            bannerUrl: '',
+            statusNote: 'Online',
+            statusState: 'online',
+            bio: 'Operative in PrivacyChat Requiem',
+            approved: false,
+            status: 'pending',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+          };
+
+          await db.ref(`users/${uid}`).set(newUserRecord);
+          showToast("Registration submitted!", "success");
+        } else {
+          await auth.signInWithEmailAndPassword(email, password);
+          showToast("Logged in successfully!", "success");
+        }
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    });
+
+    // AUTH STATE & GATEKEEPER LISTENER
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById('authOverlay').classList.add('hidden');
+        setupGatekeeperListener(user);
+      } else {
+        currentUser = null;
+        document.getElementById('authOverlay').classList.remove('hidden');
+        document.getElementById('pendingOverlay').classList.add('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
+      }
+    });
+
+    function setupGatekeeperListener(user) {
+      const userRef = db.ref(`users/${user.uid}`);
+      document.getElementById('pendingEmailDisplay').innerText = user.email || 'N/A';
+      document.getElementById('pendingUidDisplay').innerText = user.uid;
+
+      if (approvalListenerRef) userRef.off('value', approvalListenerRef);
+
+      approvalListenerRef = userRef.on('value', (snapshot) => {
+        const val = snapshot.val();
+
+        if (!val) {
+          userRef.set({
+            displayName: user.email ? user.email.split('@')[0] : 'Operative',
+            email: user.email,
+            approved: false,
+            status: 'pending'
+          });
+          return;
+        }
+
+        currentUserProfile = { ...currentUserProfile, ...val };
+        document.getElementById('pendingHandleDisplay').innerText = currentUserProfile.displayName || 'Operative';
+
+        // ACCEPTANCE GATE: approved === true OR status === "approved"
+        const isApproved = val.approved === true || val.status === 'approved';
+
+        if (isApproved) {
+          document.getElementById('pendingOverlay').classList.add('hidden');
+          document.getElementById('mainApp').classList.remove('hidden');
+
+          // Realtime Presence Record
+          const presenceRef = db.ref(`presence/${user.uid}`);
+          presenceRef.onDisconnect().remove();
+          presenceRef.set({
+            displayName: currentUserProfile.displayName,
+            email: user.email,
+            color: currentUserProfile.color || '#5865f2',
+            avatarUrl: currentUserProfile.avatarUrl || '',
+            bannerUrl: currentUserProfile.bannerUrl || '',
+            statusNote: currentUserProfile.statusNote || 'Online',
+            statusState: currentUserProfile.statusState || 'online',
+            bio: currentUserProfile.bio || '',
+            approved: true
+          });
+
+          initMainApp();
+        } else {
+          document.getElementById('mainApp').classList.add('hidden');
+          document.getElementById('pendingOverlay').classList.remove('hidden');
+          db.ref(`presence/${user.uid}`).remove();
+        }
+      });
+    }
+
+    function initMainApp() {
+      updateUserProfileDisplay();
+      listenUserServers();
+      listenPresence();
+    }
+
+    function updateUserProfileDisplay() {
+      document.getElementById('userFooterName').innerText = currentUserProfile.displayName;
+      document.getElementById('userFooterStatusText').innerText = currentUserProfile.statusNote || 'Online';
+      
+      const avatarEl = document.getElementById('userFooterAvatar');
+      if (currentUserProfile.avatarUrl) {
+        avatarEl.style.backgroundImage = `url('${currentUserProfile.avatarUrl}')`;
+        avatarEl.innerText = '';
+      } else {
+        avatarEl.style.backgroundImage = 'none';
+        avatarEl.innerText = (currentUserProfile.displayName || 'O').charAt(0).toUpperCase();
+        avatarEl.style.backgroundColor = currentUserProfile.color || '#5865f2';
+      }
+
+      updateStatusDotUI(currentUserProfile.statusState || 'online');
+    }
+
+    function updateStatusDotUI(status) {
+      currentUserProfile.statusState = status;
+      const dot = document.getElementById('userFooterStatusDot');
+      const icon = document.getElementById('statusMenuIcon');
+
+      const colorMap = {
+        online: 'bg-[#23a55a] text-[#23a55a]',
+        idle: 'bg-[#f0b232] text-[#f0b232]',
+        dnd: 'bg-[#f23f43] text-[#f23f43]',
+        invisible: 'bg-[#80848e] text-[#80848e]'
+      };
+
+      dot.className = `absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#232428] ${colorMap[status].split(' ')[0]}`;
+      icon.className = `fa-solid fa-circle text-[10px] ${colorMap[status].split(' ')[1]}`;
+
+      if (currentUser) {
+        db.ref(`users/${currentUser.uid}`).update({ statusState: status });
+        db.ref(`presence/${currentUser.uid}`).update({ statusState: status });
+      }
+    }
+
+    // SERVER MANAGEMENT & REALTIME LISTENERS
+    function listenUserServers() {
+      db.ref('servers').on('value', (snapshot) => {
+        const allServers = snapshot.val() || {};
+        const container = document.getElementById('serverRailList');
+        container.innerHTML = '';
+
+        // If no servers exist yet, create default PrivacyChat Hub
+        if (Object.keys(allServers).length === 0) {
+          createDefaultServer();
+          return;
+        }
+
+        userServers = allServers;
+
+        Object.entries(allServers).forEach(([id, srv]) => {
+          const isSelected = activeServerId === id;
+
+          const item = document.createElement('div');
+          item.className = "relative group flex items-center justify-center w-full";
+
+          const pill = document.createElement('div');
+          pill.className = `server-pill top-3 ${isSelected ? 'h-10 opacity-100' : 'h-5 opacity-0 group-hover:opacity-100'}`;
+
+          const btn = document.createElement('button');
+          btn.className = `w-12 h-12 rounded-[24px] hover:rounded-[16px] transition-all duration-200 flex items-center justify-center font-bold text-white shadow-md bg-cover bg-center ${
+            isSelected ? 'rounded-[16px] bg-[#5865f2]' : 'bg-[#313338] hover:bg-[#5865f2]'
+          }`;
+
+          if (srv.iconUrl && srv.iconUrl.startsWith('http')) {
+            btn.style.backgroundImage = `url('${srv.iconUrl}')`;
+            btn.innerText = '';
+          } else {
+            btn.innerText = srv.iconUrl || srv.name.charAt(0).toUpperCase();
+          }
+
+          btn.addEventListener('click', () => {
+            activeServerId = id;
+            document.getElementById('homePill').classList.add('opacity-0');
+            listenUserServers();
+            loadServerChannels(id, srv);
+          });
+
+          const tooltip = document.createElement('div');
+          tooltip.className = "absolute left-[76px] top-2 bg-[#111214] text-xs font-semibold text-[#f2f3f5] px-3 py-1.5 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 discord-tooltip";
+          tooltip.innerText = srv.name;
+
+          item.appendChild(pill);
+          item.appendChild(btn);
+          item.appendChild(tooltip);
+          container.appendChild(item);
+        });
+
+        if (activeServerId !== 'home' && userServers[activeServerId]) {
+          loadServerChannels(activeServerId, userServers[activeServerId]);
+        } else {
+          // Default load first available server
+          const firstKey = Object.keys(userServers)[0];
+          if (firstKey) {
+            activeServerId = firstKey;
+            loadServerChannels(firstKey, userServers[firstKey]);
+          }
+        }
+      });
+    }
+
+    async function createDefaultServer() {
+      const defaultRef = db.ref('servers').push();
+      await defaultRef.set({
+        name: 'PrivacyChat Hub',
+        iconUrl: '🛡️',
+        ownerUid: 'system',
+        channels: {
+          'general': { name: 'general', desc: 'General chatter lounge' },
+          'announcements': { name: 'announcements', desc: 'System updates' }
+        }
+      });
+    }
+
+    function loadServerChannels(serverId, serverData) {
+      document.getElementById('currentServerTitle').innerText = serverData.name || 'Server';
+      const container = document.getElementById('channelList');
+      container.innerHTML = '';
+
+      const channels = serverData.channels || { 'general': { name: 'general', desc: 'General chat' } };
+
+      if (!channels[activeChannelId]) {
+        activeChannelId = Object.keys(channels)[0] || 'general';
+      }
+
+      Object.entries(channels).forEach(([chId, ch]) => {
+        const isActive = chId === activeChannelId;
+        const item = document.createElement('div');
+        item.className = `flex items-center justify-between px-2 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${
+          isActive ? 'bg-[#35373c] text-white' : 'text-[#949ba4] hover:bg-[#35373c]/50 hover:text-[#dbdee1]'
+        }`;
+        item.innerHTML = `
+          <span class="flex items-center gap-2 truncate">
+            <i class="fa-solid fa-hashtag text-sm text-[#80848e]"></i> ${ch.name}
+          </span>
+        `;
+        item.addEventListener('click', () => {
+          activeChannelId = chId;
+          document.getElementById('headerChannelName').innerText = ch.name;
+          document.getElementById('headerChannelDesc').innerText = ch.desc || 'Channel lounge';
+          loadServerChannels(serverId, serverData);
+          loadChannelMessages(serverId, chId);
+        });
+        container.appendChild(item);
+      });
+
+      const activeChObj = channels[activeChannelId] || { name: activeChannelId, desc: 'Channel lounge' };
+      document.getElementById('headerChannelName').innerText = activeChObj.name;
+      document.getElementById('headerChannelDesc').innerText = activeChObj.desc || '';
+
+      loadChannelMessages(serverId, activeChannelId);
+    }
+
+    // MESSAGES FEED & CHAT
+    function loadChannelMessages(serverId, channelId) {
+      if (!currentUser) return;
+
+      const feed = document.getElementById('messagesFeed');
+      feed.innerHTML = '<div class="text-center text-xs text-[#949ba4] py-8"><i class="fa-solid fa-spinner animate-spin"></i> Loading messages...</div>';
+
+      if (messagesListenerRef) {
+        db.ref(`servers/${serverId}/messages/${channelId}`).off('value', messagesListenerRef);
+      }
+
+      const msgRef = db.ref(`servers/${serverId}/messages/${channelId}`);
+      messagesListenerRef = msgRef.on('value', (snapshot) => {
+        feed.innerHTML = '';
+        const data = snapshot.val();
+
+        if (!data) {
+          feed.innerHTML = `
+            <div class="my-8 text-left space-y-2 px-2">
+              <div class="w-12 h-12 rounded-full bg-[#3f4147] text-white flex items-center justify-center text-2xl font-bold">#</div>
+              <h3 class="text-2xl font-bold text-white">Welcome to #${channelId}!</h3>
+              <p class="text-xs text-[#949ba4]">This is the start of the #${channelId} channel.</p>
+            </div>
+          `;
+          return;
+        }
+
+        const msgList = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+        msgList.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+        msgList.forEach(msg => {
+          feed.appendChild(renderMessageNode(msg, serverId, channelId));
+        });
+
+        feed.scrollTop = feed.scrollHeight;
+      });
+    }
+
+    function renderMessageNode(msg, serverId, channelId) {
+      const isOwner = currentUser && currentUser.uid === msg.senderUid;
+      const div = document.createElement('div');
+      div.className = "group relative flex gap-4 px-2 py-1 hover:bg-[#2e3035] rounded transition-colors";
+
+      const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+      let avatarHtml = `<div class="w-10 h-10 rounded-full text-white font-bold text-sm flex items-center justify-center flex-shrink-0 cursor-pointer user-popout-trigger" style="background-color: ${msg.senderColor || '#5865f2'}">${(msg.senderName || 'A').charAt(0).toUpperCase()}</div>`;
+      if (msg.senderAvatar) {
+        avatarHtml = `<div class="w-10 h-10 rounded-full bg-cover bg-center flex-shrink-0 cursor-pointer user-popout-trigger" style="background-image: url('${msg.senderAvatar}')"></div>`;
+      }
+
+      let attachmentHtml = '';
+      if (msg.imageUrl) {
+        attachmentHtml = `<div class="mt-2"><img src="${escapeHtml(msg.imageUrl)}" class="max-h-60 rounded-lg border border-[#3f4147] object-cover" /></div>`;
+      }
+
+      div.innerHTML = `
+        ${avatarHtml}
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold text-white hover:underline cursor-pointer user-popout-trigger">${escapeHtml(msg.senderName || 'Operative')}</span>
+            <span class="text-[10px] text-[#949ba4]">${timeStr}</span>
+          </div>
+          <div class="text-xs text-[#dbdee1] mt-1 whitespace-pre-wrap leading-relaxed">${formatMessageContent(msg.text)}</div>
+          ${attachmentHtml}
+        </div>
+
+        <div class="absolute right-3 -top-3 hidden group-hover:flex items-center bg-[#2b2d31] border border-[#3f4147] rounded-md shadow-lg p-1 text-[#b5bac1] text-xs gap-1">
+          ${isOwner ? `<button class="hover:text-[#f23f43] p-1 msg-del-btn" title="Delete Message"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+        </div>
+      `;
+
+      div.querySelectorAll('.user-popout-trigger').forEach(el => {
+        el.addEventListener('click', () => {
+          openUserProfilePopout(msg.senderUid, msg.senderName, msg.senderEmail, msg.senderAvatar, msg.senderBanner, msg.statusNote, msg.bio);
+        });
+      });
+
+      const delBtn = div.querySelector('.msg-del-btn');
+      if (delBtn) {
+        delBtn.addEventListener('click', async () => {
+          await db.ref(`servers/${serverId}/messages/${channelId}/${msg.id}`).remove();
+        });
+      }
+
+      return div;
+    }
+
+    function formatMessageContent(text) {
+      if (!text) return '';
+      let safe = escapeHtml(text);
+      safe = safe.replace(/```([\s\S]*?)```/g, '<pre class="bg-[#1e1f22] p-2 rounded text-[#23a55a] font-mono text-xs my-1 border border-[#3f4147] overflow-x-auto">$1</pre>');
+      safe = safe.replace(/`([^`]+)`/g, '<code class="bg-[#1e1f22] px-1 py-0.5 rounded text-[#f0b232] font-mono text-xs">$1</code>');
+      safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      return safe;
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[m]));
+    }
+
+    async function sendMessage() {
+      if (!currentUserProfile.approved && currentUserProfile.status !== 'approved') return;
+
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+
+      if ((!text && !attachedImageUrl) || !currentUser) return;
+
+      input.value = '';
+
+      const msgObj = {
+        senderUid: currentUser.uid,
+        senderName: currentUserProfile.displayName,
+        senderEmail: currentUser.email,
+        senderColor: currentUserProfile.color,
+        senderAvatar: currentUserProfile.avatarUrl || '',
+        senderBanner: currentUserProfile.bannerUrl || '',
+        statusNote: currentUserProfile.statusNote,
+        bio: currentUserProfile.bio || '',
+        text: text,
+        imageUrl: attachedImageUrl || '',
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      };
+
+      attachedImageUrl = null;
+      document.getElementById('attachmentPreview').classList.add('hidden');
+
+      await db.ref(`servers/${activeServerId}/messages/${activeChannelId}`).push(msgObj);
+      playMessageChime();
+    }
+
+    document.getElementById('btnSend').addEventListener('click', sendMessage);
+    document.getElementById('chatInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Attachment Button Prompt
+    document.getElementById('btnAttachImage').addEventListener('click', () => {
+      const url = prompt("Enter Image URL to attach:");
+      if (url && url.startsWith('http')) {
+        attachedImageUrl = url;
+        document.getElementById('attachmentPreviewImg').src = url;
+        document.getElementById('attachmentPreview').classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('btnRemoveAttachment').addEventListener('click', () => {
+      attachedImageUrl = null;
+      document.getElementById('attachmentPreview').classList.add('hidden');
+    });
+
+    // PRESENCE & MEMBER LIST
+    function listenPresence() {
+      db.ref('presence').on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        const container = document.getElementById('membersOnlineList');
+        container.innerHTML = '';
+
+        const onlineUsers = Object.entries(data)
+          .map(([uid, val]) => ({ uid, ...val }))
+          .filter(u => u.approved === true || u.status === 'approved');
+
+        document.getElementById('countOnline').innerText = onlineUsers.length;
+
+        const statusColorMap = {
+          online: 'bg-[#23a55a]',
+          idle: 'bg-[#f0b232]',
+          dnd: 'bg-[#f23f43]',
+          invisible: 'bg-[#80848e]'
+        };
+
+        onlineUsers.forEach(u => {
+          const item = document.createElement('div');
+          item.className = "flex items-center gap-2 px-2 py-1 rounded hover:bg-[#35373c] cursor-pointer transition-colors";
+
+          let avatarNode = `<div class="w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs flex-shrink-0" style="background-color: ${u.color || '#5865f2'}">${(u.displayName || 'O').charAt(0).toUpperCase()}</div>`;
+          if (u.avatarUrl) {
+            avatarNode = `<div class="w-8 h-8 rounded-full bg-cover bg-center flex-shrink-0" style="background-image: url('${u.avatarUrl}')"></div>`;
+          }
+
+          item.innerHTML = `
+            <div class="relative flex-shrink-0">
+              ${avatarNode}
+              <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#2b2d31] ${statusColorMap[u.statusState || 'online']}"></span>
+            </div>
+            <div class="truncate">
+              <div class="text-xs font-semibold text-[#dbdee1] truncate">${escapeHtml(u.displayName || 'Operative')}</div>
+              <div class="text-[10px] text-[#949ba4] truncate">${escapeHtml(u.statusNote || 'Online')}</div>
+            </div>
+          `;
+
+          item.addEventListener('click', () => {
+            openUserProfilePopout(u.uid, u.displayName, u.email, u.avatarUrl, u.bannerUrl, u.statusNote, u.bio);
+          });
+
+          container.appendChild(item);
+        });
+      });
+    }
+
+    function openUserProfilePopout(uid, name, email, avatarUrl, bannerUrl, statusNote, bio) {
+      document.getElementById('popoutDisplayName').innerText = name || 'Operative';
+      document.getElementById('popoutEmail').innerText = email || 'user@domain.com';
+      
+      const avatar = document.getElementById('popoutAvatar');
+      if (avatarUrl) {
+        avatar.style.backgroundImage = `url('${avatarUrl}')`;
+        avatar.innerText = '';
+      } else {
+        avatar.style.backgroundImage = 'none';
+        avatar.innerText = (name || 'O').charAt(0).toUpperCase();
+      }
+
+      const banner = document.getElementById('popoutBanner');
+      if (bannerUrl) {
+        banner.style.backgroundImage = `url('${bannerUrl}')`;
+      } else {
+        banner.style.backgroundImage = 'none';
+        banner.style.backgroundColor = '#5865f2';
+      }
+
+      document.getElementById('popoutStatusNote').innerText = statusNote || 'Approved Operative';
+      document.getElementById('popoutBio').innerText = bio || 'No bio provided.';
+
+      document.getElementById('userProfileModal').classList.remove('hidden');
+    }
+
+    document.getElementById('closeProfileModalBtn').addEventListener('click', () => {
+      document.getElementById('userProfileModal').classList.add('hidden');
+    });
+
+    // STATUS DROPDOWN MENU
+    document.getElementById('btnStatusMenu').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('statusMenuDropdown').classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('.status-option-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const st = e.currentTarget.dataset.status;
+        updateStatusDotUI(st);
+        document.getElementById('statusMenuDropdown').classList.add('hidden');
+      });
+    });
+
+    document.addEventListener('click', () => {
+      document.getElementById('statusMenuDropdown').classList.add('hidden');
+    });
+
+    // USER SETTINGS MODAL & PREVIEWS
+    document.getElementById('btnOpenSettings').addEventListener('click', () => {
+      document.getElementById('settingsDisplayName').value = currentUserProfile.displayName || '';
+      document.getElementById('settingsAvatarUrl').value = currentUserProfile.avatarUrl || '';
+      document.getElementById('settingsBannerUrl').value = currentUserProfile.bannerUrl || '';
+      document.getElementById('settingsStatusNote').value = currentUserProfile.statusNote || '';
+      document.getElementById('settingsBio').value = currentUserProfile.bio || '';
+
+      updateLiveProfilePreview();
+      document.getElementById('settingsModal').classList.remove('hidden');
+    });
+
+    function updateLiveProfilePreview() {
+      const dName = document.getElementById('settingsDisplayName').value || 'Display Name';
+      const avatarUrl = document.getElementById('settingsAvatarUrl').value;
+      const bannerUrl = document.getElementById('settingsBannerUrl').value;
+      const note = document.getElementById('settingsStatusNote').value || 'Status note';
+      const bio = document.getElementById('settingsBio').value || 'About me snippet...';
+
+      document.getElementById('previewName').innerText = dName;
+      document.getElementById('previewTag').innerText = `@${dName.toLowerCase().replace(/\s+/g, '')}#0001`;
+      document.getElementById('previewNote').innerText = note;
+      document.getElementById('previewBio').innerText = bio;
+
+      const pAvatar = document.getElementById('previewAvatar');
+      if (avatarUrl) {
+        pAvatar.style.backgroundImage = `url('${avatarUrl}')`;
+        pAvatar.innerText = '';
+      } else {
+        pAvatar.style.backgroundImage = 'none';
+        pAvatar.innerText = dName.charAt(0).toUpperCase();
+      }
+
+      const pBanner = document.getElementById('previewBanner');
+      if (bannerUrl) {
+        pBanner.style.backgroundImage = `url('${bannerUrl}')`;
+      } else {
+        pBanner.style.backgroundImage = 'none';
+        pBanner.style.backgroundColor = '#5865f2';
+      }
+    }
+
+    ['settingsDisplayName', 'settingsAvatarUrl', 'settingsBannerUrl', 'settingsStatusNote', 'settingsBio'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateLiveProfilePreview);
+    });
+
+    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+      document.getElementById('settingsModal').classList.add('hidden');
+    });
+
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+      const dName = document.getElementById('settingsDisplayName').value.trim();
+      if (!dName) return;
+
+      currentUserProfile.displayName = dName;
+      currentUserProfile.avatarUrl = document.getElementById('settingsAvatarUrl').value.trim();
+      currentUserProfile.bannerUrl = document.getElementById('settingsBannerUrl').value.trim();
+      currentUserProfile.statusNote = document.getElementById('settingsStatusNote').value.trim();
+      currentUserProfile.bio = document.getElementById('settingsBio').value.trim();
+
+      updateUserProfileDisplay();
+
+      if (currentUser) {
+        await db.ref(`users/${currentUser.uid}`).update(currentUserProfile);
+        await db.ref(`presence/${currentUser.uid}`).update(currentUserProfile);
+      }
+
+      document.getElementById('settingsModal').classList.add('hidden');
+      showToast("Profile Settings Saved!", "success");
+    });
+
+    // ADD / JOIN SERVER MODALS
+    document.getElementById('btnOpenAddServer').addEventListener('click', () => {
+      document.getElementById('addServerModal').classList.remove('hidden');
+    });
+
+    document.getElementById('closeAddServerBtn').addEventListener('click', () => {
+      document.getElementById('addServerModal').classList.add('hidden');
+    });
+
+    document.getElementById('tabCreateServerBtn').addEventListener('click', (e) => {
+      e.target.className = "flex-1 py-2 rounded-md bg-[#5865f2] text-white";
+      document.getElementById('tabJoinServerBtn').className = "flex-1 py-2 rounded-md text-[#949ba4] hover:text-white";
+      document.getElementById('createServerSection').classList.remove('hidden');
+      document.getElementById('joinServerSection').classList.add('hidden');
+    });
+
+    document.getElementById('tabJoinServerBtn').addEventListener('click', (e) => {
+      e.target.className = "flex-1 py-2 rounded-md bg-[#5865f2] text-white";
+      document.getElementById('tabCreateServerBtn').className = "flex-1 py-2 rounded-md text-[#949ba4] hover:text-white";
+      document.getElementById('joinServerSection').classList.remove('hidden');
+      document.getElementById('createServerSection').classList.add('hidden');
+    });
+
+    document.getElementById('btnSubmitCreateServer').addEventListener('click', async () => {
+      const name = document.getElementById('newServerName').value.trim();
+      const icon = document.getElementById('newServerIcon').value.trim() || '🛡️';
+
+      if (!name) return;
+
+      const newSrvRef = db.ref('servers').push();
+      await newSrvRef.set({
+        name: name,
+        iconUrl: icon,
+        ownerUid: currentUser.uid,
+        channels: {
+          'general': { name: 'general', desc: 'General discussion' },
+          'announcements': { name: 'announcements', desc: 'Updates & info' }
+        }
+      });
+
+      document.getElementById('addServerModal').classList.add('hidden');
+      showToast(`Server "${name}" Created!`, "success");
+    });
+
+    document.getElementById('btnSubmitJoinServer').addEventListener('click', async () => {
+      const srvId = document.getElementById('joinServerIdInput').value.trim();
+      if (!srvId) return;
+
+      const snap = await db.ref(`servers/${srvId}`).once('value');
+      if (snap.exists()) {
+        activeServerId = srvId;
+        listenUserServers();
+        document.getElementById('addServerModal').classList.add('hidden');
+        showToast("Joined server successfully!", "success");
+      } else {
+        showToast("Server ID not found!", "error");
+      }
+    });
+
+    // ADD CHANNEL MODAL
+    document.getElementById('btnAddChannel').addEventListener('click', () => {
+      document.getElementById('addChannelModal').classList.remove('hidden');
+    });
+
+    document.getElementById('closeAddChannelBtn').addEventListener('click', () => {
+      document.getElementById('addChannelModal').classList.add('hidden');
+    });
+
+    document.getElementById('btnSubmitAddChannel').addEventListener('click', async () => {
+      const chName = document.getElementById('newChannelNameInput').value.trim().toLowerCase().replace(/\s+/g, '-');
+      if (!chName || !activeServerId) return;
+
+      await db.ref(`servers/${activeServerId}/channels/${chName}`).set({
+        name: chName,
+        desc: `Text channel #${chName}`
+      });
+
+      document.getElementById('addChannelModal').classList.add('hidden');
+      showToast(`Channel #${chName} created!`, "success");
+    });
+
+    // SIGN OUT HANDLERS
+    async function performSignOut() {
+      if (currentUser) {
+        await db.ref(`presence/${currentUser.uid}`).remove();
+      }
+      await auth.signOut();
+      showToast("Signed out", "info");
+    }
+
+    document.getElementById('btnCancelPending').addEventListener('click', performSignOut);
+    document.getElementById('btnSignOutMain').addEventListener('click', performSignOut);
+    document.getElementById('btnSettingsSignOut').addEventListener('click', performSignOut);
+
+    // SIDEBAR TOGGLES & CHAT HELPER BUTTONS
+    document.getElementById('toggleMembersSidebarBtn').addEventListener('click', () => {
+      document.getElementById('membersSidebar').classList.toggle('hidden');
+    });
+
+    document.getElementById('mobileSidebarToggle').addEventListener('click', () => {
+      document.getElementById('channelsSidebar').classList.toggle('hidden');
+    });
+
+    document.getElementById('btnCodeFormat').addEventListener('click', () => {
+      const input = document.getElementById('chatInput');
+      input.value = `\`\`\`\n${input.value}\n\`\`\``;
+      input.focus();
+    });
+
+    document.getElementById('btnEmoji').addEventListener('click', () => {
+      const input = document.getElementById('chatInput');
+      input.value += " 😄 ";
+      input.focus();
+    });
+  </script>
+</body>
+</html>
