@@ -1,0 +1,3024 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full select-none bg-[#1e1f22] text-[#dbdee1]">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PrivacyChat Requiem</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Firebase JS SDK v8 Compat Libraries -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            discord: {
+              chat: '#313338',
+              sidebar: '#2b2d31',
+              server: '#1e1f22',
+              panel: '#232428',
+              blurple: 'var(--accent-color)',
+              blurpleHover: 'var(--accent-hover)',
+              input: '#383a40',
+              textMuted: '#949ba4',
+              textBody: '#dbdee1',
+              textHeading: '#f2f3f5',
+              green: '#23a55a',
+              yellow: '#f0b232',
+              red: '#f23f43',
+              gray: '#80848e'
+            }
+          },
+          fontFamily: {
+            discord: ['Inter', 'gg sans', 'Whitney', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --accent-color: #7c5cff;
+      --accent-hover: #6842ff;
+      --accent-light: rgba(124, 92, 255, 0.15);
+    }
+
+    body {
+      font-family: 'Inter', 'gg sans', 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      background-color: #1e1f22;
+      color: #dbdee1;
+    }
+
+    .bg-accent { background-color: var(--accent-color) !important; }
+    .bg-accent-hover:hover { background-color: var(--accent-hover) !important; }
+    .text-accent { color: var(--accent-color) !important; }
+    .border-accent { border-color: var(--accent-color) !important; }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1a1b1e;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #111214;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Server Left Pill Indicator */
+    .server-pill {
+      position: absolute;
+      left: 0;
+      width: 4px;
+      background-color: #ffffff;
+      border-radius: 0 4px 4px 0;
+      transition: all 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+    }
+
+    .discord-tooltip {
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.45);
+    }
+
+    /* Pulse Ring on Gatekeeper Lock */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 var(--accent-light); }
+      70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(124, 92, 255, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(124, 92, 255, 0); }
+    }
+    .pulse-lock {
+      animation: pulse-ring 2.5s infinite;
+    }
+
+    /* Typing indicator bouncing dots */
+    @keyframes bounce-dot {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-3px); opacity: 1; }
+    }
+    .typing-dot:nth-child(1) { animation: bounce-dot 1.2s infinite 0s; }
+    .typing-dot:nth-child(2) { animation: bounce-dot 1.2s infinite 0.2s; }
+    .typing-dot:nth-child(3) { animation: bounce-dot 1.2s infinite 0.4s; }
+
+    /* Mention Highlighting */
+    .msg-mention-highlight {
+      background-color: rgba(240, 178, 50, 0.09);
+      border-left: 2px solid #f0b232;
+    }
+    .msg-mention-highlight:hover {
+      background-color: rgba(240, 178, 50, 0.14) !important;
+    }
+
+    /* Search Match Highlight */
+    .msg-search-match {
+      background-color: rgba(124, 92, 255, 0.16);
+      border-left: 2px solid var(--accent-color);
+    }
+
+    /* Selectable Message Content */
+    .selectable-text {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col antialiased">
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- 1. AUTHENTICATION OVERLAY -->
+  <div id="authOverlay" class="fixed inset-0 z-50 bg-[#1e1f22] flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-[#313338] rounded-xl p-8 shadow-2xl border border-[#2b2d31]">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 rounded-2xl bg-accent text-white flex items-center justify-center mx-auto mb-3 shadow-lg text-2xl font-bold">
+          <svg class="w-9 h-9 fill-current" viewBox="0 0 24 24">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6a3 3 0 0 1 3 3v2h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h1v-2a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v2h2v-2a1 1 0 0 0-1-1z"/>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-black text-[#f2f3f5] tracking-tight">PrivacyChat Requiem</h2>
+        <p id="authSubtitle" class="text-xs text-[#949ba4] mt-1">Welcome back! Sign in to enter your workspace.</p>
+      </div>
+
+      <form id="authForm" onsubmit="event.preventDefault();" class="space-y-4">
+        <div id="displayNameGroup" class="hidden">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-[#b5bac1] mb-2">Display Name</label>
+          <input type="text" id="authDisplayName" placeholder="e.g. Operative_One" class="w-full bg-[#1e1f22] text-[#dbdee1] border border-[#3f4147] focus:border-accent rounded-md p-2.5 text-sm focus:outline-none transition-colors" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-[#b5bac1] mb-2">Email Address</label>
+          <input type="email" id="authEmail" required placeholder="name@domain.com" class="w-full bg-[#1e1f22] text-[#dbdee1] border border-[#3f4147] focus:border-accent rounded-md p-2.5 text-sm focus:outline-none transition-colors" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-[#b5bac1] mb-2">Password</label>
+          <input type="password" id="authPassword" required placeholder="••••••••••••" class="w-full bg-[#1e1f22] text-[#dbdee1] border border-[#3f4147] focus:border-accent rounded-md p-2.5 text-sm focus:outline-none transition-colors" />
+        </div>
+
+        <button id="authSubmitBtn" type="submit" class="w-full py-2.5 bg-accent bg-accent-hover text-white font-semibold text-sm rounded-md transition-colors shadow-md mt-2 flex items-center justify-center gap-2">
+          <span>Log In</span>
+        </button>
+      </form>
+
+      <div class="mt-4 pt-4 border-t border-[#3f4147] text-center text-xs text-[#949ba4]">
+        <span id="authTogglePrompt">Need an account?</span>
+        <button id="authToggleBtn" class="text-accent hover:underline font-semibold ml-1">Register</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. PENDING CLEARANCE SCREEN -->
+  <div id="pendingOverlay" class="fixed inset-0 z-50 bg-[#111214]/95 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-lg bg-[#2b2d31] rounded-2xl p-8 shadow-2xl border border-[#3f4147] text-center relative overflow-hidden">
+      <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#f0b232] via-purple-500 to-[#f0b232]"></div>
+
+      <div class="w-20 h-20 rounded-full bg-[#1e1f22] text-[#f0b232] flex items-center justify-center mx-auto mb-5 text-3xl pulse-lock border border-[#3f4147]">
+        <i class="fa-solid fa-user-lock"></i>
+      </div>
+
+      <div class="inline-flex items-center gap-2 bg-[#f0b232]/10 text-[#f0b232] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
+        <span class="w-2 h-2 rounded-full bg-[#f0b232] animate-ping"></span>
+        Account Pending Clearance
+      </div>
+
+      <h3 class="text-2xl font-extrabold text-[#f2f3f5] mb-2">Awaiting Administrator Clearance</h3>
+      <p class="text-xs text-[#949ba4] leading-relaxed max-w-md mx-auto mb-6">
+        Your account registration is recorded. An administrator must set your clearance status to approved before you can access channels, messaging, or customization options.
+      </p>
+
+      <div class="bg-[#1e1f22] rounded-xl p-4 text-left border border-[#35363c] space-y-2.5 mb-6">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-[#949ba4] font-medium">Username:</span>
+          <span id="pendingHandleDisplay" class="font-bold text-[#f2f3f5]">Operative</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-[#949ba4] font-medium">Email:</span>
+          <span id="pendingEmailDisplay" class="font-mono text-[11px] text-[#dbdee1]">user@domain.com</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-[#949ba4] font-medium">User UID:</span>
+          <div class="flex items-center gap-1.5">
+            <span id="pendingUidDisplay" class="font-mono text-[10px] text-accent bg-[#2b2d31] px-2 py-0.5 rounded truncate max-w-[140px]">resolving...</span>
+            <button id="btnCopyUid" class="text-[10px] bg-[#3f4147] hover:bg-accent text-white px-2 py-0.5 rounded transition-colors" title="Copy UID">
+              <i class="fa-solid fa-copy"></i> Copy
+            </button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between text-xs pt-2 border-t border-[#2e3035]">
+          <span class="text-[#949ba4] font-medium">Approval Status:</span>
+          <span class="text-[#f0b232] font-bold flex items-center gap-1.5 text-xs">
+            <i class="fa-solid fa-spinner animate-spin"></i> Listening for Access Approval...
+          </span>
+        </div>
+      </div>
+
+      <button id="btnCancelPending" class="text-xs text-[#f23f43] hover:underline font-semibold flex items-center justify-center gap-1.5 mx-auto">
+        <i class="fa-solid fa-right-from-bracket"></i> Sign out
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. MAIN APPLICATION UI -->
+  <div id="mainApp" class="flex-1 flex overflow-hidden hidden relative">
+
+    <!-- Mobile Backdrop Overlay -->
+    <div id="mobileDrawerBackdrop" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-xs"></div>
+
+    <!-- LEFT NAVIGATION WRAPPER (Server Rail + Secondary Sidebar) -->
+    <div id="leftNavWrapper" class="fixed md:static inset-y-0 left-0 z-30 flex h-full transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-out">
+
+      <!-- 3.1 LEFTMOST SERVER RAIL -->
+      <div class="w-[72px] bg-[#1e1f22] flex flex-col items-center py-3 gap-2 flex-shrink-0">
+        <!-- Home / Direct Messages Button -->
+        <div class="relative group flex items-center justify-center w-full">
+          <div id="homePill" class="server-pill top-2 h-8 opacity-0"></div>
+          <button id="btnServerHome" class="w-12 h-12 rounded-[24px] hover:rounded-[16px] bg-[#313338] hover:bg-accent text-[#dbdee1] hover:text-white flex items-center justify-center text-xl transition-all duration-200 shadow-md relative">
+            <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6a3 3 0 0 1 3 3v2h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h1v-2a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v2h2v-2a1 1 0 0 0-1-1z"/>
+            </svg>
+            <span id="homeUnreadBadge" class="hidden absolute -bottom-1 -right-1 bg-[#f23f43] text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border-2 border-[#1e1f22]">!</span>
+          </button>
+          <div class="hidden md:block absolute left-[78px] top-2 bg-[#111214] text-xs font-semibold text-[#f2f3f5] px-3 py-1.5 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 discord-tooltip">
+            Direct Messages & Operatives
+          </div>
+        </div>
+
+        <div class="w-8 h-[2px] bg-[#35363c] rounded my-0.5"></div>
+
+        <!-- Server Icons List -->
+        <div id="serverRailList" class="flex-1 w-full flex flex-col items-center gap-2 overflow-y-auto no-scrollbar"></div>
+
+        <!-- Add / Join Server Button -->
+        <div class="relative group flex items-center justify-center w-full mt-auto">
+          <button id="btnOpenAddServer" class="w-12 h-12 rounded-[24px] hover:rounded-[16px] bg-[#313338] hover:bg-[#23a55a] text-[#23a55a] hover:text-white flex items-center justify-center text-lg transition-all duration-200 shadow-md">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+          <div class="hidden md:block absolute left-[78px] top-2 bg-[#111214] text-xs font-semibold text-[#f2f3f5] px-3 py-1.5 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 discord-tooltip">
+            Add a Server
+          </div>
+        </div>
+      </div>
+
+      <!-- 3.2 CHANNELS / DM SIDEBAR -->
+      <div id="channelsSidebar" class="w-60 bg-[#2b2d31] flex flex-col flex-shrink-0 border-r border-[#1e1f22]">
+        
+        <!-- SERVER HEADER (Shown in Server Mode) -->
+        <div id="serverSidebarHeader" class="relative">
+          <div id="serverHeaderBtn" class="h-12 border-b border-[#1f2023] px-4 flex items-center justify-between font-bold text-sm text-[#f2f3f5] shadow-sm hover:bg-[#35373c] cursor-pointer transition-colors">
+            <span id="currentServerTitle" class="truncate font-extrabold">PrivacyChat Hub</span>
+            <i id="serverHeaderChevron" class="fa-solid fa-chevron-down text-xs text-[#949ba4] transition-transform duration-150"></i>
+          </div>
+
+          <!-- Server Dropdown Menu -->
+          <div id="serverHeaderDropdown" class="hidden absolute top-13 left-2 right-2 mt-1 bg-[#111214] border border-[#26272b] rounded-md shadow-2xl p-1.5 z-50 text-xs font-medium space-y-0.5">
+            <button id="menuInvitePeople" class="w-full flex items-center justify-between px-2.5 py-2 text-accent hover:bg-accent hover:text-white rounded transition-colors">
+              <span>Invite People</span>
+              <i class="fa-solid fa-user-plus"></i>
+            </button>
+            <button id="menuCreateChannel" class="w-full flex items-center justify-between px-2.5 py-2 text-[#dbdee1] hover:bg-accent hover:text-white rounded transition-colors">
+              <span>Create Channel</span>
+              <i class="fa-solid fa-circle-plus"></i>
+            </button>
+            <div class="h-[1px] bg-[#2b2d31] my-1"></div>
+            <button id="menuCopyServerId" class="w-full flex items-center justify-between px-2.5 py-2 text-[#949ba4] hover:bg-[#35373c] hover:text-white rounded transition-colors">
+              <span>Copy Server ID</span>
+              <i class="fa-solid fa-id-badge"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- DM HEADER (Shown in Home / DM Mode) -->
+        <div id="dmSidebarHeader" class="hidden h-12 border-b border-[#1f2023] px-3 flex items-center shadow-sm">
+          <button id="btnOpenQuickSwitcher" class="w-full bg-[#1e1f22] hover:bg-[#191a1d] text-[#949ba4] text-xs font-medium px-2.5 py-1.5 rounded text-left flex items-center justify-between transition-colors">
+            <span>Find or start a conversation</span>
+            <kbd class="text-[10px] bg-[#2b2d31] px-1.5 py-0.5 rounded text-[#b5bac1]">Ctrl+K</kbd>
+          </button>
+        </div>
+
+        <!-- SERVER CHANNELS LIST -->
+        <div id="serverChannelsContainer" class="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+          <!-- Text Channels Category -->
+          <div>
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#949ba4] hover:text-[#dbdee1] px-1 mb-1 cursor-pointer select-none" id="toggleTextCatBtn">
+              <span class="flex items-center gap-1">
+                <i id="textCatChevron" class="fa-solid fa-chevron-down text-[9px] transition-transform"></i> Text Channels
+              </span>
+              <button id="btnAddChannel" class="hover:text-white p-1 rounded transition-colors" title="Create Text Channel">
+                <i class="fa-solid fa-plus text-xs"></i>
+              </button>
+            </div>
+            <div id="channelList" class="space-y-0.5"></div>
+          </div>
+
+          <!-- Voice Channels Category -->
+          <div>
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#949ba4] hover:text-[#dbdee1] px-1 mb-1 cursor-pointer select-none" id="toggleVoiceCatBtn">
+              <span class="flex items-center gap-1">
+                <i id="voiceCatChevron" class="fa-solid fa-chevron-down text-[9px] transition-transform"></i> Voice Channels
+              </span>
+              <button id="btnAddVoiceChannel" class="hover:text-white p-1 rounded transition-colors" title="Create Voice Channel">
+                <i class="fa-solid fa-plus text-xs"></i>
+              </button>
+            </div>
+            <div id="voiceChannelList" class="space-y-1"></div>
+          </div>
+        </div>
+
+        <!-- DIRECT MESSAGES LIST (Shown in Home / DM Mode) -->
+        <div id="dmSidebarContainer" class="hidden flex-1 overflow-y-auto px-2 py-3 space-y-3">
+          <button id="btnShowFriendsDir" class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-semibold bg-[#35373c] text-white transition-colors">
+            <i class="fa-solid fa-user-group text-base text-[#b5bac1]"></i>
+            <span>Operatives Directory</span>
+          </button>
+
+          <div class="pt-1">
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#949ba4] px-2 mb-1.5">
+              <span>Direct Messages</span>
+              <button id="btnNewDmQuick" class="hover:text-white" title="Start DM"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <div id="dmConversationsList" class="space-y-0.5"></div>
+          </div>
+        </div>
+
+        <!-- ACTIVE VOICE CONNECTION BAR (Shown when in a voice channel) -->
+        <div id="voiceConnectionPanel" class="hidden bg-[#232428] border-t border-[#1e1f22] px-3 py-2">
+          <div class="flex items-center justify-between">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 text-[#23a55a] text-xs font-bold">
+                <i class="fa-solid fa-signal text-[11px]"></i>
+                <span>Voice Connected</span>
+              </div>
+              <div id="voiceConnectedChannelName" class="text-[11px] text-[#949ba4] truncate">General Voice / Server</div>
+            </div>
+            <button id="btnDisconnectVoice" class="p-2 text-[#b5bac1] hover:text-[#f23f43] hover:bg-[#35373c] rounded-md transition-colors" title="Disconnect">
+              <i class="fa-solid fa-phone-slash text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- USER PROFILE & AUDIO CONTROLS FOOTER -->
+        <div class="h-[54px] bg-[#232428] px-2 flex items-center justify-between border-t border-[#1e1f22]">
+          <div id="userFooterCard" class="flex items-center gap-2 p-1 hover:bg-[#35373c] rounded-md cursor-pointer transition-colors min-w-0 flex-1 mr-1" title="Change Status">
+            <div class="relative flex-shrink-0">
+              <div id="userFooterAvatar" class="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs bg-cover bg-center overflow-hidden">
+                ?
+              </div>
+              <span id="userFooterStatusDot" class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#23a55a] border-2 border-[#232428]"></span>
+            </div>
+            <div class="truncate">
+              <div id="userFooterName" class="text-xs font-bold text-[#f2f3f5] truncate leading-tight">Operative</div>
+              <div id="userFooterStatusText" class="text-[10px] text-[#949ba4] truncate leading-tight">Online</div>
+            </div>
+          </div>
+
+          <div class="flex items-center text-[#b5bac1] gap-0.5 flex-shrink-0">
+            <button id="btnToggleMute" class="w-8 h-8 flex items-center justify-center hover:text-white hover:bg-[#35373c] rounded transition-colors relative" title="Mute">
+              <i id="iconMute" class="fa-solid fa-microphone text-xs"></i>
+            </button>
+            <button id="btnToggleDeafen" class="w-8 h-8 flex items-center justify-center hover:text-white hover:bg-[#35373c] rounded transition-colors relative" title="Deafen">
+              <i id="iconDeafen" class="fa-solid fa-headphones text-xs"></i>
+            </button>
+            <button id="btnOpenSettings" class="w-8 h-8 flex items-center justify-center hover:text-white hover:bg-[#35373c] rounded transition-colors" title="User Settings">
+              <i class="fa-solid fa-gear text-xs"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.3 MAIN CONTENT AREA (Chat OR Friends Directory) -->
+    <div class="flex-1 flex flex-col bg-[#313338] min-w-0 relative">
+
+      <!-- TOP CHANNEL / DM / DIRECTORY HEADER -->
+      <div class="h-12 border-b border-[#1f2023] px-3 sm:px-4 flex items-center justify-between flex-shrink-0 bg-[#313338] shadow-sm gap-2 z-10">
+        <div class="flex items-center gap-2 min-w-0">
+          <!-- Mobile Hamburger Button -->
+          <button id="mobileSidebarToggle" class="md:hidden p-1.5 -ml-1 text-[#b5bac1] hover:text-white rounded">
+            <i class="fa-solid fa-bars text-base"></i>
+          </button>
+
+          <i id="headerChannelIcon" class="fa-solid fa-hashtag text-[#80848e] text-lg flex-shrink-0"></i>
+          <span id="headerChannelName" class="font-bold text-[#f2f3f5] text-sm truncate">general</span>
+          <span id="headerDivider" class="text-xs text-[#3f4147] hidden sm:inline">|</span>
+          <span id="headerChannelDesc" class="text-xs text-[#949ba4] truncate hidden sm:inline">General workspace chat</span>
+        </div>
+
+        <!-- Right Header Toolbar -->
+        <div id="chatHeaderControls" class="flex items-center gap-1.5 sm:gap-2.5 text-[#b5bac1] text-sm flex-shrink-0">
+          <!-- Pinned Messages Button -->
+          <div class="relative">
+            <button id="btnPinnedDrawer" class="p-1.5 hover:text-white hover:bg-[#383a40] rounded transition-colors relative" title="Pinned Messages">
+              <i class="fa-solid fa-thumbtack text-xs sm:text-sm"></i>
+              <span id="pinnedBadge" class="hidden absolute top-1 right-1 w-2 h-2 rounded-full bg-[#f23f43]"></span>
+            </button>
+
+            <!-- Pinned Messages Popover Drawer -->
+            <div id="pinnedPopover" class="hidden absolute right-0 top-10 w-80 sm:w-96 max-h-[420px] bg-[#2b2d31] border border-[#1e1f22] rounded-lg shadow-2xl z-50 flex flex-col overflow-hidden">
+              <div class="px-4 py-3 bg-[#232428] border-b border-[#1e1f22] flex items-center justify-between">
+                <span class="text-xs font-bold text-white flex items-center gap-2">
+                  <i class="fa-solid fa-thumbtack text-accent"></i> Pinned Messages
+                </span>
+                <button id="closePinnedBtn" class="text-[#949ba4] hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+              <div id="pinnedMessagesList" class="p-3 overflow-y-auto space-y-2.5 flex-1 text-xs">
+                <div class="text-center text-[#949ba4] py-6">No pinned messages in this channel yet.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Self-Destruct Timer Menu -->
+          <div class="relative">
+            <button id="btnTimerMenu" class="text-xs bg-[#1e1f22] hover:bg-[#383a40] px-2 py-1 rounded text-[#dbdee1] flex items-center gap-1.5 font-semibold transition-colors" title="Auto Self-Destruct Timer">
+              <i class="fa-solid fa-clock text-accent"></i> <span id="timerLabel" class="hidden sm:inline">Timer: Off</span>
+            </button>
+            <div id="timerDropdown" class="absolute right-0 top-8 bg-[#111214] border border-[#3f4147] rounded-md shadow-xl py-1 w-32 hidden z-50 text-xs">
+              <button data-timer="0" class="timer-opt w-full text-left px-3 py-1.5 hover:bg-accent hover:text-white">Off</button>
+              <button data-timer="5000" class="timer-opt w-full text-left px-3 py-1.5 hover:bg-accent hover:text-white">5 Seconds</button>
+              <button data-timer="30000" class="timer-opt w-full text-left px-3 py-1.5 hover:bg-accent hover:text-white">30 Seconds</button>
+              <button data-timer="300000" class="timer-opt w-full text-left px-3 py-1.5 hover:bg-accent hover:text-white">5 Minutes</button>
+            </div>
+          </div>
+
+          <!-- In-Channel Search Input -->
+          <div class="relative hidden sm:flex items-center">
+            <input type="text" id="channelSearchInput" placeholder="Search" class="w-32 focus:w-48 transition-all duration-200 bg-[#1e1f22] text-xs text-[#dbdee1] placeholder-[#949ba4] px-2.5 py-1 pr-7 rounded focus:outline-none border border-transparent focus:border-accent" />
+            <i id="channelSearchIcon" class="fa-solid fa-magnifying-glass text-[11px] text-[#949ba4] absolute right-2 pointer-events-none"></i>
+            <button id="clearSearchBtn" class="hidden text-[11px] text-[#949ba4] hover:text-white absolute right-2">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Toggle Members List -->
+          <button id="toggleMembersSidebarBtn" class="p-1.5 hover:text-white hover:bg-[#383a40] rounded transition-colors" title="Toggle Member List">
+            <i class="fa-solid fa-users text-xs sm:text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- VIEW A: OPERATIVES / FRIENDS DIRECTORY (Shown when clicking Operatives Directory in Home) -->
+      <div id="friendsDirectoryView" class="hidden flex-1 flex flex-col overflow-hidden bg-[#313338]">
+        <div class="px-6 py-3 border-b border-[#26282c] flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <button data-dir-tab="online" class="dir-tab-btn px-3 py-1 rounded text-xs font-semibold bg-[#3f4147] text-white">Online</button>
+            <button data-dir-tab="all" class="dir-tab-btn px-3 py-1 rounded text-xs font-semibold text-[#b5bac1] hover:bg-[#35373c] hover:text-white">All Operatives</button>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="directorySearchInput" placeholder="Search operatives..." class="w-full bg-[#1e1f22] text-xs text-white px-3 py-1.5 pr-8 rounded focus:outline-none border border-[#3f4147] focus:border-accent" />
+            <i class="fa-solid fa-magnifying-glass text-xs text-[#949ba4] absolute right-2.5 top-2"></i>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6">
+          <div id="directoryHeaderCount" class="text-[11px] font-bold uppercase tracking-wider text-[#949ba4] mb-3">ONLINE — 0</div>
+          <div id="directoryOperativesList" class="divide-y divide-[#3f4147]/50"></div>
+        </div>
+      </div>
+
+      <!-- VIEW B: CHAT MESSAGES FEED & INPUT -->
+      <div id="chatWorkspaceView" class="flex-1 flex flex-col min-h-0">
+        <div id="messagesFeed" class="flex-1 overflow-y-auto px-4 py-4 space-y-0.5"></div>
+
+        <!-- Typing Indicator Bar -->
+        <div id="typingIndicatorBar" class="h-6 px-4 flex items-center gap-2 text-xs text-[#b5bac1] opacity-0 transition-opacity duration-150 pointer-events-none">
+          <div class="flex items-center gap-1 bg-[#2b2d31] px-2 py-1 rounded-full">
+            <span class="typing-dot w-1.5 h-1.5 rounded-full bg-white inline-block"></span>
+            <span class="typing-dot w-1.5 h-1.5 rounded-full bg-white inline-block"></span>
+            <span class="typing-dot w-1.5 h-1.5 rounded-full bg-white inline-block"></span>
+          </div>
+          <span id="typingIndicatorText" class="font-medium text-[11px]">Someone is typing...</span>
+        </div>
+
+        <!-- CHAT INPUT CONTAINER -->
+        <div class="px-4 pb-4 pt-0 relative">
+
+          <!-- @Mention Autocomplete Popup -->
+          <div id="mentionAutocompletePopup" class="hidden absolute bottom-full left-4 right-4 sm:w-80 mb-2 bg-[#2b2d31] border border-[#1e1f22] rounded-lg shadow-2xl overflow-hidden z-40">
+            <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#949ba4] bg-[#232428] border-b border-[#1e1f22]">
+              Members Matching @Mention
+            </div>
+            <div id="mentionList" class="max-h-48 overflow-y-auto p-1 space-y-0.5"></div>
+          </div>
+
+          <!-- Emoji Picker Popover -->
+          <div id="emojiPickerPopover" class="hidden absolute bottom-full right-4 mb-2 w-72 sm:w-80 bg-[#2b2d31] border border-[#1e1f22] rounded-xl shadow-2xl overflow-hidden z-40">
+            <div class="p-2 bg-[#232428] border-b border-[#1e1f22] flex items-center gap-1.5">
+              <input type="text" id="emojiSearchInput" placeholder="Search emojis..." class="w-full bg-[#1e1f22] text-xs text-white px-2.5 py-1.5 rounded focus:outline-none" />
+            </div>
+            <div class="flex border-b border-[#1e1f22] bg-[#232428] px-2 py-1 gap-1 text-xs" id="emojiCategoryTabs">
+              <button data-cat="smileys" class="emoji-cat-btn px-2 py-1 rounded bg-[#35373c] text-white">😀</button>
+              <button data-cat="gestures" class="emoji-cat-btn px-2 py-1 rounded hover:bg-[#35373c]">👍</button>
+              <button data-cat="hearts" class="emoji-cat-btn px-2 py-1 rounded hover:bg-[#35373c]">❤️</button>
+              <button data-cat="celebration" class="emoji-cat-btn px-2 py-1 rounded hover:bg-[#35373c]">🎉</button>
+              <button data-cat="symbols" class="emoji-cat-btn px-2 py-1 rounded hover:bg-[#35373c]">🔥</button>
+            </div>
+            <div id="emojiGrid" class="p-2.5 grid grid-cols-7 gap-1 max-h-48 overflow-y-auto text-lg"></div>
+          </div>
+
+          <!-- Inline Image Attachment Popover -->
+          <div id="attachmentPopover" class="hidden absolute bottom-full left-4 mb-2 w-80 bg-[#2b2d31] border border-[#1e1f22] rounded-xl shadow-2xl p-3 z-40 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i class="fa-solid fa-image text-accent"></i> Attach Image or GIF URL
+              </span>
+              <button id="closeAttachPopoverBtn" class="text-[#949ba4] hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="url" id="attachUrlInput" placeholder="https://example.com/image.gif" class="w-full bg-[#1e1f22] text-xs text-white p-2 rounded border border-[#3f4147] focus:border-accent focus:outline-none" />
+            <div class="flex justify-end gap-2">
+              <button id="btnConfirmAttachUrl" class="px-3 py-1.5 bg-accent bg-accent-hover text-white text-xs font-semibold rounded">Attach Media</button>
+            </div>
+          </div>
+
+          <!-- Reply Banner (Shown when replying to a message) -->
+          <div id="replyBar" class="hidden bg-[#2b2d31] border-t border-x border-[#3f4147]/50 rounded-t-lg px-3 py-1.5 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2 truncate text-[#b5bac1]">
+              <i class="fa-solid fa-reply text-accent"></i>
+              <span>Replying to <strong id="replyTargetName" class="text-white">Operative</strong></span>
+              <span id="replyTargetSnippet" class="text-[#949ba4] truncate max-w-[180px] sm:max-w-xs text-[11px]"></span>
+            </div>
+            <button id="btnCancelReply" class="text-[#949ba4] hover:text-white p-1" title="Cancel Reply">
+              <i class="fa-solid fa-circle-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Main Input Box -->
+          <div id="chatInputWrapper" class="bg-[#383a40] rounded-lg p-2.5 flex flex-col gap-2">
+            <div id="attachmentPreview" class="hidden relative inline-block max-w-xs bg-[#2b2d31] p-2 rounded-lg border border-[#3f4147]">
+              <img id="attachmentPreviewImg" src="" class="max-h-32 rounded object-cover" onerror="this.src='https://placehold.co/240x140/1e1f22/949ba4?text=Image+Preview'" />
+              <button id="btnRemoveAttachment" class="absolute -top-2 -right-2 bg-[#f23f43] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md hover:scale-105 transition-transform">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div class="flex items-end gap-2">
+              <button id="btnAttachImage" class="p-1.5 text-[#b5bac1] hover:text-white transition-colors flex-shrink-0" title="Attach Image / GIF URL">
+                <i class="fa-solid fa-circle-plus text-lg"></i>
+              </button>
+
+              <textarea id="chatInput" rows="1" placeholder="Message #general" class="flex-1 bg-transparent text-sm text-[#dbdee1] placeholder-[#80848e] focus:outline-none resize-none max-h-36 py-1 leading-relaxed"></textarea>
+
+              <div class="flex items-center gap-1 text-[#b5bac1] flex-shrink-0">
+                <button id="btnCodeFormat" class="p-1.5 hover:text-white transition-colors hidden sm:inline-flex" title="Format Code Block">
+                  <i class="fa-solid fa-code text-sm"></i>
+                </button>
+                <button id="btnEmoji" class="p-1.5 hover:text-[#f0b232] transition-colors" title="Open Emoji Picker">
+                  <i class="fa-solid fa-face-smile text-base"></i>
+                </button>
+                <button id="btnConfetti" class="p-1.5 hover:text-purple-400 transition-colors" title="Fire Confetti">
+                  <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                </button>
+                <button id="btnSend" class="p-1.5 text-accent hover:opacity-80 transition-opacity" title="Send Message">
+                  <i class="fa-solid fa-paper-plane text-base"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.4 RIGHT MEMBER LIST SIDEBAR -->
+    <div id="membersSidebar" class="w-60 bg-[#2b2d31] flex-shrink-0 border-l border-[#1e1f22] flex flex-col hidden lg:flex">
+      <div class="p-4 overflow-y-auto flex-1 space-y-5">
+        <div>
+          <div class="text-[11px] font-bold uppercase tracking-wider text-[#949ba4] mb-2">
+            ONLINE — <span id="countOnline">0</span>
+          </div>
+          <div id="membersOnlineList" class="space-y-0.5"></div>
+        </div>
+
+        <div id="offlineMembersSection">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-[#949ba4] mb-2">
+            OFFLINE — <span id="countOffline">0</span>
+          </div>
+          <div id="membersOfflineList" class="space-y-0.5 opacity-60"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- STATUS SELECTOR DROPDOWN -->
+  <div id="statusMenuDropdown" class="fixed bottom-16 left-20 z-50 bg-[#111214] border border-[#3f4147] rounded-lg shadow-2xl p-1.5 w-48 hidden">
+    <div class="px-2.5 py-1 text-[10px] font-bold uppercase text-[#949ba4]">Set Online Status</div>
+    <button data-status="online" class="status-option-btn w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-[#dbdee1] hover:bg-accent hover:text-white rounded transition-colors">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#23a55a]"></span> Online
+    </button>
+    <button data-status="idle" class="status-option-btn w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-[#dbdee1] hover:bg-accent hover:text-white rounded transition-colors">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#f0b232]"></span> Idle
+    </button>
+    <button data-status="dnd" class="status-option-btn w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-[#dbdee1] hover:bg-accent hover:text-white rounded transition-colors">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#f23f43]"></span> Do Not Disturb
+    </button>
+    <button data-status="invisible" class="status-option-btn w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-[#dbdee1] hover:bg-accent hover:text-white rounded transition-colors">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#80848e]"></span> Invisible
+    </button>
+  </div>
+
+  <!-- QUICK SWITCHER MODAL (Ctrl+K) -->
+  <div id="quickSwitcherModal" class="fixed inset-0 z-50 bg-black/75 flex items-start justify-center pt-20 p-4 hidden">
+    <div class="w-full max-w-lg bg-[#2b2d31] rounded-xl border border-[#3f4147] shadow-2xl overflow-hidden">
+      <div class="p-3 border-b border-[#1e1f22] flex items-center gap-2">
+        <i class="fa-solid fa-magnifying-glass text-[#949ba4] text-sm"></i>
+        <input type="text" id="quickSwitcherInput" placeholder="Where would you like to go? Type an operative or channel..." class="w-full bg-transparent text-sm text-white focus:outline-none" />
+        <button id="closeQuickSwitcherBtn" class="text-xs text-[#949ba4] hover:text-white px-1.5 py-0.5 bg-[#1e1f22] rounded">ESC</button>
+      </div>
+      <div id="quickSwitcherResults" class="max-h-72 overflow-y-auto p-2 space-y-1 text-xs"></div>
+    </div>
+  </div>
+
+  <!-- CREATE / JOIN SERVER MODAL -->
+  <div id="addServerModal" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-md bg-[#313338] rounded-2xl border border-[#3f4147] p-6 shadow-2xl space-y-5">
+      <div class="flex justify-between items-center border-b border-[#3f4147] pb-3">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-server text-accent"></i> Server Operations
+        </h3>
+        <button id="closeAddServerBtn" class="text-[#949ba4] hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="flex bg-[#1e1f22] p-1 rounded-lg text-xs font-bold">
+        <button id="tabCreateServerBtn" class="flex-1 py-2 rounded-md bg-accent text-white">Create Server</button>
+        <button id="tabJoinServerBtn" class="flex-1 py-2 rounded-md text-[#949ba4] hover:text-white">Join Server</button>
+      </div>
+
+      <div id="createServerSection" class="space-y-4">
+        <div>
+          <label class="block text-[11px] font-bold uppercase text-[#b5bac1] mb-1">Server Name</label>
+          <input type="text" id="newServerName" placeholder="e.g. Secret Squad" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:border-accent focus:outline-none text-xs" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase text-[#b5bac1] mb-1">Server Icon Emoji or Image URL</label>
+          <input type="text" id="newServerIcon" placeholder="e.g. 🛡️ or https://image.url/icon.png" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:border-accent focus:outline-none text-xs" />
+        </div>
+        <button id="btnSubmitCreateServer" class="w-full py-2.5 bg-accent bg-accent-hover text-white rounded font-bold text-xs shadow-md">Create Server</button>
+      </div>
+
+      <div id="joinServerSection" class="space-y-4 hidden">
+        <div>
+          <label class="block text-[11px] font-bold uppercase text-[#b5bac1] mb-1">Server Invite Code / ID</label>
+          <input type="text" id="joinServerIdInput" placeholder="Paste server key..." class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:border-accent focus:outline-none text-xs font-mono" />
+        </div>
+        <button id="btnSubmitJoinServer" class="w-full py-2.5 bg-[#23a55a] hover:bg-[#1f924e] text-white rounded font-bold text-xs shadow-md">Join Server</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD CHANNEL MODAL -->
+  <div id="addChannelModal" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-sm bg-[#313338] rounded-xl border border-[#3f4147] p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-[#3f4147] pb-2">
+        <h3 id="addChannelModalTitle" class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-hashtag text-accent"></i> Create Text Channel
+        </h3>
+        <button id="closeAddChannelBtn" class="text-[#949ba4] hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-[#b5bac1] mb-1">Channel Type</label>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button type="button" id="typeTextChannelBtn" class="p-2.5 rounded bg-[#35373c] border border-accent text-white font-semibold flex items-center gap-2">
+            <i class="fa-solid fa-hashtag text-[#949ba4]"></i> Text
+          </button>
+          <button type="button" id="typeVoiceChannelBtn" class="p-2.5 rounded bg-[#2b2d31] border border-transparent text-[#949ba4] font-semibold flex items-center gap-2">
+            <i class="fa-solid fa-volume-high"></i> Voice
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-[#b5bac1] mb-1">Channel Name</label>
+        <input type="text" id="newChannelNameInput" placeholder="e.g. general-lounge" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:border-accent focus:outline-none text-xs" />
+      </div>
+
+      <button id="btnSubmitAddChannel" class="w-full py-2.5 bg-accent bg-accent-hover text-white rounded font-bold text-xs shadow-md">Create Channel</button>
+    </div>
+  </div>
+
+  <!-- USER PROFILE CUSTOMIZATION MODAL -->
+  <div id="settingsModal" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-xl bg-[#313338] rounded-2xl border border-[#3f4147] overflow-hidden shadow-2xl flex flex-col md:flex-row h-[600px] max-h-[90vh]">
+      
+      <div class="w-full md:w-48 bg-[#2b2d31] p-4 border-b md:border-b-0 md:border-r border-[#1e1f22] flex flex-row md:flex-col items-center md:items-stretch justify-between md:justify-start gap-1">
+        <div>
+          <div class="text-[11px] font-bold uppercase text-[#949ba4] px-2 mb-1 hidden md:block">User Settings</div>
+          <button id="tabProfileBtn" class="w-full text-left px-3 py-2 rounded text-xs font-semibold bg-[#35373c] text-white">My Profile</button>
+        </div>
+        <div class="hidden md:block flex-1"></div>
+        <button id="btnSettingsSignOut" class="text-left px-3 py-2 rounded text-xs font-semibold text-[#f23f43] hover:bg-[#f23f43]/10 flex items-center gap-2">
+          <i class="fa-solid fa-right-from-bracket"></i> Log Out
+        </button>
+      </div>
+
+      <div class="flex-1 p-6 overflow-y-auto space-y-5">
+        <div class="flex justify-between items-center">
+          <h3 class="text-base font-bold text-white">Customize User Profile</h3>
+          <button id="closeSettingsBtn" class="text-[#949ba4] hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+
+        <!-- Live Preview Card -->
+        <div class="bg-[#232428] rounded-xl overflow-hidden border border-[#3f4147] shadow-md">
+          <div id="previewBanner" class="h-16 bg-gradient-to-r from-purple-600 to-indigo-800 bg-cover bg-center"></div>
+          <div class="px-4 relative -top-6 flex items-end justify-between">
+            <div id="previewAvatar" class="w-16 h-16 rounded-full bg-accent border-4 border-[#232428] text-white font-bold text-xl flex items-center justify-center bg-cover bg-center shadow-lg overflow-hidden">
+              ?
+            </div>
+          </div>
+          <div class="px-4 pb-4 -mt-4">
+            <div id="previewName" class="text-base font-bold text-white">Display Name</div>
+            <div id="previewTag" class="text-xs text-[#949ba4] font-mono">@username#0001</div>
+            <div id="previewNote" class="text-xs text-[#23a55a] font-medium mt-1">Online</div>
+            <div id="previewBio" class="text-xs text-[#dbdee1] mt-2 pt-2 border-t border-[#3f4147]">About me snippet...</div>
+          </div>
+        </div>
+
+        <div class="space-y-4 text-xs">
+          <!-- ACCENT COLOR PICKER -->
+          <div class="bg-[#2b2d31] p-3 rounded-lg border border-[#3f4147]">
+            <label class="block text-[#b5bac1] font-bold mb-1.5">Theme Accent Color</label>
+            <div class="flex items-center gap-3">
+              <input type="color" id="settingsAccentColor" value="#7c5cff" class="w-10 h-10 rounded border-0 bg-transparent cursor-pointer" />
+              <div class="flex gap-2">
+                <button type="button" class="preset-color-btn w-6 h-6 rounded-full bg-[#7c5cff] border border-white/30 hover:scale-110 transition-transform" data-color="#7c5cff"></button>
+                <button type="button" class="preset-color-btn w-6 h-6 rounded-full bg-[#5865f2] border border-white/30 hover:scale-110 transition-transform" data-color="#5865f2"></button>
+                <button type="button" class="preset-color-btn w-6 h-6 rounded-full bg-[#9d4edd] border border-white/30 hover:scale-110 transition-transform" data-color="#9d4edd"></button>
+                <button type="button" class="preset-color-btn w-6 h-6 rounded-full bg-[#23a55a] border border-white/30 hover:scale-110 transition-transform" data-color="#23a55a"></button>
+                <button type="button" class="preset-color-btn w-6 h-6 rounded-full bg-[#00b4d8] border border-white/30 hover:scale-110 transition-transform" data-color="#00b4d8"></button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">Display Name</label>
+            <input type="text" id="settingsDisplayName" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none" />
+          </div>
+
+          <!-- SOUND EFFECTS TOGGLE -->
+          <div class="flex items-center justify-between bg-[#2b2d31] p-3 rounded-lg border border-[#3f4147]">
+            <div>
+              <div class="font-bold text-[#f2f3f5]">Discord Sound Effects</div>
+              <div class="text-[10px] text-[#949ba4]">Play chimes for messages, server joins, and voice toggles.</div>
+            </div>
+            <input type="checkbox" id="settingsAudioToggle" checked class="w-4 h-4 accent-purple-600 cursor-pointer" />
+          </div>
+
+          <!-- DICEBEAR STYLE SELECTOR -->
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">DiceBear Avatar Generator Style</label>
+            <select id="settingsDicebearStyle" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none">
+              <option value="bottts">bottts (Robots)</option>
+              <option value="adventurer">adventurer (RPG Characters)</option>
+              <option value="lorelei">lorelei (Anime/Artistic)</option>
+              <option value="fun-emoji">fun-emoji (Emojis)</option>
+              <option value="identicon">identicon (Geometric)</option>
+              <option value="thumbs">thumbs (Thumbs Up)</option>
+              <option value="pixel-art">pixel-art (8-Bit Retro)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">Custom Avatar Image URL (Overrides DiceBear)</label>
+            <input type="text" id="settingsAvatarUrl" placeholder="Leave empty to use DiceBear auto avatar" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">Profile Banner Image URL</label>
+            <input type="text" id="settingsBannerUrl" placeholder="https://domain.com/banner.png" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">Custom Status Note</label>
+            <input type="text" id="settingsStatusNote" placeholder="e.g. Coding on PrivacyChat Requiem" class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-[#b5bac1] font-bold mb-1">About Me / Bio</label>
+            <textarea id="settingsBio" rows="2" placeholder="Tell the server about yourself..." class="w-full bg-[#1e1f22] text-white p-2.5 rounded border border-[#3f4147] focus:outline-none resize-none"></textarea>
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button id="saveSettingsBtn" class="bg-accent bg-accent-hover text-white px-5 py-2.5 rounded font-semibold text-xs shadow-md">Save Changes</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- USER POPOUT MODAL (With Direct Message Button!) -->
+  <div id="userProfileModal" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-xs bg-[#232428] rounded-2xl overflow-hidden shadow-2xl border border-[#3f4147] relative">
+      <div id="popoutBanner" class="h-24 bg-gradient-to-r from-purple-600 to-indigo-800 bg-cover bg-center relative">
+        <button id="closeProfileModalBtn" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center text-xs">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="px-4 relative -top-10 mb-0 flex items-end justify-between">
+        <div class="relative inline-block">
+          <div id="popoutAvatar" class="w-20 h-20 rounded-full bg-accent text-white font-bold text-2xl flex items-center justify-center border-4 border-[#232428] bg-cover bg-center overflow-hidden">
+            ?
+          </div>
+          <span id="popoutStatusDot" class="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#23a55a] border-4 border-[#232428]"></span>
+        </div>
+
+        <button id="btnPopoutSendDm" class="mb-2 px-3 py-1.5 bg-accent bg-accent-hover text-white text-xs font-semibold rounded-md shadow flex items-center gap-1.5 transition-colors">
+          <i class="fa-solid fa-message text-[11px]"></i> Message
+        </button>
+      </div>
+
+      <div class="px-4 pb-5 -mt-6">
+        <div id="popoutDisplayName" class="text-lg font-bold text-white">Operative</div>
+        <div id="popoutEmail" class="text-xs text-[#949ba4] font-mono mb-3">user@domain.com</div>
+
+        <div class="w-full h-[1px] bg-[#3f4147] my-3"></div>
+
+        <div class="space-y-3">
+          <div>
+            <div class="text-[10px] font-bold uppercase text-[#b5bac1] mb-1">Status Note</div>
+            <div id="popoutStatusNote" class="text-xs text-[#dbdee1]">Online</div>
+          </div>
+          <div>
+            <div class="text-[10px] font-bold uppercase text-[#b5bac1] mb-1">About Me</div>
+            <div id="popoutBio" class="text-xs text-[#dbdee1] leading-relaxed">No bio provided.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. FIREBASE CONFIGURATION & INITIALIZATION (PRESERVED EXACTLY)
+    // =========================================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyClRzYRn4d4iXLLKQGRVntev3LQwTfuDLQ",
+      authDomain: "redroom-9f4a0.firebaseapp.com",
+      databaseURL: "https://redroom-9f4a0-default-rtdb.firebaseio.com",
+      projectId: "redroom-9f4a0",
+      storageBucket: "redroom-9f4a0.firebasestorage.app",
+      messagingSenderId: "646291907356",
+      appId: "1:646291907356:web:29f88d37dbed10775790d9",
+      measurementId: "G-5QF7S4HR60"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((err) => console.error(err));
+
+    // =========================================================================
+    // 2. APPLICATION STATE
+    // =========================================================================
+    let currentUser = null;
+    let currentUserProfile = {
+      displayName: 'Operative',
+      accentColor: '#7c5cff',
+      dicebearStyle: 'bottts',
+      avatarUrl: '',
+      bannerUrl: '',
+      statusNote: 'Online',
+      statusState: 'online',
+      bio: '',
+      audioEnabled: true,
+      approved: false
+    };
+
+    // Navigation & Context State
+    let viewMode = 'server'; // 'server' | 'home'
+    let homeSubView = 'directory'; // 'directory' | 'dm'
+    let activeServerId = 'public-hub';
+    let activeChannelId = 'general';
+    let activeDmUserUid = null;
+    let activeDmId = null;
+
+    // Interactive State
+    let attachedImageUrl = null;
+    let autoDestructTimerMs = 0;
+    let replyingToMessage = null; // { id, senderName, text }
+    let editingMessageId = null;
+    let searchFilterQuery = '';
+    let directoryTab = 'online';
+    let directorySearchQuery = '';
+    let newChannelType = 'text';
+
+    // Voice & Audio State
+    let isMuted = false;
+    let isDeafened = false;
+    let connectedVoice = null; // { serverId, serverName, channelId, channelName }
+
+    // Cached Data
+    let userServers = {};
+    let allApprovedUsers = {};
+    let onlinePresenceUsers = {};
+    let currentPinsMap = {};
+
+    // Firebase Listener References
+    let approvalListenerRef = null;
+    let messagesListenerRef = null;
+    let messagesListenerPath = null;
+    let pinsListenerRef = null;
+    let pinsListenerPath = null;
+    let typingListenerRef = null;
+    let typingListenerPath = null;
+    let typingTimeout = null;
+    let isSignupMode = false;
+
+    // Emoji Data
+    const EMOJI_CATEGORIES = {
+      smileys: ['😀','😂','🤣','😊','😍','🥰','😎','🤩','🤔','🤨','😐','🙄','😏','😴','🤯','🥳','😭','😤','😡','😱','🤖','👻','💀','👽'],
+      gestures: ['👍','👎','👏','🙌','🤝','✌️','🤞','🤟','🤘','👌','🤙','👋','💪','🙏','👀','🧠'],
+      hearts: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❣️','💕','💖','💗','💘','💝'],
+      celebration: ['🎉','🎊','✨','🎈','🏆','🥇','🎯','🎮','🎲','🎵','🎸','🚀','🛸','⚡'],
+      symbols: ['🔥','💯','✅','❌','⚠️','🛡️','🔒','🔑','💡','📌','💬','📢','⏰','💎']
+    };
+
+    // =========================================================================
+    // 3. HELPER UTILITIES (AVATARS, COLORS, AUDIO, TOASTS)
+    // =========================================================================
+    function getDiceBearAvatar(seed, style = 'bottts') {
+      const cleanSeed = encodeURIComponent(seed || 'operative');
+      return `https://api.dicebear.com/7.x/${style}/svg?seed=${cleanSeed}`;
+    }
+
+    function getUserAvatarUrl(uid, profileObj) {
+      if (profileObj && profileObj.avatarUrl && profileObj.avatarUrl.trim() !== '') {
+        return profileObj.avatarUrl;
+      }
+      return getDiceBearAvatar(uid, (profileObj && profileObj.dicebearStyle) || 'bottts');
+    }
+
+    function applyAccentColor(hexColor) {
+      if (!hexColor) hexColor = '#7c5cff';
+      document.documentElement.style.setProperty('--accent-color', hexColor);
+      document.documentElement.style.setProperty('--accent-hover', adjustColorBrightness(hexColor, -20));
+      document.documentElement.style.setProperty('--accent-light', hexColor + '26');
+    }
+
+    function adjustColorBrightness(hex, percent) {
+      let num = parseInt(hex.replace('#',''), 16),
+          amt = Math.round(2.55 * percent),
+          R = (num >> 16) + amt,
+          G = (num >> 8 & 0x00FF) + amt,
+          B = (num & 0x0000FF) + amt;
+      return '#' + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
+    }
+
+    function playAudioTone(freq, type = 'sine', duration = 0.12) {
+      if (currentUserProfile.audioEnabled === false || isDeafened) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.07, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playMessageChime() {
+      playAudioTone(587.33, 'sine', 0.09);
+      setTimeout(() => playAudioTone(880, 'sine', 0.14), 75);
+    }
+
+    function playJoinChime() {
+      playAudioTone(523.25, 'triangle', 0.09);
+      setTimeout(() => playAudioTone(659.25, 'triangle', 0.09), 75);
+      setTimeout(() => playAudioTone(783.99, 'triangle', 0.18), 150);
+    }
+
+    function playLeaveChime() {
+      playAudioTone(659.25, 'triangle', 0.09);
+      setTimeout(() => playAudioTone(440, 'triangle', 0.16), 80);
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bgColor = type === 'error' ? 'bg-[#f23f43]' : type === 'success' ? 'bg-[#23a55a]' : 'bg-accent';
+
+      toast.className = `${bgColor} text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 pointer-events-auto transition-all duration-300 transform translate-x-5 opacity-0`;
+      toast.innerHTML = `<i class="fa-solid fa-shield-halved text-sm"></i><span>${escapeHtml(message)}</span>`;
+
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.remove('translate-x-5', 'opacity-0'), 10);
+      setTimeout(() => {
+        toast.classList.add('translate-x-5', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 70, spread: 60, origin: { y: 0.7 } });
+      }
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[m]));
+    }
+
+    function getDmThreadId(uid1, uid2) {
+      return [uid1, uid2].sort().join('_');
+    }
+
+    // =========================================================================
+    // 4. AUTHENTICATION & APPROVAL GATEKEEPER (PRESERVED EXACTLY)
+    // =========================================================================
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById('authOverlay').classList.add('hidden');
+        setupGatekeeperListener(user);
+      } else {
+        currentUser = null;
+        document.getElementById('authOverlay').classList.remove('hidden');
+        document.getElementById('pendingOverlay').classList.add('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
+      }
+    });
+
+    function setupGatekeeperListener(user) {
+      const userRef = db.ref(`users/${user.uid}`);
+      document.getElementById('pendingEmailDisplay').innerText = user.email || 'N/A';
+      document.getElementById('pendingUidDisplay').innerText = user.uid;
+
+      if (approvalListenerRef) userRef.off('value', approvalListenerRef);
+
+      approvalListenerRef = userRef.on('value', (snapshot) => {
+        const val = snapshot.val();
+
+        if (!val) {
+          userRef.set({
+            displayName: user.email ? user.email.split('@')[0] : 'Operative',
+            email: user.email,
+            accentColor: '#7c5cff',
+            dicebearStyle: 'bottts',
+            approved: false,
+            status: 'pending'
+          });
+          return;
+        }
+
+        currentUserProfile = { ...currentUserProfile, ...val };
+        applyAccentColor(currentUserProfile.accentColor || '#7c5cff');
+        document.getElementById('pendingHandleDisplay').innerText = currentUserProfile.displayName || 'Operative';
+
+        const isApproved = val.approved === true || val.status === 'approved';
+
+        if (isApproved) {
+          document.getElementById('pendingOverlay').classList.add('hidden');
+          document.getElementById('mainApp').classList.remove('hidden');
+
+          const presenceRef = db.ref(`presence/${user.uid}`);
+          presenceRef.onDisconnect().remove();
+          presenceRef.set({
+            displayName: currentUserProfile.displayName,
+            email: user.email,
+            accentColor: currentUserProfile.accentColor || '#7c5cff',
+            dicebearStyle: currentUserProfile.dicebearStyle || 'bottts',
+            avatarUrl: currentUserProfile.avatarUrl || '',
+            bannerUrl: currentUserProfile.bannerUrl || '',
+            statusNote: currentUserProfile.statusNote || 'Online',
+            statusState: currentUserProfile.statusState || 'online',
+            bio: currentUserProfile.bio || '',
+            approved: true
+          });
+
+          initMainApp();
+        } else {
+          document.getElementById('mainApp').classList.add('hidden');
+          document.getElementById('pendingOverlay').classList.remove('hidden');
+          db.ref(`presence/${user.uid}`).remove();
+        }
+      });
+    }
+
+    let appInitialized = false;
+    function initMainApp() {
+      updateUserProfileDisplay();
+      if (appInitialized) return;
+      appInitialized = true;
+
+      listenAllApprovedUsers();
+      listenUserServers();
+      listenPresence();
+      initEmojiPicker();
+    }
+
+    function updateUserProfileDisplay() {
+      document.getElementById('userFooterName').innerText = currentUserProfile.displayName;
+      document.getElementById('userFooterStatusText').innerText = currentUserProfile.statusNote || 'Online';
+      
+      const avatarEl = document.getElementById('userFooterAvatar');
+      const avatarSrc = getUserAvatarUrl(currentUser.uid, currentUserProfile);
+      avatarEl.style.backgroundImage = `url('${avatarSrc}')`;
+      avatarEl.innerText = '';
+
+      updateStatusDotUI(currentUserProfile.statusState || 'online');
+    }
+
+    function updateStatusDotUI(status) {
+      currentUserProfile.statusState = status;
+      const dot = document.getElementById('userFooterStatusDot');
+
+      const colorMap = {
+        online: 'bg-[#23a55a]',
+        idle: 'bg-[#f0b232]',
+        dnd: 'bg-[#f23f43]',
+        invisible: 'bg-[#80848e]'
+      };
+
+      dot.className = `absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#232428] ${colorMap[status] || 'bg-[#23a55a]'}`;
+
+      if (currentUser) {
+        db.ref(`users/${currentUser.uid}`).update({ statusState: status });
+        db.ref(`presence/${currentUser.uid}`).update({ statusState: status });
+      }
+    }
+
+    // =========================================================================
+    // 5. ALL APPROVED OPERATIVES & DIRECT MESSAGES (HOME VIEW)
+    // =========================================================================
+    function listenAllApprovedUsers() {
+      db.ref('users').on('value', (snapshot) => {
+        const raw = snapshot.val() || {};
+        const filtered = {};
+        Object.entries(raw).forEach(([uid, u]) => {
+          if (u && (u.approved === true || u.status === 'approved')) {
+            filtered[uid] = { uid, ...u };
+          }
+        });
+        allApprovedUsers = filtered;
+        renderDmConversationsList();
+        renderOperativesDirectory();
+        renderMemberSidebars();
+      });
+    }
+
+    function switchToHomeView(subView = 'directory', targetUid = null) {
+      viewMode = 'home';
+      homeSubView = subView;
+      cancelReply();
+      cancelEdit();
+
+      // Update Server Rail Visuals
+      const homeBtn = document.getElementById('btnServerHome');
+      homeBtn.className = "w-12 h-12 rounded-[16px] bg-accent text-white flex items-center justify-center text-xl transition-all duration-200 shadow-md relative";
+      document.getElementById('homePill').className = "server-pill top-2 h-8 opacity-100";
+      renderServerRail();
+
+      // Toggle Left Sidebar Panels
+      document.getElementById('serverSidebarHeader').classList.add('hidden');
+      document.getElementById('serverChannelsContainer').classList.add('hidden');
+      document.getElementById('dmSidebarHeader').classList.remove('hidden');
+      document.getElementById('dmSidebarContainer').classList.remove('hidden');
+
+      if (subView === 'directory') {
+        activeDmUserUid = null;
+        activeDmId = null;
+        document.getElementById('btnShowFriendsDir').className = "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-semibold bg-[#35373c] text-white transition-colors";
+        document.getElementById('friendsDirectoryView').classList.remove('hidden');
+        document.getElementById('chatWorkspaceView').classList.add('hidden');
+        document.getElementById('chatHeaderControls').classList.add('hidden');
+
+        document.getElementById('headerChannelIcon').className = "fa-solid fa-user-group text-[#80848e] text-base flex-shrink-0";
+        document.getElementById('headerChannelName').innerText = "Operatives Directory";
+        document.getElementById('headerChannelDesc').innerText = "Click any operative to start a private encrypted DM";
+
+        renderOperativesDirectory();
+      } else if (subView === 'dm' && targetUid) {
+        openDirectMessage(targetUid);
+      }
+
+      renderDmConversationsList();
+      closeMobileDrawer();
+    }
+
+    function openDirectMessage(targetUid) {
+      if (!currentUser || !targetUid) return;
+      viewMode = 'home';
+      homeSubView = 'dm';
+      activeDmUserUid = targetUid;
+      activeDmId = getDmThreadId(currentUser.uid, targetUid);
+
+      const targetUser = allApprovedUsers[targetUid] || { displayName: 'Operative', uid: targetUid };
+
+      // Update Sidebar Visuals
+      document.getElementById('btnShowFriendsDir').className = "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-semibold text-[#949ba4] hover:bg-[#35373c]/60 hover:text-white transition-colors";
+      document.getElementById('friendsDirectoryView').classList.add('hidden');
+      document.getElementById('chatWorkspaceView').classList.remove('hidden');
+      document.getElementById('chatHeaderControls').classList.remove('hidden');
+
+      // Update Header
+      document.getElementById('headerChannelIcon').className = "fa-solid fa-at text-[#80848e] text-base flex-shrink-0";
+      document.getElementById('headerChannelName').innerText = targetUser.displayName || 'Operative';
+      document.getElementById('headerChannelDesc').innerText = targetUser.statusNote || 'Direct Message';
+      document.getElementById('chatInput').placeholder = `Message @${targetUser.displayName || 'Operative'}`;
+
+      // Record DM participant metadata so it shows in sidebar
+      db.ref(`dms/${activeDmId}/participants`).update({
+        [currentUser.uid]: true,
+        [targetUid]: true
+      });
+
+      renderDmConversationsList();
+      subscribeToChatPath(`dms/${activeDmId}/messages`, `dms/${activeDmId}/pins`, `dms/${activeDmId}`);
+      closeMobileDrawer();
+    }
+
+    function renderDmConversationsList() {
+      const container = document.getElementById('dmConversationsList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const otherUsers = Object.values(allApprovedUsers).filter(u => u.uid !== currentUser?.uid);
+      if (otherUsers.length === 0) {
+        container.innerHTML = `<div class="text-[11px] text-[#949ba4] px-2 py-3 italic">No other operatives yet.</div>`;
+        return;
+      }
+
+      otherUsers.forEach(u => {
+        const isSelected = viewMode === 'home' && homeSubView === 'dm' && activeDmUserUid === u.uid;
+        const isOnline = !!onlinePresenceUsers[u.uid];
+        const statusState = isOnline ? (onlinePresenceUsers[u.uid].statusState || 'online') : 'invisible';
+        const statusColor = {
+          online: 'bg-[#23a55a]',
+          idle: 'bg-[#f0b232]',
+          dnd: 'bg-[#f23f43]',
+          invisible: 'bg-[#80848e]'
+        }[statusState];
+
+        const avatarSrc = getUserAvatarUrl(u.uid, u);
+        const btn = document.createElement('button');
+        btn.className = `w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-left transition-colors ${
+          isSelected ? 'bg-[#35373c] text-white' : 'text-[#949ba4] hover:bg-[#35373c]/50 hover:text-[#dbdee1]'
+        }`;
+        btn.innerHTML = `
+          <div class="relative flex-shrink-0">
+            <div class="w-8 h-8 rounded-full bg-cover bg-center border border-[#3f4147]" style="background-image: url('${avatarSrc}')"></div>
+            <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#2b2d31] ${statusColor}"></span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="text-xs font-semibold truncate">${escapeHtml(u.displayName || 'Operative')}</div>
+            <div class="text-[10px] text-[#949ba4] truncate">${isOnline ? escapeHtml(u.statusNote || 'Online') : 'Offline'}</div>
+          </div>
+        `;
+        btn.addEventListener('click', () => openDirectMessage(u.uid));
+        container.appendChild(btn);
+      });
+    }
+
+    function renderOperativesDirectory() {
+      const listEl = document.getElementById('directoryOperativesList');
+      const countEl = document.getElementById('directoryHeaderCount');
+      if (!listEl) return;
+
+      let users = Object.values(allApprovedUsers).filter(u => u.uid !== currentUser?.uid);
+      if (directoryTab === 'online') {
+        users = users.filter(u => !!onlinePresenceUsers[u.uid]);
+      }
+      if (directorySearchQuery) {
+        const q = directorySearchQuery.toLowerCase();
+        users = users.filter(u => (u.displayName || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q));
+      }
+
+      countEl.innerText = `${directoryTab.toUpperCase()} OPERATIVES — ${users.length}`;
+      listEl.innerHTML = '';
+
+      if (users.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-12 text-[#949ba4]">
+            <i class="fa-solid fa-user-astronaut text-3xl mb-2 opacity-50"></i>
+            <p class="text-xs">No operatives found in this filter.</p>
+          </div>
+        `;
+        return;
+      }
+
+      users.forEach(u => {
+        const isOnline = !!onlinePresenceUsers[u.uid];
+        const statusState = isOnline ? (onlinePresenceUsers[u.uid].statusState || 'online') : 'invisible';
+        const statusColor = {
+          online: 'bg-[#23a55a]',
+          idle: 'bg-[#f0b232]',
+          dnd: 'bg-[#f23f43]',
+          invisible: 'bg-[#80848e]'
+        }[statusState];
+
+        const avatarSrc = getUserAvatarUrl(u.uid, u);
+        const row = document.createElement('div');
+        row.className = "py-2.5 px-3 hover:bg-[#35373c]/60 rounded-lg flex items-center justify-between gap-3 transition-colors group";
+        row.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0 cursor-pointer flex-1 dir-user-info">
+            <div class="relative flex-shrink-0">
+              <div class="w-10 h-10 rounded-full bg-cover bg-center border border-[#3f4147]" style="background-image: url('${avatarSrc}')"></div>
+              <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#313338] ${statusColor}"></span>
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-bold text-white truncate">${escapeHtml(u.displayName || 'Operative')}</div>
+              <div class="text-xs text-[#949ba4] truncate">${isOnline ? escapeHtml(u.statusNote || 'Online') : 'Offline'}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="dir-msg-btn w-9 h-9 rounded-full bg-[#2b2d31] group-hover:bg-[#1e1f22] text-[#b5bac1] hover:text-white flex items-center justify-center transition-colors" title="Message">
+              <i class="fa-solid fa-message text-xs"></i>
+            </button>
+          </div>
+        `;
+
+        row.querySelector('.dir-msg-btn').addEventListener('click', () => openDirectMessage(u.uid));
+        row.querySelector('.dir-user-info').addEventListener('click', () => {
+          openUserProfilePopout(u.uid, u.displayName, u.email, avatarSrc, u.bannerUrl, u.statusNote, u.bio);
+        });
+        listEl.appendChild(row);
+      });
+    }
+
+    // =========================================================================
+    // 6. SERVER, TEXT CHANNELS & VOICE CHANNELS MANAGEMENT
+    // =========================================================================
+    function listenUserServers() {
+      db.ref('servers').on('value', (snapshot) => {
+        const allServers = snapshot.val() || {};
+        if (Object.keys(allServers).length === 0) {
+          createDefaultPublicServer();
+          return;
+        }
+
+        userServers = allServers;
+        renderServerRail();
+
+        if (viewMode === 'server') {
+          if (userServers[activeServerId]) {
+            loadServerChannels(activeServerId, userServers[activeServerId]);
+          } else {
+            const firstKey = Object.keys(userServers)[0];
+            if (firstKey) {
+              activeServerId = firstKey;
+              loadServerChannels(firstKey, userServers[firstKey]);
+            }
+          }
+        }
+      });
+    }
+
+    function renderServerRail() {
+      const container = document.getElementById('serverRailList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      Object.entries(userServers).forEach(([id, srv]) => {
+        const isSelected = viewMode === 'server' && activeServerId === id;
+
+        const item = document.createElement('div');
+        item.className = "relative group flex items-center justify-center w-full";
+
+        const pill = document.createElement('div');
+        pill.className = `server-pill top-2 ${isSelected ? 'h-8 opacity-100' : 'h-4 opacity-0 group-hover:opacity-100'}`;
+
+        const btn = document.createElement('button');
+        btn.className = `w-12 h-12 rounded-[24px] hover:rounded-[16px] transition-all duration-200 flex items-center justify-center font-bold text-white shadow-md bg-cover bg-center ${
+          isSelected ? 'rounded-[16px] bg-accent' : 'bg-[#313338] hover:bg-accent'
+        }`;
+
+        if (srv.iconUrl && srv.iconUrl.startsWith('http')) {
+          btn.style.backgroundImage = `url('${srv.iconUrl}')`;
+          btn.innerText = '';
+        } else {
+          btn.innerText = srv.iconUrl || srv.name.charAt(0).toUpperCase();
+        }
+
+        btn.addEventListener('click', () => {
+          viewMode = 'server';
+          activeServerId = id;
+          cancelReply();
+          cancelEdit();
+
+          // Reset Home button look
+          document.getElementById('btnServerHome').className = "w-12 h-12 rounded-[24px] hover:rounded-[16px] bg-[#313338] hover:bg-accent text-[#dbdee1] hover:text-white flex items-center justify-center text-xl transition-all duration-200 shadow-md relative";
+          document.getElementById('homePill').className = "server-pill top-2 h-4 opacity-0";
+
+          // Show Server Panels
+          document.getElementById('serverSidebarHeader').classList.remove('hidden');
+          document.getElementById('serverChannelsContainer').classList.remove('hidden');
+          document.getElementById('dmSidebarHeader').classList.add('hidden');
+          document.getElementById('dmSidebarContainer').classList.add('hidden');
+          document.getElementById('friendsDirectoryView').classList.add('hidden');
+          document.getElementById('chatWorkspaceView').classList.remove('hidden');
+          document.getElementById('chatHeaderControls').classList.remove('hidden');
+
+          playAudioTone(440, 'sine', 0.08);
+          renderServerRail();
+          loadServerChannels(id, srv);
+          closeMobileDrawer();
+        });
+
+        const tooltip = document.createElement('div');
+        tooltip.className = "hidden md:block absolute left-[78px] top-2 bg-[#111214] text-xs font-semibold text-[#f2f3f5] px-3 py-1.5 rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 discord-tooltip";
+        tooltip.innerText = srv.name;
+
+        item.appendChild(pill);
+        item.appendChild(btn);
+        item.appendChild(tooltip);
+        container.appendChild(item);
+      });
+    }
+
+    async function createDefaultPublicServer() {
+      await db.ref('servers/public-hub').set({
+        name: 'PrivacyChat Public Hub',
+        iconUrl: '🛡️',
+        ownerUid: 'system',
+        channels: {
+          'general': { name: 'general', desc: 'General chatter lounge' },
+          'lounge': { name: 'lounge', desc: 'Chill & hangout' },
+          'memes': { name: 'memes', desc: 'Share GIFs & fun images' }
+        },
+        voiceChannels: {
+          'general-voice': { name: 'General Voice' },
+          'squad-comms': { name: 'Squad Comms' }
+        }
+      });
+    }
+
+    function loadServerChannels(serverId, serverData) {
+      document.getElementById('currentServerTitle').innerText = serverData.name || 'Server';
+      const container = document.getElementById('channelList');
+      container.innerHTML = '';
+
+      const channels = serverData.channels || { 'general': { name: 'general', desc: 'General chat' } };
+      if (!channels[activeChannelId]) {
+        activeChannelId = Object.keys(channels)[0] || 'general';
+      }
+
+      Object.entries(channels).forEach(([chId, ch]) => {
+        const isActive = chId === activeChannelId;
+        const item = document.createElement('div');
+        item.className = `flex items-center justify-between px-2 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+          isActive ? 'bg-[#35373c] text-white' : 'text-[#949ba4] hover:bg-[#35373c]/50 hover:text-[#dbdee1]'
+        }`;
+        item.innerHTML = `
+          <span class="flex items-center gap-2 truncate">
+            <i class="fa-solid fa-hashtag text-sm text-[#80848e]"></i> ${escapeHtml(ch.name)}
+          </span>
+        `;
+        item.addEventListener('click', () => {
+          activeChannelId = chId;
+          cancelReply();
+          cancelEdit();
+          playAudioTone(520, 'sine', 0.05);
+          loadServerChannels(serverId, serverData);
+          closeMobileDrawer();
+        });
+        container.appendChild(item);
+      });
+
+      // Render Voice Channels
+      const voiceContainer = document.getElementById('voiceChannelList');
+      voiceContainer.innerHTML = '';
+      const voiceChannels = serverData.voiceChannels || {
+        'general-voice': { name: 'General Voice' },
+        'squad-comms': { name: 'Squad Comms' }
+      };
+
+      Object.entries(voiceChannels).forEach(([vId, vCh]) => {
+        const participants = vCh.participants || {};
+        const isConnectedHere = connectedVoice && connectedVoice.serverId === serverId && connectedVoice.channelId === vId;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = "space-y-1";
+
+        const btn = document.createElement('div');
+        btn.className = `flex items-center justify-between px-2 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+          isConnectedHere ? 'bg-[#35373c]/80 text-white' : 'text-[#949ba4] hover:bg-[#35373c]/50 hover:text-[#dbdee1]'
+        }`;
+        btn.innerHTML = `
+          <span class="flex items-center gap-2 truncate">
+            <i class="fa-solid fa-volume-high text-xs ${isConnectedHere ? 'text-[#23a55a]' : 'text-[#80848e]'}"></i>
+            <span>${escapeHtml(vCh.name)}</span>
+          </span>
+        `;
+        btn.addEventListener('click', () => joinVoiceChannel(serverId, serverData.name, vId, vCh.name));
+        wrapper.appendChild(btn);
+
+        // Connected Voice Participants Avatars
+        const pEntries = Object.entries(participants);
+        if (pEntries.length > 0) {
+          const pList = document.createElement('div');
+          pList.className = "pl-6 space-y-1";
+          pEntries.forEach(([pUid, pInfo]) => {
+            const avatarSrc = pInfo.avatarUrl || getDiceBearAvatar(pUid, pInfo.dicebearStyle || 'bottts');
+            const pRow = document.createElement('div');
+            pRow.className = "flex items-center justify-between pr-2 py-0.5 text-[11px] text-[#dbdee1]";
+            pRow.innerHTML = `
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-5 h-5 rounded-full bg-cover bg-center border ${pInfo.muted ? 'border-[#3f4147]' : 'border-[#23a55a]'}" style="background-image: url('${avatarSrc}')"></div>
+                <span class="truncate">${escapeHtml(pInfo.displayName || 'Operative')}</span>
+              </div>
+              <div class="flex items-center gap-1 text-[10px] text-[#f23f43]">
+                ${pInfo.muted ? '<i class="fa-solid fa-microphone-slash"></i>' : ''}
+                ${pInfo.deafened ? '<i class="fa-solid fa-volume-xmark"></i>' : ''}
+              </div>
+            `;
+            pList.appendChild(pRow);
+          });
+          wrapper.appendChild(pList);
+        }
+
+        voiceContainer.appendChild(wrapper);
+      });
+
+      const activeChObj = channels[activeChannelId] || { name: activeChannelId, desc: 'Channel lounge' };
+      document.getElementById('headerChannelIcon').className = "fa-solid fa-hashtag text-[#80848e] text-lg flex-shrink-0";
+      document.getElementById('headerChannelName').innerText = activeChObj.name;
+      document.getElementById('headerChannelDesc').innerText = activeChObj.desc || '';
+      document.getElementById('chatInput').placeholder = `Message #${activeChObj.name}`;
+
+      subscribeToChatPath(
+        `servers/${serverId}/messages/${activeChannelId}`,
+        `servers/${serverId}/pins/${activeChannelId}`,
+        `servers/${serverId}/channels/${activeChannelId}`
+      );
+    }
+
+    // =========================================================================
+    // 7. VOICE CHANNEL SIMULATION & AUDIO CONTROLS
+    // =========================================================================
+    async function joinVoiceChannel(serverId, serverName, channelId, channelName) {
+      if (!currentUser) return;
+      if (connectedVoice && connectedVoice.serverId === serverId && connectedVoice.channelId === channelId) {
+        return; // Already connected here
+      }
+
+      if (connectedVoice) {
+        await leaveVoiceChannel(false);
+      }
+
+      connectedVoice = { serverId, serverName, channelId, channelName };
+      const vRef = db.ref(`servers/${serverId}/voiceChannels/${channelId}/participants/${currentUser.uid}`);
+      vRef.onDisconnect().remove();
+      await vRef.set({
+        displayName: currentUserProfile.displayName,
+        avatarUrl: currentUserProfile.avatarUrl || '',
+        dicebearStyle: currentUserProfile.dicebearStyle || 'bottts',
+        muted: isMuted,
+        deafened: isDeafened
+      });
+
+      document.getElementById('voiceConnectionPanel').classList.remove('hidden');
+      document.getElementById('voiceConnectedChannelName').innerText = `${channelName} / ${serverName}`;
+      playJoinChime();
+      showToast(`Connected to ${channelName}`, 'success');
+    }
+
+    async function leaveVoiceChannel(playSound = true) {
+      if (!connectedVoice || !currentUser) return;
+      const { serverId, channelId } = connectedVoice;
+      await db.ref(`servers/${serverId}/voiceChannels/${channelId}/participants/${currentUser.uid}`).remove();
+      connectedVoice = null;
+      document.getElementById('voiceConnectionPanel').classList.add('hidden');
+      if (playSound) {
+        playLeaveChime();
+        showToast('Disconnected from voice channel', 'info');
+      }
+    }
+
+    document.getElementById('btnDisconnectVoice').addEventListener('click', () => leaveVoiceChannel(true));
+
+    document.getElementById('btnToggleMute').addEventListener('click', async () => {
+      isMuted = !isMuted;
+      const icon = document.getElementById('iconMute');
+      icon.className = isMuted ? 'fa-solid fa-microphone-slash text-xs text-[#f23f43]' : 'fa-solid fa-microphone text-xs';
+      playAudioTone(isMuted ? 330 : 520, 'sine', 0.08);
+
+      if (connectedVoice && currentUser) {
+        await db.ref(`servers/${connectedVoice.serverId}/voiceChannels/${connectedVoice.channelId}/participants/${currentUser.uid}`).update({
+          muted: isMuted
+        });
+      }
+    });
+
+    document.getElementById('btnToggleDeafen').addEventListener('click', async () => {
+      isDeafened = !isDeafened;
+      const icon = document.getElementById('iconDeafen');
+      icon.className = isDeafened ? 'fa-solid fa-volume-xmark text-xs text-[#f23f43]' : 'fa-solid fa-headphones text-xs';
+      if (!isDeafened) playAudioTone(600, 'sine', 0.08);
+
+      if (connectedVoice && currentUser) {
+        await db.ref(`servers/${connectedVoice.serverId}/voiceChannels/${connectedVoice.channelId}/participants/${currentUser.uid}`).update({
+          deafened: isDeafened
+        });
+      }
+    });
+
+    // =========================================================================
+    // 8. UNIFIED REALTIME MESSAGING, PINS, TYPING & GROUPED RENDERING
+    // =========================================================================
+    function subscribeToChatPath(messagesPath, pinsPath, contextId) {
+      if (!currentUser) return;
+
+      // Detach old listeners
+      if (messagesListenerRef && messagesListenerPath) {
+        db.ref(messagesListenerPath).off('value', messagesListenerRef);
+      }
+      if (pinsListenerRef && pinsListenerPath) {
+        db.ref(pinsListenerPath).off('value', pinsListenerRef);
+      }
+      if (typingListenerRef && typingListenerPath) {
+        db.ref(typingListenerPath).off('value', typingListenerRef);
+      }
+
+      messagesListenerPath = messagesPath;
+      pinsListenerPath = pinsPath;
+
+      // 1. Listen to Pinned Messages
+      pinsListenerRef = db.ref(pinsPath).on('value', (snap) => {
+        currentPinsMap = snap.val() || {};
+        renderPinnedDrawer();
+      });
+
+      // 2. Listen to Typing Indicators
+      const safeContextKey = contextId.replace(/[\/\.#$\[\]]/g, '_');
+      typingListenerPath = `typing/${safeContextKey}`;
+      typingListenerRef = db.ref(typingListenerPath).on('value', (snap) => {
+        const typers = snap.val() || {};
+        const now = Date.now();
+        const activeNames = Object.entries(typers)
+          .filter(([uid, info]) => uid !== currentUser.uid && info && (now - info.timestamp < 5000))
+          .map(([_, info]) => info.displayName || 'Operative');
+
+        const bar = document.getElementById('typingIndicatorBar');
+        const txt = document.getElementById('typingIndicatorText');
+        if (activeNames.length > 0) {
+          bar.classList.remove('opacity-0');
+          if (activeNames.length === 1) {
+            txt.innerText = `${activeNames[0]} is typing...`;
+          } else if (activeNames.length === 2) {
+            txt.innerText = `${activeNames[0]} and ${activeNames[1]} are typing...`;
+          } else {
+            txt.innerText = `Several operatives are typing...`;
+          }
+        } else {
+          bar.classList.add('opacity-0');
+        }
+      });
+
+      // 3. Listen to Messages
+      const feed = document.getElementById('messagesFeed');
+      feed.innerHTML = '<div class="text-center text-xs text-[#949ba4] py-8"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Loading messages...</div>';
+
+      messagesListenerRef = db.ref(messagesPath).on('value', (snapshot) => {
+        const wasAtBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 120;
+        feed.innerHTML = '';
+        const data = snapshot.val();
+
+        const titleName = viewMode === 'home'
+          ? (allApprovedUsers[activeDmUserUid]?.displayName || 'Operative')
+          : `#${document.getElementById('headerChannelName').innerText}`;
+
+        const welcomeBanner = document.createElement('div');
+        welcomeBanner.className = "my-6 text-left space-y-2 px-2 pb-4 border-b border-[#3f4147]/40";
+        welcomeBanner.innerHTML = viewMode === 'home'
+          ? `
+            <div class="w-14 h-14 rounded-full bg-accent text-white flex items-center justify-center text-2xl font-bold shadow-md">
+              <i class="fa-solid fa-at"></i>
+            </div>
+            <h3 class="text-2xl font-extrabold text-white">${escapeHtml(titleName)}</h3>
+            <p class="text-xs text-[#949ba4]">This is the beginning of your private direct message history with <strong class="text-[#dbdee1]">${escapeHtml(titleName)}</strong>.</p>
+          `
+          : `
+            <div class="w-14 h-14 rounded-full bg-[#3f4147] text-white flex items-center justify-center text-3xl font-bold">#</div>
+            <h3 class="text-2xl font-extrabold text-white">Welcome to ${escapeHtml(titleName)}!</h3>
+            <p class="text-xs text-[#949ba4]">This is the start of the ${escapeHtml(titleName)} channel.</p>
+          `;
+        feed.appendChild(welcomeBanner);
+
+        if (!data) return;
+
+        const msgList = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+        msgList.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+        let lastDateStr = null;
+        let lastMsg = null;
+
+        msgList.forEach(msg => {
+          // Self-Destruct Check
+          if (msg.expiresAt && Date.now() > msg.expiresAt) {
+            db.ref(`${messagesPath}/${msg.id}`).remove();
+            return;
+          }
+
+          // Search filter check
+          if (searchFilterQuery && !(msg.text || '').toLowerCase().includes(searchFilterQuery.toLowerCase())) {
+            return;
+          }
+
+          const msgDate = msg.timestamp ? new Date(msg.timestamp) : new Date();
+          const dateStr = msgDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+          // Insert Date Divider if new day
+          if (dateStr !== lastDateStr) {
+            const divider = document.createElement('div');
+            divider.className = "relative flex items-center justify-center my-4 select-none";
+            divider.innerHTML = `
+              <div class="flex-1 h-[1px] bg-[#3f4147]/60"></div>
+              <span class="px-3 text-[11px] font-semibold text-[#949ba4]">${dateStr}</span>
+              <div class="flex-1 h-[1px] bg-[#3f4147]/60"></div>
+            `;
+            feed.appendChild(divider);
+            lastDateStr = dateStr;
+            lastMsg = null; // Break grouping across days
+          }
+
+          // Consecutive Grouping Check: Same sender, within 5 minutes, and not a reply
+          const isGrouped = lastMsg &&
+            lastMsg.senderUid === msg.senderUid &&
+            !msg.replyTo &&
+            ((msg.timestamp || 0) - (lastMsg.timestamp || 0) < 5 * 60 * 1000);
+
+          feed.appendChild(renderMessageNode(msg, messagesPath, pinsPath, isGrouped));
+          lastMsg = msg;
+        });
+
+        if (wasAtBottom || msgList.length <= 15) {
+          feed.scrollTop = feed.scrollHeight;
+        }
+      });
+    }
+
+    function renderMessageNode(msg, messagesPath, pinsPath, isGrouped) {
+      const isOwner = currentUser && currentUser.uid === msg.senderUid;
+      const isPinned = !!currentPinsMap[msg.id];
+      const mentionsMe = currentUserProfile.displayName &&
+        (msg.text || '').toLowerCase().includes(`@${currentUserProfile.displayName.toLowerCase()}`);
+
+      const div = document.createElement('div');
+      div.id = `msg-node-${msg.id}`;
+      div.className = `group relative flex gap-4 px-2 py-1 hover:bg-[#2e3035] rounded transition-colors ${
+        isGrouped ? 'mt-0' : 'mt-3 pt-1.5'
+      } ${mentionsMe ? 'msg-mention-highlight' : ''} ${searchFilterQuery ? 'msg-search-match' : ''}`;
+
+      const msgDate = msg.timestamp ? new Date(msg.timestamp) : new Date();
+      const fullTimeStr = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const shortTimeStr = msgDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+      // Live profile lookup so updated avatars/names reflect immediately
+      const liveProfile = allApprovedUsers[msg.senderUid];
+      const displayName = liveProfile?.displayName || msg.senderName || 'Operative';
+      const avatarSrc = liveProfile ? getUserAvatarUrl(msg.senderUid, liveProfile) : (msg.senderAvatar || getDiceBearAvatar(msg.senderUid, msg.dicebearStyle || 'bottts'));
+
+      // Reply Reference Header
+      let replyHeaderHtml = '';
+      if (msg.replyTo) {
+        replyHeaderHtml = `
+          <div class="flex items-center gap-1.5 text-[11px] text-[#949ba4] mb-1 ml-12 select-none">
+            <div class="w-6 h-3 border-l-2 border-t-2 border-[#4e5058] rounded-tl-md -ml-6 mt-1.5"></div>
+            <i class="fa-solid fa-reply text-[10px] text-accent"></i>
+            <span class="font-semibold text-[#dbdee1] hover:underline cursor-pointer">${escapeHtml(msg.replyTo.senderName)}</span>
+            <span class="truncate max-w-xs sm:max-w-md opacity-85">${escapeHtml(msg.replyTo.text || '[Attachment]')}</span>
+          </div>
+        `;
+      }
+
+      // Attachment / Media Preview
+      let attachmentHtml = '';
+      if (msg.imageUrl) {
+        attachmentHtml = `
+          <div class="mt-2">
+            <img src="${escapeHtml(msg.imageUrl)}" class="max-h-72 max-w-full rounded-lg border border-[#3f4147] object-contain bg-[#1e1f22]" onerror="this.style.display='none'" />
+          </div>
+        `;
+      }
+
+      // YouTube Inline Embed Detection
+      const ytMatch = (msg.text || '').match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      if (ytMatch && ytMatch[1]) {
+        attachmentHtml += `
+          <div class="mt-2 max-w-md rounded-lg overflow-hidden border border-[#3f4147] bg-[#2b2d31]">
+            <iframe class="w-full aspect-video" src="https://www.youtube.com/embed/${ytMatch[1]}" frameborder="0" allowfullscreen></iframe>
+          </div>
+        `;
+      }
+
+      // Reactions Bar
+      let reactionsHtml = '';
+      if (msg.reactions && Object.keys(msg.reactions).length > 0) {
+        reactionsHtml = '<div class="flex flex-wrap gap-1 mt-1.5">';
+        Object.entries(msg.reactions).forEach(([emoji, uidsObj]) => {
+          const count = Object.keys(uidsObj || {}).length;
+          if (count === 0) return;
+          const hasReacted = uidsObj[currentUser.uid];
+          reactionsHtml += `
+            <button class="reaction-btn text-xs px-2 py-0.5 rounded-md border flex items-center gap-1.5 transition-colors ${
+              hasReacted ? 'bg-accent/20 border-accent text-white' : 'bg-[#2b2d31] border-transparent hover:border-[#3f4147] text-[#b5bac1]'
+            }" data-emoji="${emoji}">
+              <span>${emoji}</span>
+              <span class="font-bold text-[11px]">${count}</span>
+            </button>
+          `;
+        });
+        reactionsHtml += '</div>';
+      }
+
+      // Inline Edit Form vs Normal Message Body
+      const isEditing = editingMessageId === msg.id;
+      const bodyHtml = isEditing
+        ? `
+          <div class="mt-1 space-y-1.5">
+            <textarea id="editInput-${msg.id}" rows="2" class="w-full bg-[#383a40] text-sm text-[#dbdee1] p-2 rounded-md border border-accent focus:outline-none resize-none">${escapeHtml(msg.text || '')}</textarea>
+            <div class="text-[11px] text-[#949ba4]">
+              escape to <button class="cancel-edit-btn text-accent hover:underline font-semibold">cancel</button> • enter to <button class="save-edit-btn text-accent hover:underline font-semibold">save</button>
+            </div>
+          </div>
+        `
+        : `
+          <div class="text-[14px] text-[#dbdee1] whitespace-pre-wrap leading-[1.375rem] break-words selectable-text">${formatMessageContent(msg.text)}${msg.edited ? ' <span class="text-[10px] text-[#949ba4] select-none">(edited)</span>' : ''}</div>
+        `;
+
+      const leftColHtml = isGrouped
+        ? `<div class="w-10 flex-shrink-0 text-[10px] text-[#949ba4] opacity-0 group-hover:opacity-100 text-right pr-1 pt-1 select-none font-mono">${shortTimeStr}</div>`
+        : `<div class="w-10 h-10 rounded-full bg-cover bg-center flex-shrink-0 cursor-pointer user-popout-trigger overflow-hidden border border-[#3f4147] mt-0.5" style="background-image: url('${avatarSrc}')"></div>`;
+
+      const headerRowHtml = isGrouped
+        ? ''
+        : `
+          <div class="flex items-center gap-2">
+            <span class="text-[15px] font-semibold text-white hover:underline cursor-pointer user-popout-trigger">${escapeHtml(displayName)}</span>
+            <span class="text-[11px] text-[#949ba4]">${fullTimeStr}</span>
+            ${isPinned ? '<span class="text-[10px] text-accent bg-accent/10 px-1.5 py-0.2 rounded font-semibold"><i class="fa-solid fa-thumbtack text-[9px]"></i> Pinned</span>' : ''}
+            ${msg.expiresAt ? '<span class="text-[10px] text-[#f0b232] bg-[#f0b232]/10 px-1.5 py-0.2 rounded font-mono"><i class="fa-solid fa-clock"></i> Timed</span>' : ''}
+          </div>
+        `;
+
+      div.innerHTML = `
+        <div class="w-full">
+          ${replyHeaderHtml}
+          <div class="flex gap-4">
+            ${leftColHtml}
+            <div class="flex-1 min-w-0">
+              ${headerRowHtml}
+              ${bodyHtml}
+              ${attachmentHtml}
+              ${reactionsHtml}
+            </div>
+          </div>
+        </div>
+
+        <!-- Discord Floating Action Toolbar -->
+        <div class="absolute right-3 -top-3.5 hidden group-hover:flex items-center bg-[#313338] border border-[#232428] rounded-md shadow-lg p-0.5 text-[#b5bac1] text-xs z-20">
+          <button class="hover:text-[#f0b232] hover:bg-[#383a40] p-1.5 rounded add-reaction-btn" data-emoji="❤️" title="React ❤️"><i class="fa-solid fa-heart"></i></button>
+          <button class="hover:text-[#23a55a] hover:bg-[#383a40] p-1.5 rounded add-reaction-btn" data-emoji="👍" title="React 👍"><i class="fa-solid fa-thumbs-up"></i></button>
+          <button class="hover:text-white hover:bg-[#383a40] p-1.5 rounded msg-reply-btn" title="Reply"><i class="fa-solid fa-reply"></i></button>
+          <button class="hover:text-accent hover:bg-[#383a40] p-1.5 rounded msg-pin-btn" title="${isPinned ? 'Unpin Message' : 'Pin Message'}"><i class="fa-solid fa-thumbtack"></i></button>
+          ${isOwner ? `<button class="hover:text-white hover:bg-[#383a40] p-1.5 rounded msg-edit-btn" title="Edit"><i class="fa-solid fa-pen"></i></button>` : ''}
+          ${isOwner ? `<button class="hover:text-[#f23f43] hover:bg-[#383a40] p-1.5 rounded msg-del-btn" title="Delete"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+        </div>
+      `;
+
+      // Bind User Popout
+      div.querySelectorAll('.user-popout-trigger').forEach(el => {
+        el.addEventListener('click', () => {
+          openUserProfilePopout(
+            msg.senderUid,
+            displayName,
+            liveProfile?.email || msg.senderEmail,
+            avatarSrc,
+            liveProfile?.bannerUrl || msg.senderBanner,
+            liveProfile?.statusNote || msg.statusNote,
+            liveProfile?.bio || msg.bio
+          );
+        });
+      });
+
+      // Bind Reactions
+      div.querySelectorAll('.add-reaction-btn, .reaction-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const emoji = e.currentTarget.dataset.emoji;
+          const userReactRef = db.ref(`${messagesPath}/${msg.id}/reactions/${emoji}/${currentUser.uid}`);
+          const snap = await userReactRef.once('value');
+          if (snap.exists()) {
+            await userReactRef.remove();
+          } else {
+            await userReactRef.set(true);
+          }
+        });
+      });
+
+      // Bind Reply
+      const replyBtn = div.querySelector('.msg-reply-btn');
+      if (replyBtn) {
+        replyBtn.addEventListener('click', () => startReply(msg.id, displayName, msg.text));
+      }
+
+      // Bind Pin / Unpin
+      const pinBtn = div.querySelector('.msg-pin-btn');
+      if (pinBtn) {
+        pinBtn.addEventListener('click', async () => {
+          const pinRef = db.ref(`${pinsPath}/${msg.id}`);
+          if (isPinned) {
+            await pinRef.remove();
+            showToast('Unpinned message', 'info');
+          } else {
+            await pinRef.set({
+              id: msg.id,
+              senderName: displayName,
+              senderAvatar: avatarSrc,
+              text: msg.text || '[Attachment]',
+              timestamp: msg.timestamp || Date.now()
+            });
+            showToast('Pinned message to channel', 'success');
+          }
+        });
+      }
+
+      // Bind Edit
+      const editBtn = div.querySelector('.msg-edit-btn');
+      if (editBtn) {
+        editBtn.addEventListener('click', () => {
+          editingMessageId = msg.id;
+          // Re-trigger render via shallow read
+          db.ref(messagesPath).once('value');
+          setTimeout(() => {
+            const editBox = document.getElementById(`editInput-${msg.id}`);
+            if (editBox) {
+              editBox.focus();
+              editBox.setSelectionRange(editBox.value.length, editBox.value.length);
+              editBox.addEventListener('keydown', (ke) => {
+                if (ke.key === 'Enter' && !ke.shiftKey) {
+                  ke.preventDefault();
+                  saveMessageEdit(messagesPath, msg.id, editBox.value);
+                } else if (ke.key === 'Escape') {
+                  cancelEdit();
+                }
+              });
+            }
+          }, 50);
+        });
+      }
+
+      const saveEditBtn = div.querySelector('.save-edit-btn');
+      if (saveEditBtn) {
+        saveEditBtn.addEventListener('click', () => {
+          const editBox = document.getElementById(`editInput-${msg.id}`);
+          if (editBox) saveMessageEdit(messagesPath, msg.id, editBox.value);
+        });
+      }
+
+      const cancelEditBtn = div.querySelector('.cancel-edit-btn');
+      if (cancelEditBtn) {
+        cancelEditBtn.addEventListener('click', cancelEdit);
+      }
+
+      // Bind Delete
+      const delBtn = div.querySelector('.msg-del-btn');
+      if (delBtn) {
+        delBtn.addEventListener('click', async () => {
+          await db.ref(`${messagesPath}/${msg.id}`).remove();
+          await db.ref(`${pinsPath}/${msg.id}`).remove();
+        });
+      }
+
+      return div;
+    }
+
+    async function saveMessageEdit(messagesPath, msgId, newText) {
+      const trimmed = (newText || '').trim();
+      if (!trimmed) return;
+      editingMessageId = null;
+      await db.ref(`${messagesPath}/${msgId}`).update({
+        text: trimmed,
+        edited: true
+      });
+    }
+
+    function cancelEdit() {
+      if (!editingMessageId) return;
+      editingMessageId = null;
+      if (messagesListenerPath) {
+        db.ref(messagesListenerPath).once('value');
+      }
+    }
+
+    function startReply(msgId, senderName, text) {
+      replyingToMessage = { id: msgId, senderName, text };
+      document.getElementById('replyTargetName').innerText = senderName;
+      document.getElementById('replyTargetSnippet').innerText = text ? `— ${text}` : '— [Attachment]';
+      document.getElementById('replyBar').classList.remove('hidden');
+      document.getElementById('chatInputWrapper').classList.remove('rounded-lg');
+      document.getElementById('chatInputWrapper').classList.add('rounded-b-lg');
+      document.getElementById('chatInput').focus();
+    }
+
+    function cancelReply() {
+      replyingToMessage = null;
+      document.getElementById('replyBar').classList.add('hidden');
+      document.getElementById('chatInputWrapper').classList.add('rounded-lg');
+      document.getElementById('chatInputWrapper').classList.remove('rounded-b-lg');
+    }
+
+    document.getElementById('btnCancelReply').addEventListener('click', cancelReply);
+
+    function renderPinnedDrawer() {
+      const list = document.getElementById('pinnedMessagesList');
+      const badge = document.getElementById('pinnedBadge');
+      const pins = Object.values(currentPinsMap || {});
+
+      if (pins.length === 0) {
+        badge.classList.add('hidden');
+        list.innerHTML = `<div class="text-center text-[#949ba4] py-8">No pinned messages in this channel yet.</div>`;
+        return;
+      }
+
+      badge.classList.remove('hidden');
+      list.innerHTML = '';
+      pins.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).forEach(p => {
+        const card = document.createElement('div');
+        card.className = "bg-[#313338] border border-[#3f4147] rounded-lg p-3 space-y-1.5 relative group";
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <img src="${escapeHtml(p.senderAvatar || '')}" class="w-5 h-5 rounded-full object-cover" onerror="this.style.display='none'" />
+              <span class="font-bold text-white text-xs">${escapeHtml(p.senderName || 'Operative')}</span>
+            </div>
+            <button class="unpin-drawer-btn text-[10px] text-[#949ba4] hover:text-[#f23f43]" title="Unpin">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div class="text-xs text-[#dbdee1] break-words">${formatMessageContent(p.text)}</div>
+        `;
+        card.querySelector('.unpin-drawer-btn').addEventListener('click', async () => {
+          if (pinsListenerPath) {
+            await db.ref(`${pinsListenerPath}/${p.id}`).remove();
+          }
+        });
+        list.appendChild(card);
+      });
+    }
+
+    function formatMessageContent(text) {
+      if (!text) return '';
+      let safe = escapeHtml(text);
+
+      // Multi-line Code Blocks
+      safe = safe.replace(/```([\s\S]*?)```/g, '<pre class="bg-[#1e1f22] p-2.5 rounded-md text-[#23a55a] font-mono text-xs my-1.5 border border-[#3f4147] overflow-x-auto">$1</pre>');
+      // Inline Code
+      safe = safe.replace(/`([^`]+)`/g, '<code class="bg-[#1e1f22] px-1.5 py-0.5 rounded text-[#f0b232] font-mono text-xs">$1</code>');
+      // Bold, Italic, Strikethrough
+      safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
+      safe = safe.replace(/\*([^*]+)\*/g, '<em class="italic">$1</em>');
+      safe = safe.replace(/~~([^~]+)~~/g, '<del class="line-through opacity-75">$1</del>');
+      // Blockquotes
+      safe = safe.replace(/^&gt;\s?(.*)$/gm, '<div class="border-l-4 border-[#4e5058] pl-3 py-0.5 my-0.5 text-[#b5bac1]">$1</div>');
+      // @Mentions Pill
+      safe = safe.replace(/(@[a-zA-Z0-9_-]+)/g, '<span class="bg-accent/25 text-accent font-semibold px-1 rounded hover:bg-accent hover:text-white transition-colors cursor-pointer">$1</span>');
+      // Clickable URLs
+      safe = safe.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-[#00a8fc] hover:underline break-all">$1</a>');
+
+      return safe;
+    }
+
+    async function sendMessage() {
+      if (!currentUserProfile.approved && currentUserProfile.status !== 'approved') return;
+
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+
+      if ((!text && !attachedImageUrl) || !currentUser || !messagesListenerPath) return;
+
+      input.value = '';
+      autoResizeChatInput();
+      clearTypingStatus();
+
+      let expiresAt = null;
+      if (autoDestructTimerMs > 0) {
+        expiresAt = Date.now() + autoDestructTimerMs;
+      }
+
+      const msgObj = {
+        senderUid: currentUser.uid,
+        senderName: currentUserProfile.displayName,
+        senderEmail: currentUser.email,
+        dicebearStyle: currentUserProfile.dicebearStyle || 'bottts',
+        senderAvatar: currentUserProfile.avatarUrl || '',
+        senderBanner: currentUserProfile.bannerUrl || '',
+        statusNote: currentUserProfile.statusNote,
+        bio: currentUserProfile.bio || '',
+        text: text,
+        imageUrl: attachedImageUrl || '',
+        replyTo: replyingToMessage ? { ...replyingToMessage } : null,
+        expiresAt: expiresAt,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      };
+
+      attachedImageUrl = null;
+      document.getElementById('attachmentPreview').classList.add('hidden');
+      cancelReply();
+
+      await db.ref(messagesListenerPath).push(msgObj);
+      playMessageChime();
+
+      if (text.toLowerCase().includes('party') || text.includes('🎉') || text.toLowerCase().includes('congrats')) {
+        triggerConfetti();
+      }
+    }
+
+    // =========================================================================
+    // 9. TYPING BROADCAST, @MENTION AUTOCOMPLETE & EMOJI PICKER
+    // =========================================================================
+    function broadcastTyping() {
+      if (!currentUser || !typingListenerPath) return;
+      const myTypingRef = db.ref(`${typingListenerPath}/${currentUser.uid}`);
+      myTypingRef.onDisconnect().remove();
+      myTypingRef.set({
+        displayName: currentUserProfile.displayName,
+        timestamp: Date.now()
+      });
+
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(clearTypingStatus, 3500);
+    }
+
+    function clearTypingStatus() {
+      if (!currentUser || !typingListenerPath) return;
+      db.ref(`${typingListenerPath}/${currentUser.uid}`).remove();
+    }
+
+    function autoResizeChatInput() {
+      const input = document.getElementById('chatInput');
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 144) + 'px';
+    }
+
+    function handleMentionAutocomplete() {
+      const input = document.getElementById('chatInput');
+      const popup = document.getElementById('mentionAutocompletePopup');
+      const list = document.getElementById('mentionList');
+
+      const cursorPos = input.selectionStart;
+      const textBeforeCursor = input.value.slice(0, cursorPos);
+      const match = textBeforeCursor.match(/@([a-zA-Z0-9_-]*)$/);
+
+      if (!match) {
+        popup.classList.add('hidden');
+        return;
+      }
+
+      const query = match[1].toLowerCase();
+      const candidates = Object.values(allApprovedUsers).filter(u =>
+        (u.displayName || '').toLowerCase().includes(query)
+      );
+
+      if (candidates.length === 0) {
+        popup.classList.add('hidden');
+        return;
+      }
+
+      list.innerHTML = '';
+      candidates.slice(0, 6).forEach(u => {
+        const avatarSrc = getUserAvatarUrl(u.uid, u);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded hover:bg-accent hover:text-white text-left text-xs transition-colors";
+        btn.innerHTML = `
+          <img src="${avatarSrc}" class="w-6 h-6 rounded-full object-cover" />
+          <span class="font-semibold">${escapeHtml(u.displayName)}</span>
+        `;
+        btn.addEventListener('click', () => {
+          const prefix = textBeforeCursor.slice(0, match.index);
+          const suffix = input.value.slice(cursorPos);
+          input.value = `${prefix}@${u.displayName} ${suffix}`;
+          popup.classList.add('hidden');
+          input.focus();
+        });
+        list.appendChild(btn);
+      });
+
+      popup.classList.remove('hidden');
+    }
+
+    function initEmojiPicker() {
+      renderEmojiGrid('smileys');
+
+      document.querySelectorAll('.emoji-cat-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.querySelectorAll('.emoji-cat-btn').forEach(b => b.classList.remove('bg-[#35373c]', 'text-white'));
+          e.currentTarget.classList.add('bg-[#35373c]', 'text-white');
+          renderEmojiGrid(e.currentTarget.dataset.cat);
+        });
+      });
+
+      document.getElementById('emojiSearchInput').addEventListener('input', (e) => {
+        const q = e.target.value.trim();
+        if (!q) {
+          renderEmojiGrid('smileys');
+          return;
+        }
+        const all = Object.values(EMOJI_CATEGORIES).flat();
+        renderEmojiGrid(null, all);
+      });
+    }
+
+    function renderEmojiGrid(category, customList = null) {
+      const grid = document.getElementById('emojiGrid');
+      grid.innerHTML = '';
+      const emojis = customList || EMOJI_CATEGORIES[category] || EMOJI_CATEGORIES.smileys;
+      emojis.forEach(em => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = "w-8 h-8 flex items-center justify-center rounded hover:bg-[#35373c] transition-transform hover:scale-110";
+        btn.innerText = em;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const input = document.getElementById('chatInput');
+          input.value += em;
+          input.focus();
+          document.getElementById('emojiPickerPopover').classList.add('hidden');
+        });
+        grid.appendChild(btn);
+      });
+    }
+
+    // Chat Input Listeners
+    document.getElementById('btnSend').addEventListener('click', sendMessage);
+    document.getElementById('chatInput').addEventListener('input', () => {
+      autoResizeChatInput();
+      broadcastTyping();
+      handleMentionAutocomplete();
+    });
+    document.getElementById('chatInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('mentionAutocompletePopup').classList.add('hidden');
+        sendMessage();
+      } else if (e.key === 'Escape') {
+        document.getElementById('mentionAutocompletePopup').classList.add('hidden');
+        cancelReply();
+      }
+    });
+
+    // Paste image URL detection directly in chat input
+    document.getElementById('chatInput').addEventListener('paste', (e) => {
+      const pasted = (e.clipboardData || window.clipboardData).getData('text').trim();
+      if (/^https?:\/\/.*\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(pasted)) {
+        e.preventDefault();
+        attachedImageUrl = pasted;
+        document.getElementById('attachmentPreviewImg').src = pasted;
+        document.getElementById('attachmentPreview').classList.remove('hidden');
+        showToast('Image URL attached from clipboard!', 'info');
+      }
+    });
+
+    document.getElementById('btnEmoji').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('emojiPickerPopover').classList.toggle('hidden');
+      document.getElementById('attachmentPopover').classList.add('hidden');
+    });
+
+    document.getElementById('btnConfetti').addEventListener('click', () => {
+      triggerConfetti();
+      playAudioTone(880, 'sine', 0.2);
+    });
+
+    // Inline Attachment Popover (Replaces window.prompt)
+    document.getElementById('btnAttachImage').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('attachmentPopover').classList.toggle('hidden');
+      document.getElementById('emojiPickerPopover').classList.add('hidden');
+      document.getElementById('attachUrlInput').focus();
+    });
+
+    document.getElementById('closeAttachPopoverBtn').addEventListener('click', () => {
+      document.getElementById('attachmentPopover').classList.add('hidden');
+    });
+
+    document.getElementById('btnConfirmAttachUrl').addEventListener('click', () => {
+      const url = document.getElementById('attachUrlInput').value.trim();
+      if (url && url.startsWith('http')) {
+        attachedImageUrl = url;
+        document.getElementById('attachmentPreviewImg').src = url;
+        document.getElementById('attachmentPreview').classList.remove('hidden');
+        document.getElementById('attachUrlInput').value = '';
+        document.getElementById('attachmentPopover').classList.add('hidden');
+      } else {
+        showToast('Please enter a valid http/https image URL', 'error');
+      }
+    });
+
+    document.getElementById('btnRemoveAttachment').addEventListener('click', () => {
+      attachedImageUrl = null;
+      document.getElementById('attachmentPreview').classList.add('hidden');
+    });
+
+    // =========================================================================
+    // 10. PRESENCE, RIGHT MEMBER SIDEBAR & USER POPOUT
+    // =========================================================================
+    function listenPresence() {
+      db.ref('presence').on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        const onlineMap = {};
+        Object.entries(data).forEach(([uid, val]) => {
+          if (val && (val.approved === true || val.status === 'approved')) {
+            onlineMap[uid] = { uid, ...val };
+          }
+        });
+        onlinePresenceUsers = onlineMap;
+        renderMemberSidebars();
+        renderDmConversationsList();
+        renderOperativesDirectory();
+      });
+    }
+
+    function renderMemberSidebars() {
+      const onlineContainer = document.getElementById('membersOnlineList');
+      const offlineContainer = document.getElementById('membersOfflineList');
+      if (!onlineContainer || !offlineContainer) return;
+
+      onlineContainer.innerHTML = '';
+      offlineContainer.innerHTML = '';
+
+      const onlineUsers = Object.values(onlinePresenceUsers);
+      const offlineUsers = Object.values(allApprovedUsers).filter(u => !onlinePresenceUsers[u.uid]);
+
+      document.getElementById('countOnline').innerText = onlineUsers.length;
+      document.getElementById('countOffline').innerText = offlineUsers.length;
+
+      const statusColorMap = {
+        online: 'bg-[#23a55a]',
+        idle: 'bg-[#f0b232]',
+        dnd: 'bg-[#f23f43]',
+        invisible: 'bg-[#80848e]'
+      };
+
+      const buildRow = (u, isOnline) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-[#35373c] cursor-pointer transition-colors";
+        const avatarSrc = getUserAvatarUrl(u.uid, u);
+        const dotColor = isOnline ? (statusColorMap[u.statusState || 'online'] || 'bg-[#23a55a]') : 'bg-[#80848e]';
+
+        item.innerHTML = `
+          <div class="relative flex-shrink-0">
+            <div class="w-8 h-8 rounded-full bg-cover bg-center flex-shrink-0 overflow-hidden border border-[#3f4147]" style="background-image: url('${avatarSrc}')"></div>
+            <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#2b2d31] ${dotColor}"></span>
+          </div>
+          <div class="truncate">
+            <div class="text-xs font-semibold text-[#dbdee1] truncate">${escapeHtml(u.displayName || 'Operative')}</div>
+            <div class="text-[10px] text-[#949ba4] truncate">${isOnline ? escapeHtml(u.statusNote || 'Online') : 'Offline'}</div>
+          </div>
+        `;
+
+        item.addEventListener('click', () => {
+          openUserProfilePopout(u.uid, u.displayName, u.email, avatarSrc, u.bannerUrl, u.statusNote, u.bio);
+        });
+        return item;
+      };
+
+      onlineUsers.forEach(u => onlineContainer.appendChild(buildRow(u, true)));
+      offlineUsers.forEach(u => offlineContainer.appendChild(buildRow(u, false)));
+    }
+
+    let popoutTargetUid = null;
+    function openUserProfilePopout(uid, name, email, avatarUrl, bannerUrl, statusNote, bio) {
+      popoutTargetUid = uid;
+      document.getElementById('popoutDisplayName').innerText = name || 'Operative';
+      document.getElementById('popoutEmail').innerText = email || 'user@domain.com';
+
+      const dmBtn = document.getElementById('btnPopoutSendDm');
+      if (currentUser && uid === currentUser.uid) {
+        dmBtn.classList.add('hidden');
+      } else {
+        dmBtn.classList.remove('hidden');
+      }
+
+      const avatar = document.getElementById('popoutAvatar');
+      avatar.style.backgroundImage = `url('${avatarUrl}')`;
+      avatar.innerText = '';
+
+      const banner = document.getElementById('popoutBanner');
+      if (bannerUrl) {
+        banner.style.backgroundImage = `url('${bannerUrl}')`;
+      } else {
+        banner.style.backgroundImage = 'none';
+        banner.style.backgroundColor = currentUserProfile.accentColor || '#5865f2';
+      }
+
+      document.getElementById('popoutStatusNote').innerText = statusNote || 'Approved Operative';
+      document.getElementById('popoutBio').innerText = bio || 'No bio provided.';
+
+      document.getElementById('userProfileModal').classList.remove('hidden');
+    }
+
+    document.getElementById('btnPopoutSendDm').addEventListener('click', () => {
+      document.getElementById('userProfileModal').classList.add('hidden');
+      if (popoutTargetUid) {
+        switchToHomeView('dm', popoutTargetUid);
+      }
+    });
+
+    document.getElementById('closeProfileModalBtn').addEventListener('click', () => {
+      document.getElementById('userProfileModal').classList.add('hidden');
+    });
+
+    // =========================================================================
+    // 11. HEADER CONTROLS, SERVER DROPDOWN, QUICK SWITCHER & MOBILE DRAWER
+    // =========================================================================
+    // Home Button
+    document.getElementById('btnServerHome').addEventListener('click', () => {
+      playAudioTone(480, 'sine', 0.08);
+      switchToHomeView('directory');
+    });
+
+    document.getElementById('btnShowFriendsDir').addEventListener('click', () => {
+      switchToHomeView('directory');
+    });
+
+    document.getElementById('btnNewDmQuick').addEventListener('click', () => {
+      openQuickSwitcher();
+    });
+
+    // Directory Tabs & Search
+    document.querySelectorAll('.dir-tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.dir-tab-btn').forEach(b => {
+          b.className = "dir-tab-btn px-3 py-1 rounded text-xs font-semibold text-[#b5bac1] hover:bg-[#35373c] hover:text-white";
+        });
+        e.currentTarget.className = "dir-tab-btn px-3 py-1 rounded text-xs font-semibold bg-[#3f4147] text-white";
+        directoryTab = e.currentTarget.dataset.dirTab;
+        renderOperativesDirectory();
+      });
+    });
+
+    document.getElementById('directorySearchInput').addEventListener('input', (e) => {
+      directorySearchQuery = e.target.value.trim();
+      renderOperativesDirectory();
+    });
+
+    // Server Header Dropdown Menu
+    document.getElementById('serverHeaderBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById('serverHeaderDropdown');
+      const chevron = document.getElementById('serverHeaderChevron');
+      menu.classList.toggle('hidden');
+      chevron.classList.toggle('rotate-180');
+    });
+
+    document.getElementById('menuInvitePeople').addEventListener('click', () => {
+      copyToClipboard(activeServerId);
+      showToast(`Server Invite Code (${activeServerId}) copied!`, 'success');
+    });
+
+    document.getElementById('menuCreateChannel').addEventListener('click', () => {
+      openAddChannelModal('text');
+    });
+
+    document.getElementById('menuCopyServerId').addEventListener('click', () => {
+      copyToClipboard(activeServerId);
+      showToast(`Server ID copied to clipboard!`, 'info');
+    });
+
+    // Collapsible Channel Categories
+    document.getElementById('toggleTextCatBtn').addEventListener('click', () => {
+      document.getElementById('channelList').classList.toggle('hidden');
+      document.getElementById('textCatChevron').classList.toggle('-rotate-90');
+    });
+
+    document.getElementById('toggleVoiceCatBtn').addEventListener('click', () => {
+      document.getElementById('voiceChannelList').classList.toggle('hidden');
+      document.getElementById('voiceCatChevron').classList.toggle('-rotate-90');
+    });
+
+    // Pinned Messages Popover
+    document.getElementById('btnPinnedDrawer').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('pinnedPopover').classList.toggle('hidden');
+    });
+
+    document.getElementById('closePinnedBtn').addEventListener('click', () => {
+      document.getElementById('pinnedPopover').classList.add('hidden');
+    });
+
+    // Self-Destruct Timer Dropdown
+    document.getElementById('btnTimerMenu').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('timerDropdown').classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('.timer-opt').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        autoDestructTimerMs = parseInt(e.target.dataset.timer);
+        const labelMap = { 0: 'Timer: Off', 5000: 'Timer: 5s', 30000: 'Timer: 30s', 300000: 'Timer: 5m' };
+        document.getElementById('timerLabel').innerText = labelMap[autoDestructTimerMs];
+        document.getElementById('timerDropdown').classList.add('hidden');
+      });
+    });
+
+    // In-Channel Search Input
+    const channelSearchInput = document.getElementById('channelSearchInput');
+    channelSearchInput.addEventListener('input', (e) => {
+      searchFilterQuery = e.target.value.trim();
+      document.getElementById('clearSearchBtn').classList.toggle('hidden', !searchFilterQuery);
+      document.getElementById('channelSearchIcon').classList.toggle('hidden', !!searchFilterQuery);
+      if (messagesListenerPath) {
+        db.ref(messagesListenerPath).once('value');
+      }
+    });
+
+    document.getElementById('clearSearchBtn').addEventListener('click', () => {
+      channelSearchInput.value = '';
+      searchFilterQuery = '';
+      document.getElementById('clearSearchBtn').classList.add('hidden');
+      document.getElementById('channelSearchIcon').classList.remove('hidden');
+      if (messagesListenerPath) {
+        db.ref(messagesListenerPath).once('value');
+      }
+    });
+
+    // User Status Menu
+    document.getElementById('userFooterCard').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('statusMenuDropdown').classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('.status-option-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const st = e.currentTarget.dataset.status;
+        updateStatusDotUI(st);
+        document.getElementById('statusMenuDropdown').classList.add('hidden');
+      });
+    });
+
+    // Global Click-Outside Closer
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#statusMenuDropdown') && !e.target.closest('#userFooterCard')) {
+        document.getElementById('statusMenuDropdown').classList.add('hidden');
+      }
+      if (!e.target.closest('#timerDropdown') && !e.target.closest('#btnTimerMenu')) {
+        document.getElementById('timerDropdown').classList.add('hidden');
+      }
+      if (!e.target.closest('#emojiPickerPopover') && !e.target.closest('#btnEmoji')) {
+        document.getElementById('emojiPickerPopover').classList.add('hidden');
+      }
+      if (!e.target.closest('#attachmentPopover') && !e.target.closest('#btnAttachImage')) {
+        document.getElementById('attachmentPopover').classList.add('hidden');
+      }
+      if (!e.target.closest('#pinnedPopover') && !e.target.closest('#btnPinnedDrawer')) {
+        document.getElementById('pinnedPopover').classList.add('hidden');
+      }
+      if (!e.target.closest('#serverHeaderDropdown') && !e.target.closest('#serverHeaderBtn')) {
+        document.getElementById('serverHeaderDropdown').classList.add('hidden');
+        document.getElementById('serverHeaderChevron').classList.remove('rotate-180');
+      }
+    });
+
+    // Quick Switcher (Ctrl+K / Cmd+K)
+    function openQuickSwitcher() {
+      const modal = document.getElementById('quickSwitcherModal');
+      const input = document.getElementById('quickSwitcherInput');
+      modal.classList.remove('hidden');
+      input.value = '';
+      renderQuickSwitcherResults('');
+      input.focus();
+    }
+
+    function renderQuickSwitcherResults(query) {
+      const container = document.getElementById('quickSwitcherResults');
+      container.innerHTML = '';
+      const q = query.toLowerCase();
+
+      // Operatives (DMs)
+      Object.values(allApprovedUsers)
+        .filter(u => u.uid !== currentUser?.uid && (u.displayName || '').toLowerCase().includes(q))
+        .slice(0, 5)
+        .forEach(u => {
+          const btn = document.createElement('button');
+          btn.className = "w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-accent hover:text-white text-[#dbdee1] transition-colors";
+          btn.innerHTML = `
+            <span class="flex items-center gap-2 font-semibold">
+              <i class="fa-solid fa-at text-[#949ba4]"></i> ${escapeHtml(u.displayName)}
+            </span>
+            <span class="text-[10px] opacity-75">Direct Message</span>
+          `;
+          btn.addEventListener('click', () => {
+            document.getElementById('quickSwitcherModal').classList.add('hidden');
+            switchToHomeView('dm', u.uid);
+          });
+          container.appendChild(btn);
+        });
+
+      // Server Channels
+      Object.entries(userServers).forEach(([srvId, srv]) => {
+        Object.entries(srv.channels || {}).forEach(([chId, ch]) => {
+          if ((ch.name || '').toLowerCase().includes(q) || (srv.name || '').toLowerCase().includes(q)) {
+            const btn = document.createElement('button');
+            btn.className = "w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-accent hover:text-white text-[#dbdee1] transition-colors";
+            btn.innerHTML = `
+              <span class="flex items-center gap-2 font-semibold">
+                <i class="fa-solid fa-hashtag text-[#949ba4]"></i> ${escapeHtml(ch.name)}
+              </span>
+              <span class="text-[10px] opacity-75">${escapeHtml(srv.name)}</span>
+            `;
+            btn.addEventListener('click', () => {
+              document.getElementById('quickSwitcherModal').classList.add('hidden');
+              viewMode = 'server';
+              activeServerId = srvId;
+              activeChannelId = chId;
+              document.getElementById('btnServerHome').className = "w-12 h-12 rounded-[24px] hover:rounded-[16px] bg-[#313338] hover:bg-accent text-[#dbdee1] hover:text-white flex items-center justify-center text-xl transition-all duration-200 shadow-md relative";
+              document.getElementById('homePill').className = "server-pill top-2 h-4 opacity-0";
+              document.getElementById('serverSidebarHeader').classList.remove('hidden');
+              document.getElementById('serverChannelsContainer').classList.remove('hidden');
+              document.getElementById('dmSidebarHeader').classList.add('hidden');
+              document.getElementById('dmSidebarContainer').classList.add('hidden');
+              document.getElementById('friendsDirectoryView').classList.add('hidden');
+              document.getElementById('chatWorkspaceView').classList.remove('hidden');
+              document.getElementById('chatHeaderControls').classList.remove('hidden');
+              renderServerRail();
+              loadServerChannels(srvId, srv);
+            });
+            container.appendChild(btn);
+          }
+        });
+      });
+    }
+
+    document.getElementById('btnOpenQuickSwitcher').addEventListener('click', openQuickSwitcher);
+    document.getElementById('closeQuickSwitcherBtn').addEventListener('click', () => {
+      document.getElementById('quickSwitcherModal').classList.add('hidden');
+    });
+    document.getElementById('quickSwitcherInput').addEventListener('input', (e) => {
+      renderQuickSwitcherResults(e.target.value);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        openQuickSwitcher();
+      } else if (e.key === 'Escape') {
+        document.getElementById('quickSwitcherModal').classList.add('hidden');
+      }
+    });
+
+    // Mobile Drawer Toggle
+    function openMobileDrawer() {
+      document.getElementById('leftNavWrapper').classList.remove('-translate-x-full');
+      document.getElementById('mobileDrawerBackdrop').classList.remove('hidden');
+    }
+
+    function closeMobileDrawer() {
+      document.getElementById('leftNavWrapper').classList.add('-translate-x-full');
+      document.getElementById('mobileDrawerBackdrop').classList.add('hidden');
+    }
+
+    document.getElementById('mobileSidebarToggle').addEventListener('click', openMobileDrawer);
+    document.getElementById('mobileDrawerBackdrop').addEventListener('click', closeMobileDrawer);
+
+    document.getElementById('toggleMembersSidebarBtn').addEventListener('click', () => {
+      document.getElementById('membersSidebar').classList.toggle('hidden');
+    });
+
+    document.getElementById('btnCodeFormat').addEventListener('click', () => {
+      const input = document.getElementById('chatInput');
+      input.value = `\`\`\`\n${input.value}\n\`\`\``;
+      input.focus();
+      autoResizeChatInput();
+    });
+
+    // =========================================================================
+    // 12. USER SETTINGS MODAL & PRESET ACCENT COLORS
+    // =========================================================================
+    document.getElementById('btnOpenSettings').addEventListener('click', () => {
+      document.getElementById('settingsDisplayName').value = currentUserProfile.displayName || '';
+      document.getElementById('settingsAccentColor').value = currentUserProfile.accentColor || '#7c5cff';
+      document.getElementById('settingsDicebearStyle').value = currentUserProfile.dicebearStyle || 'bottts';
+      document.getElementById('settingsAvatarUrl').value = currentUserProfile.avatarUrl || '';
+      document.getElementById('settingsBannerUrl').value = currentUserProfile.bannerUrl || '';
+      document.getElementById('settingsStatusNote').value = currentUserProfile.statusNote || '';
+      document.getElementById('settingsBio').value = currentUserProfile.bio || '';
+      document.getElementById('settingsAudioToggle').checked = currentUserProfile.audioEnabled !== false;
+
+      updateLiveProfilePreview();
+      document.getElementById('settingsModal').classList.remove('hidden');
+    });
+
+    document.querySelectorAll('.preset-color-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const hex = e.currentTarget.dataset.color;
+        document.getElementById('settingsAccentColor').value = hex;
+        applyAccentColor(hex);
+        updateLiveProfilePreview();
+      });
+    });
+
+    document.getElementById('settingsAccentColor').addEventListener('input', (e) => {
+      applyAccentColor(e.target.value);
+      updateLiveProfilePreview();
+    });
+
+    function updateLiveProfilePreview() {
+      const dName = document.getElementById('settingsDisplayName').value || 'Display Name';
+      const avatarUrl = document.getElementById('settingsAvatarUrl').value;
+      const bannerUrl = document.getElementById('settingsBannerUrl').value;
+      const note = document.getElementById('settingsStatusNote').value || 'Online';
+      const bio = document.getElementById('settingsBio').value || 'About me snippet...';
+      const style = document.getElementById('settingsDicebearStyle').value;
+      const accent = document.getElementById('settingsAccentColor').value;
+
+      document.getElementById('previewName').innerText = dName;
+      document.getElementById('previewTag').innerText = `@${dName.toLowerCase().replace(/\s+/g, '')}#0001`;
+      document.getElementById('previewNote').innerText = note;
+      document.getElementById('previewBio').innerText = bio;
+
+      const pAvatar = document.getElementById('previewAvatar');
+      const avatarSrc = avatarUrl || getDiceBearAvatar(currentUser ? currentUser.uid : 'preview', style);
+      pAvatar.style.backgroundImage = `url('${avatarSrc}')`;
+      pAvatar.innerText = '';
+
+      const pBanner = document.getElementById('previewBanner');
+      if (bannerUrl) {
+        pBanner.style.backgroundImage = `url('${bannerUrl}')`;
+      } else {
+        pBanner.style.backgroundImage = 'none';
+        pBanner.style.backgroundColor = accent || '#7c5cff';
+      }
+    }
+
+    ['settingsDisplayName', 'settingsAvatarUrl', 'settingsBannerUrl', 'settingsStatusNote', 'settingsBio', 'settingsDicebearStyle'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateLiveProfilePreview);
+    });
+
+    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+      applyAccentColor(currentUserProfile.accentColor);
+      document.getElementById('settingsModal').classList.add('hidden');
+    });
+
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+      const dName = document.getElementById('settingsDisplayName').value.trim();
+      if (!dName) return;
+
+      currentUserProfile.displayName = dName;
+      currentUserProfile.accentColor = document.getElementById('settingsAccentColor').value;
+      currentUserProfile.dicebearStyle = document.getElementById('settingsDicebearStyle').value;
+      currentUserProfile.avatarUrl = document.getElementById('settingsAvatarUrl').value.trim();
+      currentUserProfile.bannerUrl = document.getElementById('settingsBannerUrl').value.trim();
+      currentUserProfile.statusNote = document.getElementById('settingsStatusNote').value.trim();
+      currentUserProfile.bio = document.getElementById('settingsBio').value.trim();
+      currentUserProfile.audioEnabled = document.getElementById('settingsAudioToggle').checked;
+
+      applyAccentColor(currentUserProfile.accentColor);
+      updateUserProfileDisplay();
+
+      if (currentUser) {
+        await db.ref(`users/${currentUser.uid}`).update(currentUserProfile);
+        await db.ref(`presence/${currentUser.uid}`).update(currentUserProfile);
+      }
+
+      document.getElementById('settingsModal').classList.add('hidden');
+      showToast("Profile Settings Saved!", "success");
+    });
+
+    // =========================================================================
+    // 13. CREATE / JOIN SERVER & ADD TEXT/VOICE CHANNEL MODALS
+    // =========================================================================
+    document.getElementById('btnOpenAddServer').addEventListener('click', () => {
+      document.getElementById('addServerModal').classList.remove('hidden');
+    });
+
+    document.getElementById('closeAddServerBtn').addEventListener('click', () => {
+      document.getElementById('addServerModal').classList.add('hidden');
+    });
+
+    document.getElementById('tabCreateServerBtn').addEventListener('click', (e) => {
+      e.target.className = "flex-1 py-2 rounded-md bg-accent text-white";
+      document.getElementById('tabJoinServerBtn').className = "flex-1 py-2 rounded-md text-[#949ba4] hover:text-white";
+      document.getElementById('createServerSection').classList.remove('hidden');
+      document.getElementById('joinServerSection').classList.add('hidden');
+    });
+
+    document.getElementById('tabJoinServerBtn').addEventListener('click', (e) => {
+      e.target.className = "flex-1 py-2 rounded-md bg-accent text-white";
+      document.getElementById('tabCreateServerBtn').className = "flex-1 py-2 rounded-md text-[#949ba4] hover:text-white";
+      document.getElementById('joinServerSection').classList.remove('hidden');
+      document.getElementById('createServerSection').classList.add('hidden');
+    });
+
+    document.getElementById('btnSubmitCreateServer').addEventListener('click', async () => {
+      const name = document.getElementById('newServerName').value.trim();
+      const icon = document.getElementById('newServerIcon').value.trim() || '🛡️';
+      if (!name) return;
+
+      const newSrvRef = db.ref('servers').push();
+      await newSrvRef.set({
+        name: name,
+        iconUrl: icon,
+        ownerUid: currentUser.uid,
+        channels: {
+          'general': { name: 'general', desc: 'General discussion' },
+          'lounge': { name: 'lounge', desc: 'Hangout spot' }
+        },
+        voiceChannels: {
+          'general-voice': { name: 'General Voice' }
+        }
+      });
+
+      triggerConfetti();
+      playJoinChime();
+      document.getElementById('addServerModal').classList.add('hidden');
+      showToast(`Server "${name}" Created!`, "success");
+    });
+
+    document.getElementById('btnSubmitJoinServer').addEventListener('click', async () => {
+      const srvId = document.getElementById('joinServerIdInput').value.trim();
+      if (!srvId) return;
+
+      const snap = await db.ref(`servers/${srvId}`).once('value');
+      if (snap.exists()) {
+        viewMode = 'server';
+        activeServerId = srvId;
+        listenUserServers();
+        playJoinChime();
+        document.getElementById('addServerModal').classList.add('hidden');
+        showToast("Joined server successfully!", "success");
+      } else {
+        showToast("Server Key / ID not found!", "error");
+      }
+    });
+
+    function openAddChannelModal(type = 'text') {
+      newChannelType = type;
+      setChannelModalTypeUI(type);
+      document.getElementById('newChannelNameInput').value = '';
+      document.getElementById('addChannelModal').classList.remove('hidden');
+      document.getElementById('newChannelNameInput').focus();
+    }
+
+    function setChannelModalTypeUI(type) {
+      newChannelType = type;
+      const textBtn = document.getElementById('typeTextChannelBtn');
+      const voiceBtn = document.getElementById('typeVoiceChannelBtn');
+      if (type === 'text') {
+        textBtn.className = "p-2.5 rounded bg-[#35373c] border border-accent text-white font-semibold flex items-center gap-2";
+        voiceBtn.className = "p-2.5 rounded bg-[#2b2d31] border border-transparent text-[#949ba4] font-semibold flex items-center gap-2";
+      } else {
+        voiceBtn.className = "p-2.5 rounded bg-[#35373c] border border-accent text-white font-semibold flex items-center gap-2";
+        textBtn.className = "p-2.5 rounded bg-[#2b2d31] border border-transparent text-[#949ba4] font-semibold flex items-center gap-2";
+      }
+    }
+
+    document.getElementById('btnAddChannel').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openAddChannelModal('text');
+    });
+
+    document.getElementById('btnAddVoiceChannel').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openAddChannelModal('voice');
+    });
+
+    document.getElementById('typeTextChannelBtn').addEventListener('click', () => setChannelModalTypeUI('text'));
+    document.getElementById('typeVoiceChannelBtn').addEventListener('click', () => setChannelModalTypeUI('voice'));
+
+    document.getElementById('closeAddChannelBtn').addEventListener('click', () => {
+      document.getElementById('addChannelModal').classList.add('hidden');
+    });
+
+    document.getElementById('btnSubmitAddChannel').addEventListener('click', async () => {
+      const rawName = document.getElementById('newChannelNameInput').value.trim();
+      if (!rawName || !activeServerId) return;
+
+      if (newChannelType === 'text') {
+        const chSlug = rawName.toLowerCase().replace(/\s+/g, '-');
+        await db.ref(`servers/${activeServerId}/channels/${chSlug}`).set({
+          name: chSlug,
+          desc: `Text channel #${chSlug}`
+        });
+        showToast(`Text channel #${chSlug} created!`, "success");
+      } else {
+        const vSlug = rawName.toLowerCase().replace(/\s+/g, '-');
+        await db.ref(`servers/${activeServerId}/voiceChannels/${vSlug}`).set({
+          name: rawName
+        });
+        showToast(`Voice channel "${rawName}" created!`, "success");
+      }
+
+      document.getElementById('addChannelModal').classList.add('hidden');
+    });
+
+    // =========================================================================
+    // 14. SIGN OUT & AUTH FORM SUBMISSION
+    // =========================================================================
+    async function performSignOut() {
+      if (connectedVoice) {
+        await leaveVoiceChannel(false);
+      }
+      if (currentUser) {
+        await db.ref(`presence/${currentUser.uid}`).remove();
+      }
+      appInitialized = false;
+      await auth.signOut();
+      showToast("Signed out", "info");
+    }
+
+    document.getElementById('btnCancelPending').addEventListener('click', performSignOut);
+    document.getElementById('btnSettingsSignOut').addEventListener('click', () => {
+      document.getElementById('settingsModal').classList.add('hidden');
+      performSignOut();
+    });
+
+    document.getElementById('btnCopyUid').addEventListener('click', () => {
+      copyToClipboard(currentUser.uid);
+      showToast("UID copied to clipboard!", "success");
+    });
+
+    function copyToClipboard(text) {
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+
+    const authToggleBtn = document.getElementById('authToggleBtn');
+    authToggleBtn.addEventListener('click', () => {
+      isSignupMode = !isSignupMode;
+      document.getElementById('displayNameGroup').classList.toggle('hidden', !isSignupMode);
+      document.getElementById('authSubtitle').innerText = isSignupMode ? "Create an account to request access." : "Welcome back! Sign in to enter your workspace.";
+      document.getElementById('authSubmitBtn').querySelector('span').innerText = isSignupMode ? "Register Account" : "Log In";
+      document.getElementById('authTogglePrompt').innerText = isSignupMode ? "Already have an account?" : "Need an account?";
+      authToggleBtn.innerText = isSignupMode ? "Log In" : "Register";
+    });
+
+    document.getElementById('authForm').addEventListener('submit', async () => {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value.trim();
+      const displayName = document.getElementById('authDisplayName').value.trim() || 'Operative';
+
+      if (!email || !password) return;
+
+      try {
+        if (isSignupMode) {
+          const userCred = await auth.createUserWithEmailAndPassword(email, password);
+          const uid = userCred.user.uid;
+
+          const newUserRecord = {
+            displayName: displayName,
+            email: email,
+            accentColor: '#7c5cff',
+            dicebearStyle: 'bottts',
+            avatarUrl: '',
+            bannerUrl: '',
+            statusNote: 'Online',
+            statusState: 'online',
+            bio: 'Operative in PrivacyChat Requiem',
+            audioEnabled: true,
+            approved: false,
+            status: 'pending',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+          };
+
+          await db.ref(`users/${uid}`).set(newUserRecord);
+          showToast("Registration submitted!", "success");
+        } else {
+          await auth.signInWithEmailAndPassword(email, password);
+          showToast("Logged in successfully!", "success");
+        }
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    });
+  </script>
+</body>
+</html>
